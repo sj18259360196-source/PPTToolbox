@@ -4,21 +4,23 @@ import {mountFolderActions} from './project-folders.js';
 import {requestLabels,categoryLabel,stateLabel,projectItems,filterItems,localTime,formatBytes,groupedItems,managementRow} from './projects-model.js';
 import {projectDialog,globalStorageDialog,openProjectFile,storageSummary} from './project-management.js';
 import {batchDialog} from './project-batch.js';
+import {projectThumbnails} from './project-thumbnails.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let timer, generation=0, dispose;
+let timer, generation=0, dispose,preferenceWrites=Promise.resolve();
 export function stopProjects(){clearTimeout(timer);generation++;dispose?.();dispose=null;}
 export async function mountProjects(main,bootReady){
- stopProjects();const epoch=generation;let rows=[],requests=[],query='',category='',view='active',busy=false,requestError='',review=null,requestSequence=0,sort='manual',onlyDelivery=false,storage={projects:{},global:[]},order={revision:0,ids:[]};
+ stopProjects();const epoch=generation;let rows=[],requests=[],query='',category='',view='active',busy=false,requestError='',review=null,requestSequence=0,sort='updated',onlyDelivery=false,storage={projects:{},global:[]},order={revision:0,ids:[]};
+ let preferencesLoaded=false;
  const expandedGroups=new Set(),selectedProjects=new Set();let filteredIds=[];
  main.innerHTML=`<div class="projects-page"><div class="page-head"><h1>项目</h1><span id="project-connection" class="small muted" role="status">正在连接</span></div>
  <div id="project-instance" class="small muted" style="overflow-wrap:anywhere" role="status">正在读取管理实例</div>
  <div class="project-views" role="tablist" aria-label="项目视图">${[['active','项目'],['deliveries','成品'],['completed','已完结'],['pending','待授权'],['archived','已归档']].map(([v,label])=>`<button id="projects-${v}" role="tab" aria-controls="project-list" data-view="${v}" aria-selected="${v==='active'}" tabindex="${v==='active'?0:-1}">${label} <span></span></button>`).join('')}</div>
- <div class="project-toolbar"><input id="project-query" type="search" aria-label="搜索项目" placeholder="搜索项目或成品"><select id="project-category" aria-label="分类"><option value="">全部分类</option></select><select id="project-sort" aria-label="排序"><option value="manual">手动顺序</option><option value="updated">最近活动优先</option><option value="oldest">较早活动优先</option><option value="name">名称正序</option><option value="name-desc">名称倒序</option></select><label class="project-filter"><input id="project-only-delivery" type="checkbox">有成品</label><span id="project-count" class="small muted" role="status"></span></div>
+ <div class="project-toolbar"><input id="project-query" type="search" aria-label="搜索项目" placeholder="搜索项目或成品"><select id="project-category" aria-label="分类"><option value="">全部分类</option></select><select id="project-sort" aria-label="排序"><option value="updated">最近活动优先</option><option value="manual">手动顺序</option><option value="oldest">较早活动优先</option><option value="name">名称正序</option><option value="name-desc">名称倒序</option></select><label class="project-filter"><input id="project-only-delivery" type="checkbox">有成品</label><span id="project-count" class="small muted" role="status"></span></div>
  <div class="project-storage-summary"><span>点开项目查看文件与工作记录。手动顺序下，可用每行的排序菜单调整同级项目。</span><div><button data-global-storage>查看存储</button></div></div>
  <div class="project-batch-toolbar" aria-label="批量管理"><label><input id="project-select-all" type="checkbox">全选当前结果</label><button data-selection="invert">反选</button><button data-selection="clear">清空</button><span id="project-selected-count" role="status">已选 0 个</span><div class="batch-toolbar-actions"><button data-batch="archive">批量归档</button><button data-batch="restore">批量恢复</button><button class="primary" data-batch="deliver">批量交付</button></div><small>全选包含筛选结果中的子项目。单独勾选父项目不会连选子项目。</small></div>
  <p id="archive-status" role="status"></p><p id="request-error" role="alert" hidden></p><div id="project-list" role="tabpanel" aria-labelledby="projects-active">正在读取项目</div></div>`;
- const $=s=>main.querySelector(s);
- dispose=()=>{main.onclick=null;main.onchange=null;main.querySelectorAll('dialog').forEach(d=>{if(d.classList.contains('project-batch-dialog'))d.close();else d.onclose=null;d.remove();});};
+ const $=s=>main.querySelector(s);const thumbnails=projectThumbnails(main);
+ dispose=()=>{thumbnails.dispose();main.onclick=null;main.onchange=null;main.querySelectorAll('dialog').forEach(d=>{if(d.classList.contains('project-batch-dialog'))d.close();else d.onclose=null;d.remove();});};
  const statusText={...requestLabels,started:'已启动'};
  const signature=r=>JSON.stringify([r.id,r.revision,r.status,r.path,r.input_roots,r.label,r.archived]);
  function validateRequests(value){
@@ -82,6 +84,8 @@ export async function mountProjects(main,bootReady){
   $('#project-category').innerHTML='<option value="">全部分类</option>'+categories.map(c=>`<option value="${esc(c)}">${esc(categoryLabel(c))}</option>`).join('');
   if(category&&!categories.includes(category))category='';
   $('#project-category').value=category;
+  $('#project-sort').value=sort;
+  $('#project-only-delivery').checked=onlyDelivery;
   main.querySelectorAll('[data-view]').forEach(button=>{
    const selected=button.dataset.view===view;
    button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
@@ -104,9 +108,9 @@ export async function mountProjects(main,bootReady){
    const complete=r?.lifecycle?.status==='completed';
    const status=!r&&item.archived?'已归档申请':pending?'待授权':complete?(r.lifecycle.history_cleaned?'已完结 · 历史已清理':'已完结'):r?stateLabel(r.status):requestLabels[request.status];
    const tone=pending?'pending':r?.status==='delivered'?'done':r?.error||request?.status==='rejected'?'error':'';
-   return `<article class="project-row text-project-row" style="--project-depth:${depth}" data-project-key="${esc(item.key)}"><input class="project-select" type="checkbox" data-project-select="${esc(item.key)}" aria-label="选择 ${esc(item.label)}" ${selectedProjects.has(item.key)?'checked':''} ${busy?'disabled':''}><div class="project-main"><div class="project-name">${children?`<button class="group-toggle" data-group="${esc(item.key)}" aria-expanded="${expandedGroups.has(item.key)}" aria-label="展开或收起 ${esc(item.label)} 的子项目">${expandedGroups.has(item.key)?'▾':'▸'} <small>${children}</small></button>`:''}${r?`<a href="#/workbench?project=${encodeURIComponent(r.id)}">${esc(item.label)}</a>`:`<strong>${esc(item.label)}</strong>`}</div><div class="project-path" title="${esc(item.path)}">${esc(item.path)}</div><span class="project-category">${r?esc(categoryLabel(item.category)):'未登记的启动申请'} · ${esc(localTime(r?.updated_at||request?.updated_at))}</span></div><div class="project-state"><span class="project-status ${tone}">${esc(r?.error||status)}</span></div><div class="project-actions">${sort==='manual'?`<details class="project-more project-order"><summary aria-label="调整 ${esc(item.label)} 的顺序">排序</summary><div>${[['top','移到最前'],['up','上移'],['down','下移'],['bottom','移到最后']].map(([direction,label])=>`<button data-order-move="${direction}" data-order-key="${esc(item.key)}" ${busy?'disabled':''}>${label}</button>`).join('')}</div></details>`:''}${pending?`<button class="primary" data-request="${esc(pending.id)}" ${requestError?'disabled':''}>审核授权</button>`:''}${r?`<a class="project-open" href="#/workbench?project=${encodeURIComponent(r.id)}">进入项目</a><button data-folder="${esc(r.id)}" title="在资源管理器打开" aria-label="打开 ${esc(item.label)} 文件夹">文件夹</button><details class="project-more"><summary aria-label="更多项目操作">⋯</summary><div><button data-edit="${esc(r.id)}">整理项目</button><button data-manage="storage" data-id="${esc(r.id)}">空间管理</button>${complete?`<button data-manage="reopen" data-id="${esc(r.id)}">重新开启</button>`:`<button data-manage="complete" data-id="${esc(r.id)}">交付并完结</button>`}<button data-archive="${esc(r.id)}" ${busy?'disabled':''}>${r.archived?'恢复到列表':'归档项目'}</button></div></details>`:!pending?`<button data-request="${esc(request.id)}" ${requestError?'disabled':''}>查看权限</button>`:''}${!r?`<button data-request-archive="${esc(request.id)}" ${busy?'disabled':''}>${item.archived?'恢复申请':'归档申请'}</button>`:''}</div>${item.requests.length?`<details class="project-details" ${expanded.has(item.key)?'open':''}><summary data-details="${esc(item.key)}">授权记录</summary><div class="project-detail-body">${item.requests.map(q=>`<div><span>${esc(statusText[q.status])}</span><span>${esc(localTime(q.updated_at))}</span><button data-request="${esc(q.id)}">查看权限</button></div>`).join('')}</div></details>`:''}</article>`;
+   return `<article class="project-row text-project-row" style="--project-depth:${depth}" data-project-key="${esc(item.key)}"><input class="project-select" type="checkbox" data-project-select="${esc(item.key)}" aria-label="选择 ${esc(item.label)}" ${selectedProjects.has(item.key)?'checked':''} ${busy?'disabled':''}><a class="project-reference-thumb" ${r?`href="#/workbench?project=${encodeURIComponent(r.id)}" data-thumbnail="${esc(r.id)}" aria-label="查看 ${esc(item.label)}"`:'aria-hidden="true"'}><span>${r?'参考图':'待登记'}</span></a><div class="project-main"><div class="project-name">${children?`<button class="group-toggle" data-group="${esc(item.key)}" aria-expanded="${expandedGroups.has(item.key)}" aria-label="展开或收起 ${esc(item.label)} 的子项目">${expandedGroups.has(item.key)?'▾':'▸'} <small>${children}</small></button>`:''}${r?`<a href="#/workbench?project=${encodeURIComponent(r.id)}">${esc(item.label)}</a>`:`<strong>${esc(item.label)}</strong>`}</div><div class="project-path" title="${esc(item.path)}">${esc(item.path)}</div><span class="project-category">${r?esc(categoryLabel(item.category)):'未登记的启动申请'} · ${esc(localTime(r?.updated_at||request?.updated_at))}</span></div><div class="project-state"><span class="project-status ${tone}">${esc(r?.error||status)}</span></div><div class="project-actions">${sort==='manual'?`<details class="project-more project-order"><summary aria-label="调整 ${esc(item.label)} 的顺序">排序</summary><div>${[['top','移到最前'],['up','上移'],['down','下移'],['bottom','移到最后']].map(([direction,label])=>`<button data-order-move="${direction}" data-order-key="${esc(item.key)}" ${busy?'disabled':''}>${label}</button>`).join('')}</div></details>`:''}${pending?`<button class="primary" data-request="${esc(pending.id)}" ${requestError?'disabled':''}>审核授权</button>`:''}${r?`<a class="project-open" href="#/workbench?project=${encodeURIComponent(r.id)}">进入项目</a><button data-folder="${esc(r.id)}" title="在资源管理器打开" aria-label="打开 ${esc(item.label)} 文件夹">文件夹</button><details class="project-more"><summary aria-label="更多项目操作">⋯</summary><div><button data-edit="${esc(r.id)}">整理项目</button><button data-manage="storage" data-id="${esc(r.id)}">空间管理</button>${complete?`<button data-manage="reopen" data-id="${esc(r.id)}">重新开启</button>`:`<button data-manage="complete" data-id="${esc(r.id)}">交付并完结</button>`}<button data-archive="${esc(r.id)}" ${busy?'disabled':''}>${r.archived?'恢复到列表':'归档项目'}</button></div></details>`:!pending?`<button data-request="${esc(request.id)}" ${requestError?'disabled':''}>查看权限</button>`:''}${!r?`<button data-request-archive="${esc(request.id)}" ${busy?'disabled':''}>${item.archived?'恢复申请':'归档申请'}</button>`:''}</div>${item.requests.length?`<details class="project-details" ${expanded.has(item.key)?'open':''}><summary data-details="${esc(item.key)}">授权记录</summary><div class="project-detail-body">${item.requests.map(q=>`<div><span>${esc(statusText[q.status])}</span><span>${esc(localTime(q.updated_at))}</span><button data-request="${esc(q.id)}">查看权限</button></div>`).join('')}</div></details>`:''}</article>`;
   }).join('')}`:`<div class="empty">${query||category?'没有匹配的项目':view==='pending'?'没有待授权项目':view==='archived'?'暂无归档项目':'暂无项目'}</div>`;
-  paintSelection();
+  thumbnails.paint();paintSelection();
   for(const article of main.querySelectorAll('[data-project-key]'))for(const menu of article.querySelectorAll('.project-more'))menu.open=menus.has(article.dataset.projectKey+'|'+(menu.classList.contains('project-order')?'order':'more'));
   if(focusedKey&&focusedAction){
    [...main.querySelectorAll('[data-project-key]')].find(el=>el.dataset.projectKey===focusedKey)?.querySelector(`[${focusedAction}]`)?.focus({preventScroll:true});
@@ -126,14 +130,24 @@ export async function mountProjects(main,bootReady){
  }
  function receive(value){
   if(epoch!==generation)return;
+  if(!preferencesLoaded){
+   const p=value.preferences||{};sort=['updated','manual','oldest','name','name-desc'].includes(p.sort)?p.sort:'updated';
+   category=typeof p.category==='string'?p.category:'';onlyDelivery=p.only_delivery===true;preferencesLoaded=true;
+  }
   rows=value.rows;requests=validateRequests(value.requests);order=value.order||{revision:0,ids:[]};requestError='';
   $('#project-connection').textContent='登记索引已加载';paintRequests();
  }
  async function changed(){const value=await projectIndex(true);receive(value);}
  $('#project-query').oninput=e=>{query=e.target.value;paint();};
- $('#project-category').onchange=e=>{category=e.target.value;paint();};
- $('#project-sort').onchange=e=>{sort=e.target.value;paint();};
- $('#project-only-delivery').onchange=e=>{onlyDelivery=e.target.checked;paint();};
+ function savePreferences(){
+  preferencesLoaded=true;const value={sort,category,only_delivery:onlyDelivery};
+  preferenceWrites=preferenceWrites.catch(()=>{}).then(()=>api('projects.preferences',value)).catch(error=>{
+   if(epoch===generation)$('#archive-status').textContent=`列表偏好未保存。${error.message}`;
+  });
+ }
+ $('#project-category').onchange=e=>{category=e.target.value;savePreferences();paint();};
+ $('#project-sort').onchange=e=>{sort=e.target.value;savePreferences();paint();};
+ $('#project-only-delivery').onchange=e=>{onlyDelivery=e.target.checked;savePreferences();paint();};
  main.onchange=e=>{
   const input=e.target.closest('[data-project-select]');
   if(input){input.checked?selectedProjects.add(input.dataset.projectSelect):selectedProjects.delete(input.dataset.projectSelect);paintSelection();}
@@ -225,7 +239,7 @@ export async function mountProjects(main,bootReady){
  };
  mountFolderActions(main,changed,()=>rows);
  readInstance();
- try{receive(await projectIndex());}catch(error){if(epoch===generation)$('#project-connection').textContent=error.message;}
+ try{await preferenceWrites;receive(await projectIndex(true));}catch(error){if(epoch===generation)$('#project-connection').textContent=error.message;}
  if(epoch===generation){const release=watchProjectIndex(receive,error=>{$('#project-connection').textContent=error.message;});const oldDispose=dispose;dispose=()=>{release();oldDispose?.();};}
 
 }

@@ -234,7 +234,9 @@ def snapshot(manager, key):
         suggested.sort(key=lambda r: preferred.index(r['id']) if r['id'] in preferred else len(preferred))
     from .project_status import graph
     from scripts.project_flow import STEP_TYPES
+    from .pptagent_metrics import project_status as assistant_status
     return {**state, 'project': key, 'path': str(root), 'workflow_status': workflow.get('status'),
+            'assistant':assistant_status(manager,key,state),
             'display_graph':graph(state), 'step_types':STEP_TYPES,
             'notes': journal.notes(root),
             'recommendations': suggested, 'summary': summary,

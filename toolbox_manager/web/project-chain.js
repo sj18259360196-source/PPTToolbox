@@ -1,3 +1,7 @@
+import {renderProjectAssistance} from './pptagent-visibility.js';
+import {createImageViewer} from './project-image-viewer.js';
+import {mountProjectFiles} from './project-file-browser.js';
+import {mountProjectReference} from './project-reference.js';
 import {mountProjectFlow} from './project-flow.js';
 import {api} from './api.js';
 import {projectIndex} from './project-index.js';
@@ -7,8 +11,8 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const stages=[['intake','接单与确认'],['plan','确定方案'],['production','制作 PPT'],['revision','整理与修订'],['delivery','交付']];
 const eventLabels={begin:'开始',transition:'阶段切换',finish:'交付收尾',replan:'调整方案',blocked:'等待处理',pause:'暂停',resume:'恢复'};
 const callLabels={running:'执行中',started:'已受理',completed:'已完成',tool_failed:'失败',failed:'失败',outcome_unknown:'结果待确认',action_required:'等待处理',blocked:'等待处理',permission_denied:'等待授权',invalid_arguments:'参数无效',invalid_submission:'提交无效',invalid_operation:'操作无效',missing_file:'文件缺失',office_busy:'Office 被占用',writer_busy:'写入被占用',no_results:'未找到素材'};
-let epoch=0,timer,refreshNow,images=[],dispose,flowView;
-export function stopWorkbench(){epoch++;clearTimeout(timer);refreshNow=null;flowView?.dispose();flowView=null;dispose?.();dispose=null;images.forEach(URL.revokeObjectURL);images=[];}
+let epoch=0,timer,refreshNow,images=[],dispose,flowView,referenceView;
+export function stopWorkbench(){epoch++;clearTimeout(timer);refreshNow=null;referenceView?.dispose();referenceView=null;flowView?.dispose();flowView=null;dispose?.();dispose=null;images.forEach(URL.revokeObjectURL);images=[];}
 export function refreshWorkbench(){refreshNow?.();}
 export async function mountWorkbench(main){
  stopWorkbench();const generation=epoch;
@@ -16,10 +20,18 @@ export async function mountWorkbench(main){
  const rows=(await projectIndex()).rows;if(generation!==epoch)return;
  if(!key)key=rows.find(r=>!r.error&&!r.archived)?.id;
  if(!key){main.innerHTML='<div class="panel panel-body"><h1>项目工作链</h1><p>先创建项目文件夹，或让 Agent 开始制作。</p><a href="#/projects">查看项目</a></div>';return;}
- const row=rows.find(r=>r.id===key);
+ const row=rows.find(r=>r.id===key),family=projectFamily(rows,key);
  const ancestors=[];let parent=row;const seen=new Set();while(parent&&!seen.has(parent.id)){seen.add(parent.id);ancestors.unshift(parent);parent=rows.find(r=>r.id===parent.parent_id);}
- main.innerHTML=`<section class="project-chain"><header class="chain-head"><div><nav class="chain-breadcrumb" aria-label="项目路径"><a href="#/projects">所有项目</a>${ancestors.map(r=>`<span>/</span><a href="#/workbench?project=${encodeURIComponent(r.id)}" ${r.id===key?'aria-current="page"':''}>${esc(r.label)}</a>`).join('')}</nav><h1>${esc(row?.label||'项目')}</h1></div><button data-open-root>打开文件夹</button></header><p class="small muted" id="chain-sync" role="status">正在读取项目记录</p><section id="chain-alerts" class="chain-alerts" aria-label="项目异常" aria-live="polite"></section><div class="chain-layout"><aside class="chain-tree"><h2>项目文件夹</h2>${tree(projectFamily(rows,key),null,key)}</aside><section class="chain-overview panel panel-body" id="chain-overview"></section><section class="chain-preview-panel panel panel-body"><h2>当前 PPT</h2><div id="chain-preview"></div></section><section class="chain-flow-panel panel panel-body"><div class="chain-section-head"><h2>运行路径</h2><span class="small muted">自动排布与连线</span></div><div id="project-flow"></div></section><div class="chain-body"><details class="panel panel-body chain-stage-details"><summary>大阶段记录</summary><div class="stage-list" id="stage-list"></div><div id="stage-detail"></div></details><details class="panel panel-body chain-auxiliary"><summary>实际工具调用</summary><div id="chain-calls"></div></details><details class="panel panel-body chain-auxiliary"><summary>本次可用经验</summary><div id="chain-experiences"></div></details><details class="panel panel-body chain-auxiliary"><summary>路径调整与打卡记录</summary><div id="chain-checkpoints"></div></details></div><aside class="chain-side"><section class="panel panel-body"><h2>PPTAgent</h2><div id="chain-helper"></div></section><section class="panel panel-body"><h2>项目文件</h2><div id="chain-files"></div></section></aside></div></section>`;
+ main.innerHTML=`<section class="project-chain"><header class="chain-head"><div><nav class="chain-breadcrumb" aria-label="项目路径"><a href="#/projects">所有项目</a>${ancestors.map(r=>`<span>/</span><a href="#/workbench?project=${encodeURIComponent(r.id)}" ${r.id===key?'aria-current="page"':''}>${esc(r.label)}</a>`).join('')}</nav><h1>${esc(row?.label||'项目')}</h1></div><button data-open-root>打开文件夹</button></header><p class="small muted" id="chain-sync" role="status">正在读取项目记录</p><section id="chain-alerts" class="chain-alerts" aria-label="项目异常" aria-live="polite"></section><div class="chain-layout">${family.length>1?`<details class="chain-tree"><summary>关联项目 · ${family.length}</summary><div>${tree(family,null,key)}</div></details>`:''}<section class="chain-reference-panel panel panel-body"><h2>参考图</h2><div id="chain-reference"></div></section><section class="chain-overview panel panel-body" id="chain-overview"></section><section class="chain-preview-panel panel panel-body"><h2>当前 PPT</h2><div id="chain-preview"></div></section><section class="chain-assistance panel panel-body" id="chain-assistance" aria-label="PPTAgent 辅助状态"></section><nav class="chain-tabs" role="tablist" aria-label="项目详情">${[['flow','运行路径'],['files','项目文件'],['records','制作记录'],['helper','助手摘要']].map(([id,label],i)=>`<button id="chain-tab-${id}" role="tab" aria-controls="chain-pane-${id}" aria-selected="${!i}" tabindex="${i?-1:0}" data-chain-tab="${id}">${label}</button>`).join('')}</nav><section id="chain-pane-flow" role="tabpanel" aria-labelledby="chain-tab-flow" class="chain-flow-panel panel panel-body"><div class="chain-section-head"><h2>运行路径</h2><span class="small muted">自动排布与连线</span></div><div id="project-flow"></div></section><div id="chain-pane-records" role="tabpanel" aria-labelledby="chain-tab-records" class="chain-body" hidden><details class="panel panel-body chain-stage-details"><summary>大阶段记录</summary><div class="stage-list" id="stage-list"></div><div id="stage-detail"></div></details><details class="panel panel-body chain-auxiliary"><summary>实际工具调用</summary><div id="chain-calls"></div></details><details class="panel panel-body chain-auxiliary"><summary>本次可用经验</summary><div id="chain-experiences"></div></details><details class="panel panel-body chain-auxiliary"><summary>路径调整与打卡记录</summary><div id="chain-checkpoints"></div></details></div><section id="chain-pane-helper" role="tabpanel" aria-labelledby="chain-tab-helper" class="chain-side panel panel-body" hidden><h2>助手摘要</h2><div id="chain-helper"></div></section><section id="chain-pane-files" role="tabpanel" aria-labelledby="chain-tab-files" class="chain-file-browser panel panel-body" hidden><div id="chain-files"></div></section></div></section>`;
  const $=id=>main.querySelector('#'+id);
+ const viewer=createImageViewer(main);let filesMounted=false;
+ function selectTab(id){
+  main.querySelectorAll('[data-chain-tab]').forEach(b=>{const selected=b.dataset.chainTab===id;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;$('chain-pane-'+b.dataset.chainTab).hidden=!selected;});
+  if(id==='files'&&!filesMounted){filesMounted=true;mountProjectFiles($('chain-files'),key,false,{initialGroup:'delivery'}).catch(e=>{filesMounted=false;$('chain-files').textContent=e.message;});}
+ }
+ main.querySelector('.chain-tabs').onclick=e=>{const id=e.target.closest('[data-chain-tab]')?.dataset.chainTab;if(id)selectTab(id);};
+ main.querySelector('.chain-tabs').onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const buttons=[...main.querySelectorAll('[data-chain-tab]')],index=buttons.indexOf(document.activeElement);if(index<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;selectTab(buttons[next].dataset.chainTab);buttons[next].focus();};
+ referenceView=mountProjectReference($('chain-reference'),key);referenceView.refresh();
  flowView=mountProjectFlow($('project-flow'),{onAction:flowAction});
  const notesButton=document.createElement('button');notesButton.textContent='项目说明';notesButton.dataset.notes='';main.querySelector('.chain-head').append(notesButton);
  mountFolderActions(main,async()=>{},()=>rows,{parent:key});
@@ -42,7 +54,7 @@ export async function mountWorkbench(main){
   $('stage-list').onclick=e=>{const id=e.target.closest('[data-stage]')?.dataset.stage;if(id){selectedStage=id;detail();}};detail();
   const calls=s.activity?.calls||[];
   const connection=s.activity?.connection;
-  $('chain-overview').insertAdjacentHTML('beforeend',`<p class="small muted">${connection?.connected_count?'工具箱当前有 Agent 连接':'当前未检测到工具箱 Agent 连接'}。连接情况不代表本项目正在执行，其他软件中的活动暂不可见。</p>`);
+  $('chain-overview').insertAdjacentHTML('beforeend',`<details class="chain-connection"><summary>${connection?.connected_count?'Agent 已连接':'Agent 未连接'}</summary><p>连接情况不代表本项目正在执行，其他软件中的活动暂不可见。</p></details>`);
   renderCalls();
   const used=new Set((s.checkpoints||[]).flatMap(c=>c.used_experiences||[]));
   $('chain-experiences').innerHTML=(s.recommendations||[]).map(r=>`<details class="experience-card"><summary><b>${esc(r.title)}</b><span>${used.has(r.id)?'Agent 已报告采用':'供本阶段参考'}</span></summary><p>${esc(r.trigger)}</p><ol>${r.actions.map(a=>`<li>${esc(a)}</li>`).join('')}</ol><p class="small muted">${esc(r.constraints.join('；'))}</p><p class="small muted">${esc(r.id)} · 来源 ${esc(r.sources.map(x=>x.source_id).join('、'))} · 历史方法，当前效果待验证</p></details>`).join('')||'<p class="muted">当前没有足够相关的经验，软件不会凑满推荐数量。</p>';
@@ -50,7 +62,8 @@ export async function mountWorkbench(main){
   $('chain-checkpoints').innerHTML=checks.slice(-30).reverse().map(c=>`<details class="checkpoint-record ${c.event==='replan'?'branch':''}"><summary>${c.event==='replan'?'↳ ':''}${esc(eventLabels[c.event])} · ${esc(Object.fromEntries(stages)[c.stage])}<small>${esc(new Date(c.received_at).toLocaleString())}</small></summary><p>${esc(c.result_summary)}</p><p>下一步　${esc(c.next_action||'未登记')}</p>${c.artifact_refs?.length?`<p>相关文件　${esc(c.artifact_refs.join('、'))}</p>`:''}${c.used_experiences?.length?`<p>实际采用　${esc(c.used_experiences.join('、'))}</p>`:''}<p class="small muted">记录来自制作 Agent，工具执行与产物状态单独核对。</p></details>`).join('')||'<p class="muted">尚无阶段打卡。此前的调用记录继续保留。</p>';
   const helper=s.summary||{};
   $('chain-helper').innerHTML=`<p>${esc(helper.status==='ready'?'后台整理已更新':helper.status==='unavailable'?helper.message:'本地采集正常，可在 Agent 接入中配置 API')}</p>${helper.summary?`<p class="helper-summary">${esc(helper.summary)}</p><p class="small muted">${helper.status==='unavailable'?'上次整理，尚未同步本次变化':'辅助归纳'} · ${esc((helper.evidence_ids||[]).join('、'))}</p>`:''}${helper.next_hint?`<p class="small muted">预计后续　${esc(helper.next_hint)}</p>`:''}${s.management_note?`<p class="small muted">PPTAgent 管理备注</p><p class="helper-summary">${esc(s.management_note.text)}</p>`:''}<a href="#/pptagent?project=${encodeURIComponent(key)}">打开管理助手</a>`;
-  $('chain-files').innerHTML=(s.files||[]).filter(f=>f.name!=='office-render.json').slice(0,12).map(f=>`<button class="chain-file" data-open="${esc(f.path)}" title="${esc(f.path)}"><strong>${esc(f.name)}</strong><small>${esc(f.path)}</small></button>`).join('')||'<p class="muted">尚无候选 PPT 或说明文件。</p>';
+  // File inventory is loaded on demand, with explicit delivery/history groups.
+
  }
  function alerts(){
   const s=current||{},issues=(s.activity?.issues||[]).filter(i=>i.state==='open');
@@ -72,6 +85,7 @@ export async function mountWorkbench(main){
  function flowAction(action,node){
   if(action==='notes'){editNotes();return;}
   if(action==='icons'||action==='graphics'){location.hash=`#/${action}?project=${encodeURIComponent(key)}`;return;}
+  if(action==='calls')selectTab('records');else if(action==='files')selectTab('files');
   const target=$(action==='calls'?'chain-calls':action==='preview'?'chain-preview':'chain-files');
   if(action==='calls'){callFilter=node?.call_ids||null;renderCalls();target.closest('details').open=true;}
   target.scrollIntoView({block:'center',behavior:'smooth'});target.classList.remove('chain-highlight');void target.offsetWidth;target.classList.add('chain-highlight');
@@ -82,10 +96,13 @@ export async function mountWorkbench(main){
   const result=await api('project.simple-previews',undefined,{project:key});if(generation!==epoch||request!==previewSerial)return;
   previewError='';alerts();
   previewRetry=(result.decks||[]).some(d=>/正在保存|等待扫描/.test(d.state))?Date.now()+3000:0;
-  const decks=result.decks||[];if(!decks.length){$('chain-preview').innerHTML='<div class="simple-preview-empty">Agent 保存 PPT 后，软件会自动发现文件与匹配预览。</div>';return;}
+  const decks=result.decks||[];if(!decks.length){previewSignature='';deckPath='';page=0;images.forEach(URL.revokeObjectURL);images=[];$('chain-preview').innerHTML='<div class="simple-preview-empty">Agent 保存 PPT 后，软件会自动发现文件与匹配预览。</div>';return;}
   let deck=decks[0];if(deckPath!==deck.path)page=0;deckPath=deck.path;page=Math.min(page,Math.max(0,deck.slides.length-1));
   const signature=JSON.stringify([decks,deckPath,page]);if(signature===previewSignature)return;
-  $('chain-preview').innerHTML=`<p class="current-deck" title="${esc(deck.path)}">${esc(deck.name)}</p><div class="simple-preview-image">${deck.slides.length?'<img alt="当前 PPT 页面" id="simple-slide">':'<p>已有 PPT，预览待更新</p>'}</div><div class="simple-preview-pager"><button id="chain-prev" aria-label="上一页" ${page===0?'disabled':''}>‹</button><span>${deck.slides.length?page+1:0} / ${deck.slides.length}</span><button id="chain-next" aria-label="下一页" ${page>=deck.slides.length-1?'disabled':''}>›</button></div><p class="small muted">${esc(deck.state)}</p><button data-open="${esc(deckPath)}">打开 PPT</button>`;
+  $('chain-preview').innerHTML=`${deck.slides.length?'<button class="chain-slide-image" aria-label="放大当前 PPT"><img alt="当前 PPT 页面" id="simple-slide"></button>':'<div class="simple-preview-empty">已有 PPT，预览待更新</div>'}<div class="chain-media-footer"><span title="${esc(deck.path)}">${esc(deck.name)}</span><div class="simple-preview-pager"><button id="chain-prev" aria-label="上一页 PPT" ${page===0?'disabled':''}>‹</button><span>${deck.slides.length?page+1:0} / ${deck.slides.length}</span><button id="chain-next" aria-label="下一页 PPT" ${page>=deck.slides.length-1?'disabled':''}>›</button></div></div><div class="chain-media-actions"><span class="small muted">${esc(deck.state)}</span><div class="actions">${deck.slides.length?'<button data-enlarge-ppt>放大预览</button>':''}<button data-open="${esc(deckPath)}">打开 PPT</button></div></div>`;
+  const readSlide=async()=>{const response=await fetch('/api/project.simple-image?'+new URLSearchParams({project:key,path:deck.slides[page]}),{headers:{Authorization:'Bearer '+sessionStorage.getItem('ppt-manager-token')}});if(!response.ok)throw Error('预览已变化，稍后自动刷新');return response.blob();};
+  $('chain-preview').querySelector('.chain-slide-image')?.addEventListener('click',()=>viewer.open('当前 PPT · '+deck.name,readSlide).catch(showPreviewError));
+  $('chain-preview').querySelector('[data-enlarge-ppt]')?.addEventListener('click',()=>viewer.open('当前 PPT · '+deck.name,readSlide).catch(showPreviewError));
   $('chain-prev').onclick=()=>{page--;preview().catch(showPreviewError);};$('chain-next').onclick=()=>{page++;preview().catch(showPreviewError);};
   if(deck.slides.length){
    const response=await fetch('/api/project.simple-image?'+new URLSearchParams({project:key,path:deck.slides[page]}),{headers:{Authorization:'Bearer '+sessionStorage.getItem('ppt-manager-token')}});
@@ -95,7 +112,7 @@ export async function mountWorkbench(main){
   previewSignature=signature;
  }
  function showError(e){if(generation===epoch){fetchError=e.message;alerts();}}
- function showPreviewError(e){if(generation===epoch){previewError=e.message;alerts();}}
+ function showPreviewError(e){if(generation===epoch){previewSignature='';previewRetry=Date.now()+3000;previewError=e.message;alerts();}}
  function editNotes(){
   if(!current?.notes)return;
   const notes=current.notes,dialog=document.createElement('dialog');dialog.className='project-editor chain-notes';
@@ -104,16 +121,18 @@ export async function mountWorkbench(main){
   dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=dialog.querySelector('[type=submit]');button.disabled=true;try{await api('project.notes.save',{project:key,text:e.target.elements.notes.value,revision:notes.revision});dialog.close();await poll();}catch(error){dialog.querySelector('[role=alert]').textContent=error.message;}finally{button.disabled=false;}};
  }
  const click=async e=>{
+  if(e.target.closest('.chain-file-browser'))return;
+  if(e.target.closest('[data-assistant-details]')){selectTab('helper');$('chain-pane-helper').scrollIntoView({block:'start',behavior:'smooth'});return;}
   const issue=e.target.closest('[data-ack-issue]');if(issue){issue.disabled=true;try{await api('project.issue.acknowledge',{project:key,id:issue.dataset.ackIssue,sequence:current.sequence});await poll();}catch(error){showError(error);}finally{issue.disabled=false;}return;}
   const call=e.target.closest('[data-show-call]');if(call){flowAction('calls',{call_ids:[call.dataset.showCall]});return;}
   if(e.target.closest('[data-all-calls]')){callFilter=null;renderCalls();return;}
   const jump=e.target.closest('[data-flow-jump]');if(jump){flowAction(jump.dataset.flowJump);return;}
   if(e.target.closest('[data-notes]')){editNotes();return;}const file=e.target.closest('[data-open]');if(!file&&!e.target.closest('[data-open-root]'))return;try{await api('project.open',{project:key,path:file?.dataset.open,action:file?'open':'reveal'});}catch(error){showError(error);}};
- main.addEventListener('click',click);dispose=()=>{main.removeEventListener('click',click);main.querySelectorAll('.chain-notes').forEach(d=>d.remove());};
+ main.addEventListener('click',click);dispose=()=>{viewer.dispose();main.removeEventListener('click',click);main.querySelectorAll('.chain-notes').forEach(d=>d.remove());};
  async function poll(){
   if(generation!==epoch||busy)return;busy=true;clearTimeout(timer);
   try{const next=await api('project.activity',undefined,{project:key});if(generation!==epoch)return;
-   fetchError='';current=next;alerts();
+   fetchError='';current=next;alerts();referenceView.refresh();const assistanceHtml=renderProjectAssistance(next,key);if($('chain-assistance').innerHTML!==assistanceHtml)$('chain-assistance').innerHTML=assistanceHtml;
    $('chain-sync').textContent=next.observer_error||next.manifest_warning||(next.syncing?'正在建立项目记录':`记录已同步 · ${new Date(next.updated_at).toLocaleString()}`);
    if(sequence!==next.sequence){sequence=next.sequence;paint(next);preview().catch(showPreviewError);}
    else if(previewRetry&&Date.now()>=previewRetry){previewRetry=0;preview().catch(showPreviewError);}

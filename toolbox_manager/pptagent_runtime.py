@@ -243,7 +243,9 @@ def run_task(manager, row, stop_event):
                     'tools': schema, 'store': False, 'include': ['reasoning.encrypted_content'],
                     'max_output_tokens': 1800, 'parallel_tool_calls': False}
             if probe and turn == 0: body['tool_choice'] = {'type': 'function', 'name': 'connection_probe'}
-            response = request_json(manager, cfg, body, timeout=min(20, max(1, deadline-time.monotonic())))
+            from . import pptagent_metrics as metrics
+            with metrics.scope(project=row.get('project'),task=identifier,kind='probe' if probe else 'task'):
+                response = request_json(manager, cfg, body, timeout=min(20, max(1, deadline-time.monotonic())))
             text = output_text(response); guard()
             calls = [x for x in response['output'] if x.get('type') == 'function_call']
             if not calls:
@@ -275,6 +277,10 @@ def run_task(manager, row, stop_event):
                         else:
                             result = tool_result(manager, name, args, row.get('project'))
                         step.update(status='completed', result=redact(result))
+                        if not probe:
+                            metrics.effect(manager,row.get('project'),'tools_completed')
+                            effect={'record_project_note':'notes_saved','update_work_graph':'graphs_updated','apply_request_policy':'requests_handled'}.get(name)
+                            if effect: metrics.effect(manager,row.get('project'),effect)
                     except (ValueError, PermissionError) as exc:
                         result = {'error': str(exc)[:300]}; step.update(status='failed', result=result)
                     change_task(manager, identifier, steps=steps)

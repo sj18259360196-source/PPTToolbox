@@ -88,6 +88,9 @@ class Handler(BaseHTTPRequestHandler):
                 path=safe(entry(self.server.manager,key)[0],name)
                 if path.stat().st_size>20_000_000:raise ValueError('预览图片过大')
                 self.reply(path.read_bytes(),mime=mimetypes.guess_type(path.name)[0]);return
+            if u.path == '/api/pptagent.metrics':
+                from .pptagent_metrics import snapshot
+                self.reply({'ok':True,'result':snapshot(self.server.manager)});return
             if u.path == '/api/pptagent.settings':
                 from .pptagent import config
                 self.reply({'ok':True,'result':config(self.server.manager)});return
@@ -107,6 +110,11 @@ class Handler(BaseHTTPRequestHandler):
                 from .material_policy import effective
                 root = self.server.workbench.entry(a['project'])[0] if a.get('project') else None
                 self.reply({'ok':True,'result':effective(self.server.manager,root)});return
+            if u.path == '/api/project.thumbnail':
+                from .project_thumbnails import image
+                thumbnail = image(self.server.manager, a.get('project'))
+                self.reply(thumbnail or b'', status=200 if thumbnail else 204, mime='image/jpeg')
+                return
             if u.path in {'/api/project.gallery','/api/project.preview'}:
                 from .project_gallery import gallery,image
                 if u.path.endswith('.gallery'): self.reply({'ok':True,'result':gallery(self.server.manager,a.get('project'))})
@@ -259,6 +267,9 @@ class Handler(BaseHTTPRequestHandler):
                     self.reply({'ok':True,'result':self.server.workbench.write(json.loads(raw))});return
                 if u.path=='/api/workbench.preferences.save':
                     self.reply({'ok':True,'result':self.server.workbench.save_preferences(json.loads(raw))});return
+                if u.path=='/api/projects.preferences':
+                    from .projects import list_preferences
+                    self.reply({'ok':True,'result':list_preferences(self.server.manager,json.loads(raw))});return
                 if u.path=='/api/projects.update':
                     from .projects import update_metadata
                     self.reply({'ok':True,'result':update_metadata(self.server.manager,json.loads(raw))});return

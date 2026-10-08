@@ -8,6 +8,21 @@ from pathlib import Path
 from .storage import digest, stamp
 
 
+def list_preferences(manager, body=None):
+    saved = manager.store.get('project_list_preferences', {}) if body is None else body
+    if not isinstance(saved, dict):
+        saved = {}
+    value = {'sort': saved.get('sort', 'updated'), 'category': saved.get('category', ''),
+             'only_delivery': saved.get('only_delivery') is True}
+    if value['sort'] not in ('updated', 'manual', 'oldest', 'name', 'name-desc'):
+        value['sort'] = 'updated'
+    if not isinstance(value['category'], str) or len(value['category']) > 48:
+        value['category'] = ''
+    if body is not None:
+        manager.store.set('project_list_preferences', value)
+    return value
+
+
 def mutate(store, operation):
     with store.db() as connection:
         connection.execute("BEGIN IMMEDIATE")
@@ -37,7 +52,8 @@ def directory(manager):
     order = _list_order({r['id']: r for r in rows}, requests, manager.store.get('project_list_order', {}))
     revision = digest(json.dumps({'rows':[{k:v for k,v in r.items() if k!='updated_at'} for r in rows],
                                   'requests':requests, 'order':order}, sort_keys=True, ensure_ascii=False))
-    return {'rows':rows, 'requests':requests, 'revision':revision, 'order':order}
+    return {'rows':rows, 'requests':requests, 'revision':revision, 'order':order,
+            'preferences':list_preferences(manager)}
 
 
 def _list_order(projects, requests, saved):

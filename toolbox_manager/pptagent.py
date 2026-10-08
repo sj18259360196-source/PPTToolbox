@@ -87,6 +87,18 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def request_json(manager, cfg, body, timeout=20):
+    from . import pptagent_metrics as metrics
+    ticket=metrics.start(manager,cfg)
+    try:
+        result=_request_json(manager,cfg,body,timeout)
+    except Exception as exc:
+        metrics.finish(manager,ticket,error=exc)
+        raise
+    metrics.finish(manager,ticket,response=result)
+    return result
+
+
+def _request_json(manager, cfg, body, timeout=20):
     # Keep the small management workload responsive without another UI setting.
     if cfg.get('protocol') == 'responses' and cfg.get('model') == 'gpt-6.1-sol':
         body = {'reasoning': {'effort': 'low'}, **body}
@@ -147,12 +159,14 @@ def request_summary(manager, cfg, payload):
 class Worker:
     def __init__(self,manager):
         self.manager=manager; self.pending={}; self.seen={}; self.lock=threading.Lock(); self.stop_event=threading.Event()
-        self.task_event=threading.Event()
+        self.processing=set(); self.task_event=threading.Event()
         self.thread=threading.Thread(target=self.run,name='pptagent-summary',daemon=True)
 
     def start(self):
         from .pptagent_runtime import recover
         recover(self.manager)
+        from .pptagent_metrics import recover as recover_metrics
+        recover_metrics(self.manager)
         self.thread.start()
     def close(self): self.stop_event.set(); self.thread.join(timeout=1)
 
@@ -180,7 +194,9 @@ class Worker:
                  'files':[f['path'] for f in state.get('files',[])[:20]],'evidence_ids':evidence,
                  'recommendations':[{'id':r['id'],'title':r['title'],'trigger':r['trigger']} for r in candidates]}
         try:
-            result=request_summary(self.manager,cfg,payload)
+            from . import pptagent_metrics as metrics
+            with metrics.scope(project=key,kind='summary'):
+                result=request_summary(self.manager,cfg,payload)
             summary={**result,'status':'ready','at':journal.now(),'basis_sequence':sequence}
         except Exception as exc:
             # Do not persist provider response bodies or credentials in project records.
@@ -192,6 +208,10 @@ class Worker:
         saved=journal.update(root,{'summary':summary},'pptagent.summary',expected_sequence=sequence)
         if not saved.get('discarded'):
             self.seen[key]=signature
+            if summary['status']=='ready':
+                metrics.effect(self.manager,key,'summaries_saved')
+                metrics.effect(self.manager,key,'evidence_reviewed',len(set(summary['evidence_ids'])))
+                if summary['recommended_ids']: metrics.effect(self.manager,key,'recommendations_selected',len(summary['recommended_ids']))
 
     def run(self):
         while not self.stop_event.wait(.5):
@@ -208,5 +228,8 @@ class Worker:
                 if ready:self.pending.pop(ready[0],None)
             if ready:
                 key,(sequence,signature,_)=ready
+                with self.lock:self.processing.add(key)
                 try:self.process(key,sequence,signature)
                 except Exception: self.seen[key]=signature
+                finally:
+                    with self.lock:self.processing.discard(key)
