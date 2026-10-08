@@ -10,14 +10,21 @@ def stop_idle(destination,uninstall=False):
     location=destination/"location.json"
     if not location.exists():return
     data=no_reparse(json.loads(location.read_text(encoding="utf-8"))["data_directory"])
-    with sqlite3.connect(data/"manager.sqlite3") as db:audit(data,db)
-    if not controllers([destination,data]):return
+    # The old idle controller may own a historical call. Ask it to exit before
+    # inspecting PIDs; never turn a missing completion event into a permanent
+    # upgrade block. Locks and queued/running resident tasks still block here.
+    with sqlite3.connect(data/"manager.sqlite3") as db:audit(data,db,check_calls=False)
+    if not controllers([destination,data]):
+        with sqlite3.connect(data/"manager.sqlite3") as db:audit(data,db,quiescent=True)
+        return
     signal=data/"UPDATE_REQUEST.json"
     signal.write_text(json.dumps({"data":str(data),"created":time.time(),'mode':'uninstall' if uninstall else 'upgrade'}),encoding="utf-8")
     try:
         until=time.monotonic()+12
         while time.monotonic()<until:
-            if not controllers([destination,data]):return
+            if not controllers([destination,data]):
+                with sqlite3.connect(data/"manager.sqlite3") as db:audit(data,db,quiescent=True)
+                return
             time.sleep(.3)
         raise ValueError("旧版后台或 Agent 仍在运行。请从托盘退出工具箱，并停止其 MCP 服务后重试。当前任务和文件未被强制终止。")
     finally:signal.unlink(missing_ok=True)

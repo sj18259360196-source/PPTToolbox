@@ -56,7 +56,7 @@ def verify(bundle):
     return manifest
 
 
-def audit(data, db):
+def audit(data, db, *, check_calls=True, quiescent=False, process_probe=None):
     schema=db.execute("SELECT value FROM kv WHERE key='schema_version'").fetchone()
     if schema and json.loads(schema[0]) != 1:
         raise ValueError('管理数据库版本不兼容，不能更新或回退到此版本')
@@ -67,8 +67,23 @@ def audit(data, db):
         value=json.loads(body);key=value.get("call_id")
         if not key:continue
         if action in ("tool.finished","tool.reconciled"):active.pop(key,None)
-        elif action in ("tool.started","tool.authorized","tool.launched"):active[key]=value
-    if active:raise ValueError("存在未决调用，请先核对结果再更新")
+        elif action in ("tool.started","tool.authorized","tool.launched"):
+            active[key]={**active.get(key, {}), **value}
+    # Historical outcomes remain unknown. Updating program files does not replay
+    # calls or certify their results. Callers must first stop the old controllers.
+    if check_calls:
+        if active and not quiescent:
+            raise ValueError("存在未决调用，请退出旧版及其 Agent 服务后运行新版安装包。安装程序将在确认进程停止后保留历史记录并继续升级。")
+        if process_probe is None:
+            from toolbox_manager.execution import process_alive
+            process_probe = process_alive
+        for key, value in active.items():
+            pids = {value.get(name) for name in ('worker_pid', 'owner_pid')} - {None, 0}
+            if any(process_probe(pid) is not False for pid in pids):
+                raise ValueError(f"调用仍在运行或无法确认进程状态，更新已暂停。项目 {value.get('project') or '未登记'}，工具 {value.get('tool_id') or '未知'}，调用 {key}。请退出旧版及其 Agent 服务后重试；历史数据会保留。")
+            project = value.get('project')
+            if project and (Path(project)/'workflow/writer.lock').exists():
+                raise ValueError(f"项目仍有写入锁，更新已暂停。项目 {project}，调用 {key}。请先核对写入状态。")
     row=db.execute("SELECT value FROM kv WHERE key='pptagent_tasks'").fetchone()
     tasks=json.loads(row[0]) if row else []
     tasks=tasks.values() if isinstance(tasks,dict) else tasks
@@ -78,6 +93,9 @@ def audit(data, db):
     for item in (json.loads(row[0]) if row else {}).values():
         if (Path(item["path"])/"workflow/writer.lock").exists():
             raise ValueError("项目仍有写入锁，请完成当前任务后更新")
+    return [{"call_id": key, "project": value.get('project'),
+             "tool_id": value.get('tool_id'), "outcome": "unknown_preserved"}
+            for key, value in active.items()]
 
 
 def upgrade(bundle, destination, process_check=controllers, validate=None):
@@ -110,7 +128,12 @@ def upgrade(bundle, destination, process_check=controllers, validate=None):
     if active:
         raise ValueError("请从工具箱托盘退出旧后台，并停止其 Agent 服务，再重新打开新版。占用进程 "+str(active))
     db=data/"manager.sqlite3"
-    owner=storage_fence.acquire(db,lambda c:audit(data,c))
+    preserved_calls=[]
+    def audit_update(connection):
+        if process_check([destination,data]):
+            raise ValueError("更新期间后台重新启动，请退出后重试")
+        preserved_calls.extend(audit(data,connection,quiescent=True))
+    owner=storage_fence.acquire(db,audit_update)
     stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     # Backups are persistent upgrade recovery assets, not temporary scratch.
     backup=data/"application-updates"/stamp
@@ -153,7 +176,8 @@ def upgrade(bundle, destination, process_check=controllers, validate=None):
         if validate:validate(destination)
         report={"status":"updated","version":incoming["version"],"installation":str(destination),
                 "data_directory":str(data),"backup":str(backup),"changed_files":len(changed),
-                "settings_preserved":True,"mcp_path_preserved":True,"experience_library":library}
+                "settings_preserved":True,"mcp_path_preserved":True,"experience_library":library,
+                "historical_calls_preserved":preserved_calls}
         (backup/"receipt.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
         pending.unlink()
         return report

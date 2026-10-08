@@ -59,13 +59,93 @@ def test_reinstall_restores_removed_program_and_keeps_data(installed):
     assert upgrade(src,dest,process_check=lambda _:[])["status"]=="updated"
     assert state(data)==before and (dest/"runtime/python.exe").exists()
 
-def test_unresolved_call_blocks_update(installed):
+def test_legacy_unresolved_call_preserved_without_blocking_update(installed):
     src,dest,data=installed
     m=Manager(data,root=dest/"app")
     m.store.event("tool.started","fixture",details={"call_id":"unknown"})
-    with pytest.raises(ValueError,match="未决"):
+    before=state(data)
+    with sqlite3.connect(data/'manager.sqlite3') as db:
+        events=db.execute('SELECT * FROM events ORDER BY id').fetchall()
+    result=upgrade(src,dest,process_check=lambda _:[])
+    assert result['historical_calls_preserved']==[{'call_id':'unknown','project':None,'tool_id':None,'outcome':'unknown_preserved'}]
+    assert state(data)==before
+    with sqlite3.connect(data/'manager.sqlite3') as db:
+        assert db.execute('SELECT * FROM events ORDER BY id').fetchall()==events
+    assert (dest/"app/example.txt").read_text()=="1.8.2-icons"
+
+@pytest.mark.parametrize('alive', [True, None])
+def test_live_or_uninspectable_call_blocks_update(installed, monkeypatch, alive):
+    src,dest,data=installed
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'live','owner_pid':123})
+    monkeypatch.setattr('toolbox_manager.execution.process_alive',lambda pid: alive)
+    with pytest.raises(ValueError,match='调用仍在运行或无法确认'):
         upgrade(src,dest,process_check=lambda _:[])
-    assert (dest/"app/example.txt").read_text()=="1.8.1-icons"
+    assert (dest/'app/example.txt').read_text()=='1.8.1-icons'
+
+def test_dead_call_upgrade_preserves_project_and_unknown_result(installed, tmp_path, monkeypatch):
+    src,dest,data=installed
+    project=tmp_path/'中文项目'; (project/'workflow').mkdir(parents=True)
+    (project/'workflow/state.json').write_text('{"operation":"interrupted"}',encoding='utf-8')
+    (project/'original.pptx').write_bytes(b'original-content')
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'dead','owner_pid':123,'project':str(project)})
+    monkeypatch.setattr('toolbox_manager.execution.process_alive',lambda pid: False)
+    before={str(p):p.read_bytes() for p in project.rglob('*') if p.is_file()}
+    result=upgrade(src,dest,process_check=lambda _:[])
+    assert result['historical_calls_preserved'][0]['outcome']=='unknown_preserved'
+    assert {str(p):p.read_bytes() for p in project.rglob('*') if p.is_file()}==before
+
+def test_unregistered_pending_project_lock_blocks_update(installed,tmp_path,monkeypatch):
+    src,dest,data=installed
+    project=tmp_path/'locked';(project/'workflow').mkdir(parents=True)
+    (project/'workflow/writer.lock').write_text('locked')
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'locked','project':str(project)})
+    with pytest.raises(ValueError,match='写入锁'):
+        upgrade(src,dest,process_check=lambda _:[])
+
+def test_setup_preflight_accepts_legacy_history(installed,monkeypatch):
+    from distribution import setup_helper
+    _,dest,data=installed
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'legacy'})
+    monkeypatch.setattr(setup_helper,'controllers',lambda _:[])
+    setup_helper.stop_idle(dest)
+    assert not (data/'UPDATE_REQUEST.json').exists()
+
+def test_running_app_audit_still_blocks_legacy_history(installed):
+    from distribution.update_installed import audit
+    _,dest,data=installed
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'legacy'})
+    with sqlite3.connect(data/'manager.sqlite3') as db:
+        with pytest.raises(ValueError,match='未决'):
+            audit(data,db)
+
+def test_partial_events_retain_process_identity(installed,monkeypatch):
+    src,dest,data=installed
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'partial','owner_pid':123})
+    m.store.event('tool.authorized','fixture',details={'call_id':'partial','tool_id':'workflow.start'})
+    monkeypatch.setattr('toolbox_manager.execution.process_alive',lambda pid: True)
+    with pytest.raises(ValueError,match='partial'):
+        upgrade(src,dest,process_check=lambda _:[])
+
+def test_history_survives_failed_runtime_validation(installed):
+    src,dest,data=installed
+    m=Manager(data,root=dest/'app')
+    m.store.event('tool.started','fixture',details={'call_id':'legacy'})
+    before=state(data)
+    with sqlite3.connect(data/'manager.sqlite3') as db:
+        events=db.execute('SELECT * FROM events ORDER BY id').fetchall()
+    def reject(_):raise RuntimeError('runtime rejected')
+    with pytest.raises(RuntimeError,match='runtime rejected'):
+        upgrade(src,dest,process_check=lambda _:[],validate=reject)
+    assert state(data)==before
+    with sqlite3.connect(data/'manager.sqlite3') as db:
+        assert db.execute('SELECT * FROM events ORDER BY id').fetchall()==events
+    assert (dest/'app/example.txt').read_text()=='1.8.1-icons'
 
 def test_custom_pointer_and_stale_pointer(installed,tmp_path):
     _,dest,_=installed;local=tmp_path/"local";local.mkdir()
