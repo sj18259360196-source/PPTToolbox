@@ -121,6 +121,38 @@ def blockers(manager):
         return [str(exc)]
 
 
+def installer_process_identity(pid):
+    """Return creation time, None for a stopped process, or unknown on access failure."""
+    if type(pid) is not int or pid <= 0:
+        return None
+    if os.name != 'nt':
+        from .execution import process_alive
+        return 'unknown' if process_alive(pid) is not False else None
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel.GetProcessTimes.argtypes = [wintypes.HANDLE] + [ctypes.POINTER(wintypes.FILETIME)] * 4
+    handle = kernel.OpenProcess(0x1000, False, pid)
+    if not handle:
+        return 'unknown' if ctypes.get_last_error() == 5 else None
+    try:
+        code = wintypes.DWORD()
+        if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return 'unknown'
+        if code.value != 259:
+            return None
+        times = [wintypes.FILETIME() for _ in range(4)]
+        if not kernel.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+            return 'unknown'
+        return str((times[0].dwHighDateTime << 32) | times[0].dwLowDateTime)
+    finally:
+        kernel.CloseHandle(handle)
+
+
 class Updater:
     def __init__(self, manager, transport=None, launch=None):
         self.manager = manager
@@ -160,6 +192,18 @@ class Updater:
                         self._set(phase='installed' if result.get('exit_code') == 0 else 'error',
                                   error='' if result.get('exit_code') == 0 else '安装未完成，原版本保留。请查看安装日志后重试',
                                   install_result=result)
+                if self.state.get('phase') == 'installing':
+                    helper = self.state.get('install_helper')
+                    elapsed = time.time() - self.state.get('install_started', 0)
+                    if isinstance(helper, dict):
+                        identity = installer_process_identity(helper.get('pid'))
+                        interrupted = identity is None or (identity != 'unknown'
+                            and helper.get('created') not in (None, 'unknown', identity))
+                    else:
+                        # Covers a crash between recording intent and launching the helper.
+                        interrupted = elapsed > 120
+                    if interrupted:
+                        self._set(phase='error', error='安装过程已中断。请查看安装日志，必要时重新运行完整安装包。')
             value = copy.deepcopy(self.state)
         return {**value, 'installed_version': VERSION, 'repository': self.cfg['repository'],
                 'configured': bool(self.cfg.get('trusted_keys')), 'can_install': self._installed(),
@@ -304,9 +348,11 @@ class Updater:
                     digest = hashlib.file_digest(stream, 'sha256').hexdigest()
                 if digest != manifest['asset']['sha256']:
                     raise ValueError('已下载的安装包发生变化，请重新下载')
-                self._set(phase='installing', blockers=[], error='')
+                self._set(phase='installing', blockers=[], error='', install_helper=None,
+                          install_started=time.time())
                 try:
-                    self.launch(target, manifest)
+                    helper = self.launch(target, manifest)
+                    self._set(install_helper=helper)
                 except Exception as exc:
                     self._set(phase='ready', error='无法启动安装程序 ' + str(exc)[:300])
                     raise
@@ -325,8 +371,9 @@ class Updater:
                 '-File', str(helper), '-Installer', str(target), '-ExpectedSha256', manifest['asset']['sha256'],
                 '-Destination', str(self.manager.root.parent), '-Version', manifest['version'],
                 '-ResultPath', str(result), '-LogPath', str(log)]
-        subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS, close_fds=True)
+        process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS, close_fds=True)
+        return {'pid': process.pid, 'created': installer_process_identity(process.pid)}
 
     def start(self):
         def monitor():

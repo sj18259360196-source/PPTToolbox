@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -157,6 +158,54 @@ def test_network_failure_preserves_existing_project_and_settings(update):
     updater.transport.read=lambda _: (_ for _ in ()).throw(OSError('offline'))
     updater.check();assert finish(updater)['phase']=='error'
     assert updater.manager.settings()==settings and not updater.cache.exists()
+
+
+@pytest.mark.parametrize('identity',[None, 'different-process'])
+def test_missing_or_reused_installer_process_allows_recovery(update,monkeypatch,identity):
+    updater=ready(update)
+    updater._set(phase='installing',install_started=time.time()-300,
+                 install_helper={'pid':54321,'created':'original-process'})
+    monkeypatch.setattr('toolbox_manager.software_updates.installer_process_identity',lambda _:identity)
+    assert updater.status()['phase']=='error'
+    assert '中断' in updater.status()['error']
+    assert not update[-1]
+    updater.check()
+    assert finish(updater)['phase']=='available'
+
+
+@pytest.mark.parametrize('identity',['original-process','unknown'])
+def test_live_or_uninspectable_installer_is_not_restarted(update,monkeypatch,identity):
+    updater=ready(update)
+    updater._set(phase='installing',install_started=time.time()-300,
+                 install_helper={'pid':54321,'created':'original-process'})
+    monkeypatch.setattr('toolbox_manager.software_updates.installer_process_identity',lambda _:identity)
+    assert updater.status()['phase']=='installing'
+    with pytest.raises(ValueError,match='已有更新'):updater.check()
+    assert not update[-1]
+
+
+def test_crash_before_installer_pid_was_saved_is_recoverable(update):
+    updater=ready(update)
+    updater._set(phase='installing',install_started=time.time()-300,install_helper=None)
+    assert updater.status()['phase']=='error'
+
+
+def test_install_result_takes_precedence_over_exited_helper(update,monkeypatch):
+    updater=ready(update)
+    updater._set(phase='installing',install_started=time.time()-300,
+                 install_helper={'pid':54321,'created':'original-process'})
+    monkeypatch.setattr('toolbox_manager.software_updates.installer_process_identity',lambda _:None)
+    (updater.cache/'install-result.json').write_text(json.dumps({'version':update[1]['version'],'exit_code':0}),encoding='utf-8')
+    assert updater.status()['phase']=='installed'
+
+
+@pytest.mark.skipif(__import__('os').name!='nt',reason='Windows helper process identity')
+def test_current_process_has_stable_creation_identity():
+    import os
+    from toolbox_manager.software_updates import installer_process_identity
+    first=installer_process_identity(os.getpid())
+    assert first and first!='unknown'
+    assert installer_process_identity(os.getpid())==first
 
 
 def test_download_cancel_is_atomic(update):
