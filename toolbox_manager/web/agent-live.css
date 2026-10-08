@@ -1,0 +1,14 @@
+#agent-live-badge{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:#64748b;letter-spacing:0}
+#agent-live-badge:before,.agent-pill:before{content:'';display:inline-block;width:7px;height:7px;flex-shrink:0;border-radius:50%;background:currentColor;margin-right:5px}
+#agent-live-badge[data-state=working],.agent-pill[data-state=working]{color:#16804a}
+#agent-live-badge[data-state=connected],.agent-pill[data-state=connected]{color:#2563eb}
+#agent-live-badge[data-state=error],#agent-live-badge[data-state=unknown],.agent-pill[data-state=error],.agent-pill[data-state=unknown],.agent-error{color:#c33838}
+.agent-pill[data-state=offline]{color:#64748b}
+#agent-live-panel{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--surface2);margin-bottom:24px;font-size:13px;line-height:1.65}
+.agent-live-heading,.agent-session>div{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.agent-live-heading small{color:var(--muted)}
+.agent-session{border-top:1px solid var(--line);padding-top:12px;margin-top:12px;overflow-wrap:anywhere}
+.agent-session p{margin:7px 0}.agent-session .agent-pill{font-size:12px}.agent-error{max-height:120px;overflow:auto;white-space:pre-wrap}
+[data-theme=dark] #agent-live-badge[data-state=working],[data-theme=dark] .agent-pill[data-state=working]{color:#55ce8b}
+[data-theme=dark] #agent-live-badge[data-state=connected],[data-theme=dark] .agent-pill[data-state=connected]{color:#80afff}
+[data-theme=dark] #agent-live-badge[data-state=error],[data-theme=dark] .agent-pill[data-state=error],[data-theme=dark] .agent-error{color:#ff9797}

@@ -1,0 +1,4 @@
+# Isolated optional geometry/fitting runtime. Do not install globally.
+SciPy==1.17.1
+Shapely==2.1.2
+svgelements==1.9.6

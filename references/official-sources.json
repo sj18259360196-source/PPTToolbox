@@ -1,0 +1,198 @@
+[
+  {
+    "id": "D01",
+    "title": "Agent Skills specification",
+    "url": "https://agentskills.io/specification",
+    "scope": "标准目录与frontmatter、按需加载",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D02",
+    "title": "PowerPoint Shapes",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shapes",
+    "scope": "原生对象创建入口",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D03",
+    "title": "AddTextbox",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shapes.addtextbox",
+    "scope": "文本框参数与点数单位",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D04",
+    "title": "FreeformBuilder.AddNodes",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.freeformbuilder.addnodes",
+    "scope": "line/curve、auto/corner及控制点",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D05",
+    "title": "ConnectorFormat",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.connectorformat",
+    "scope": "自动附着与连接关系",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D06",
+    "title": "ShapeRange.MergeShapes",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shaperange.mergeshapes",
+    "scope": "合并操作、PrimaryShape与void返回",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D07",
+    "title": "Shapes.AddChart2",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shapes.addchart2",
+    "scope": "原生图表创建",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D08",
+    "title": "ChartData.Workbook",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.chartdata.workbook",
+    "scope": "Activate后访问数据工作簿",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D09",
+    "title": "Shapes.AddPicture",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shapes.addpicture",
+    "scope": "嵌入图片与链接参数",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D10",
+    "title": "Slide.Export",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.slide.export",
+    "scope": "导出文件及像素尺寸",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D11",
+    "title": "TextRange.BoundWidth",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.textrange.boundwidth",
+    "scope": "文本实际边界",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D12",
+    "title": "ParagraphFormat.SpaceWithin",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.paragraphformat.spacewithin",
+    "scope": "段落行距参数",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D13",
+    "title": "MsoAutoShapeType",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/office.msoautoshapetype",
+    "scope": "具名形状枚举",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D14",
+    "title": "ShapeRange.Group",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shaperange.group",
+    "scope": "组合对象与计数变化",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D15",
+    "title": "ShapeRange.Align",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shaperange.align",
+    "scope": "选区或幻灯片对齐",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D16",
+    "title": "ShapeRange.Distribute",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shaperange.distribute",
+    "scope": "对象分布",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D17",
+    "title": "PictureFormat.CropLeft",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.pictureformat.cropleft",
+    "scope": "COM裁切单位与原始尺寸",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D18",
+    "title": "Shape.ZOrder",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shape.zorder",
+    "scope": "层级操作",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D19",
+    "title": "Shapes.AddTable",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/powerpoint.shapes.addtable",
+    "scope": "原生表格创建",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D20",
+    "title": "python-pptx charts and shapes",
+    "url": "https://python-pptx.readthedocs.io/en/latest/user/charts.html",
+    "scope": "图表创建、类别数据与XY数据",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D21",
+    "title": "Lucide license",
+    "url": "https://lucide.dev/license",
+    "scope": "图标许可核对入口",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D22",
+    "title": "Tabler Icons",
+    "url": "https://tabler.io/icons",
+    "scope": "图标资源入口",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D23",
+    "title": "Material Symbols guide",
+    "url": "https://developers.google.com/fonts/docs/material_symbols",
+    "scope": "符号样式与SVG资源",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D24",
+    "title": "Iconify icon sets",
+    "url": "https://iconify.design/docs/icons/icon-set-basics.html",
+    "scope": "图标集元数据、许可按集合管理",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D25",
+    "title": "OpenAI Build skills",
+    "url": "https://learn.chatgpt.com/docs/build-skills",
+    "scope": "Codex本地目录与显式调用；由developers.openai.com/codex/skills重定向",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D26",
+    "title": "python-pptx shapes API",
+    "url": "https://python-pptx.readthedocs.io/en/latest/api/shapes.html",
+    "scope": "本包构建接口与分组/连接",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D27",
+    "title": "MsoArrowheadStyle",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/office.msoarrowheadstyle",
+    "scope": "两端箭头具名常量",
+    "checked_on": "2026-09-16"
+  },
+  {
+    "id": "D28",
+    "title": "MsoEditingType",
+    "url": "https://learn.microsoft.com/en-us/office/vba/api/office.msoeditingtype",
+    "scope": "曲线路径节点类型",
+    "checked_on": "2026-09-16"
+  }
+]

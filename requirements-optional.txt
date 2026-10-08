@@ -1,0 +1,8 @@
+# Optional polygon booleans only; do not install without environment authorization.
+Shapely>=2.0
+
+# Local preview only; the normal Office route does not require this.
+pypdfium2>=4.30
+
+# Optional native Office sample edit/readback adapter on Windows.
+pywin32>=306; sys_platform == "win32"

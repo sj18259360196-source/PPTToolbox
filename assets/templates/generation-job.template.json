@@ -1,0 +1,41 @@
+{
+  "job_id": "",
+  "target_object": "",
+  "slide_index": null,
+  "reference_region": null,
+  "reason_for_generation": "",
+  "trigger": "crop_failed | native_rebuild_failed | missing_asset | complex_texture | user_requested",
+  "reference_files": [],
+  "preserve": [
+    "主体数量",
+    "主要轮廓",
+    "视角与方向",
+    "主色和负空间"
+  ],
+  "generate": [],
+  "forbid": [
+    "文字与业务数字",
+    "图表轴标签",
+    "虚构品牌标志",
+    "水印"
+  ],
+  "preferred_output": "transparent_png",
+  "fallback_background": "FF00FF",
+  "safe_margin_percent": 10,
+  "variants_requested": 1,
+  "transparency_requirement": "real_alpha_required",
+  "tool_requested": "host image generation tool",
+  "tool_actually_used": "",
+  "model_reported_by_tool": null,
+  "attempts": [],
+  "status": "not_run",
+  "outputs": [],
+  "postprocess": {
+    "alpha_audit": "not_run",
+    "trim_alpha": "not_run",
+    "matte_preview": "not_run",
+    "inserted_into_ppt": "not_run",
+    "local_side_by_side_review": "not_run"
+  },
+  "limitations": []
+}

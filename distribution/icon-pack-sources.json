@@ -1,0 +1,1447 @@
+[
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/heart.svg",
+    "name": "心脏",
+    "tags": [
+      "心脏",
+      "heart",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/brain.svg",
+    "name": "大脑",
+    "tags": [
+      "大脑",
+      "brain",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/microscope.svg",
+    "name": "显微镜",
+    "tags": [
+      "显微镜",
+      "microscope",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/flask.svg",
+    "name": "烧瓶",
+    "tags": [
+      "烧瓶",
+      "flask",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/test-pipe.svg",
+    "name": "试管",
+    "tags": [
+      "试管",
+      "test-pipe",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/dna.svg",
+    "name": "DNA 双螺旋",
+    "tags": [
+      "DNA 双螺旋",
+      "dna",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/atom.svg",
+    "name": "原子",
+    "tags": [
+      "原子",
+      "atom",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/virus.svg",
+    "name": "病毒",
+    "tags": [
+      "病毒",
+      "virus",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/pill.svg",
+    "name": "药片",
+    "tags": [
+      "药片",
+      "pill",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/vaccine.svg",
+    "name": "疫苗",
+    "tags": [
+      "疫苗",
+      "vaccine",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/droplet.svg",
+    "name": "液滴",
+    "tags": [
+      "液滴",
+      "droplet",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/leaf.svg",
+    "name": "叶片",
+    "tags": [
+      "叶片",
+      "leaf",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/sun.svg",
+    "name": "太阳",
+    "tags": [
+      "太阳",
+      "sun",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/cloud.svg",
+    "name": "云",
+    "tags": [
+      "云",
+      "cloud",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/database.svg",
+    "name": "数据库",
+    "tags": [
+      "数据库",
+      "database",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/chart-bar.svg",
+    "name": "柱状图",
+    "tags": [
+      "柱状图",
+      "chart-bar",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/settings.svg",
+    "name": "设置",
+    "tags": [
+      "设置",
+      "settings",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/search.svg",
+    "name": "搜索",
+    "tags": [
+      "搜索",
+      "search",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/arrow-right.svg",
+    "name": "向右箭头",
+    "tags": [
+      "向右箭头",
+      "arrow-right",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "tabler/tabler-icons",
+    "revision": "0239805680a36bab4e1070529b6744924402d804",
+    "path": "icons/outline/shield.svg",
+    "name": "防护",
+    "tags": [
+      "防护",
+      "shield",
+      "通用"
+    ],
+    "collection": "Tabler",
+    "style": "outline",
+    "license": "MIT",
+    "author": "Tabler contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/heart.svg",
+    "name": "心脏",
+    "tags": [
+      "心脏",
+      "heart",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/brain.svg",
+    "name": "大脑",
+    "tags": [
+      "大脑",
+      "brain",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/microscope.svg",
+    "name": "显微镜",
+    "tags": [
+      "显微镜",
+      "microscope",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/dna.svg",
+    "name": "DNA 双螺旋",
+    "tags": [
+      "DNA 双螺旋",
+      "dna",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/atom.svg",
+    "name": "原子",
+    "tags": [
+      "原子",
+      "atom",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/virus.svg",
+    "name": "病毒",
+    "tags": [
+      "病毒",
+      "virus",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "lucide-icons/lucide",
+    "revision": "66d8f9fc394b8530377e5f6112f0b8908ba01280",
+    "path": "icons/pill.svg",
+    "name": "药片",
+    "tags": [
+      "药片",
+      "pill",
+      "通用"
+    ],
+    "collection": "Lucide",
+    "style": "outline",
+    "license": "ISC",
+    "author": "Lucide contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/blood/blood-bag.svg",
+    "name": "血袋",
+    "tags": [
+      "血袋",
+      "blood-bag",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/antibody.svg",
+    "name": "抗体",
+    "tags": [
+      "抗体",
+      "antibody",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/bacteria.svg",
+    "name": "细菌",
+    "tags": [
+      "细菌",
+      "bacteria",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/blood-cells.svg",
+    "name": "血细胞",
+    "tags": [
+      "血细胞",
+      "blood-cells",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/blood-drop.svg",
+    "name": "血滴",
+    "tags": [
+      "血滴",
+      "blood-drop",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/cell-nuclei.svg",
+    "name": "细胞核",
+    "tags": [
+      "细胞核",
+      "cell-nuclei",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/dna.svg",
+    "name": "DNA 双螺旋",
+    "tags": [
+      "DNA 双螺旋",
+      "dna",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/enzyme.svg",
+    "name": "酶",
+    "tags": [
+      "酶",
+      "enzyme",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/heart-organ.svg",
+    "name": "心脏器官",
+    "tags": [
+      "心脏器官",
+      "heart-organ",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/kidneys.svg",
+    "name": "肾脏",
+    "tags": [
+      "肾脏",
+      "kidneys",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/liver.svg",
+    "name": "肝脏",
+    "tags": [
+      "肝脏",
+      "liver",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/body/lungs.svg",
+    "name": "肺",
+    "tags": [
+      "肺",
+      "lungs",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/devices/microscope.svg",
+    "name": "显微镜",
+    "tags": [
+      "显微镜",
+      "microscope",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/graphs/chart-bar.svg",
+    "name": "柱状图",
+    "tags": [
+      "柱状图",
+      "chart-bar",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/symbols/database.svg",
+    "name": "数据库",
+    "tags": [
+      "数据库",
+      "database",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/symbols/heart.svg",
+    "name": "心脏",
+    "tags": [
+      "心脏",
+      "heart",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/filled/symbols/virus.svg",
+    "name": "病毒",
+    "tags": [
+      "病毒",
+      "virus",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "filled",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/blood/blood-bag.svg",
+    "name": "血袋",
+    "tags": [
+      "血袋",
+      "blood-bag",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/antibody.svg",
+    "name": "抗体",
+    "tags": [
+      "抗体",
+      "antibody",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/bacteria.svg",
+    "name": "细菌",
+    "tags": [
+      "细菌",
+      "bacteria",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/blood-cells.svg",
+    "name": "血细胞",
+    "tags": [
+      "血细胞",
+      "blood-cells",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/blood-drop.svg",
+    "name": "血滴",
+    "tags": [
+      "血滴",
+      "blood-drop",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/cell-nuclei.svg",
+    "name": "细胞核",
+    "tags": [
+      "细胞核",
+      "cell-nuclei",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/dna.svg",
+    "name": "DNA 双螺旋",
+    "tags": [
+      "DNA 双螺旋",
+      "dna",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/enzyme.svg",
+    "name": "酶",
+    "tags": [
+      "酶",
+      "enzyme",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/heart-organ.svg",
+    "name": "心脏器官",
+    "tags": [
+      "心脏器官",
+      "heart-organ",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/kidneys.svg",
+    "name": "肾脏",
+    "tags": [
+      "肾脏",
+      "kidneys",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/liver.svg",
+    "name": "肝脏",
+    "tags": [
+      "肝脏",
+      "liver",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/body/lungs.svg",
+    "name": "肺",
+    "tags": [
+      "肺",
+      "lungs",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/devices/microscope.svg",
+    "name": "显微镜",
+    "tags": [
+      "显微镜",
+      "microscope",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/graphs/chart-bar.svg",
+    "name": "柱状图",
+    "tags": [
+      "柱状图",
+      "chart-bar",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/symbols/database.svg",
+    "name": "数据库",
+    "tags": [
+      "数据库",
+      "database",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/symbols/heart.svg",
+    "name": "心脏",
+    "tags": [
+      "心脏",
+      "heart",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "resolvetosavelives/healthicons",
+    "revision": "36887b268d2cb61f8d91622ad459bdf07910c2b0",
+    "path": "public/icons/svg/outline/symbols/virus.svg",
+    "name": "病毒",
+    "tags": [
+      "病毒",
+      "virus",
+      "医疗",
+      "科研"
+    ],
+    "collection": "Health Icons",
+    "style": "outline",
+    "license": "CC0-1.0",
+    "author": "Health Icons contributors"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Cell_culture/B--Gideon-Bergheim/Bacteria_colonies.svg",
+    "name": "细菌 Bacteria_colonies",
+    "tags": [
+      "细菌",
+      "Cell_culture",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "B--Gideon-Bergheim"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Cell_culture/B--Gideon-Bergheim/bacteria_culture_cotton_swap.svg",
+    "name": "细菌 bacteria_culture_cotton_swap",
+    "tags": [
+      "细菌",
+      "Cell_culture",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "B--Gideon-Bergheim"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Cell_culture/B--Gideon-Bergheim/bacteria_culture_loop.svg",
+    "name": "细菌 bacteria_culture_loop",
+    "tags": [
+      "细菌",
+      "Cell_culture",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "B--Gideon-Bergheim"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Cell_membrane/Cléber-Gomes/Phospholipid.svg",
+    "name": "脂质 Phospholipid",
+    "tags": [
+      "脂质",
+      "Cell_membrane",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Cléber-Gomes"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-1000ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-1000ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-100ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-100ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-2000ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-2000ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-250ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-250ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-500ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-500ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-1-50ml.svg",
+    "name": "烧瓶 round-bottomed-flask-1-50ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-2-1000ml.svg",
+    "name": "烧瓶 round-bottomed-flask-2-1000ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-2-100ml.svg",
+    "name": "烧瓶 round-bottomed-flask-2-100ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-2-250ml.svg",
+    "name": "烧瓶 round-bottomed-flask-2-250ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Chemistry/OpenClipart/round-bottomed-flask-2-500ml.svg",
+    "name": "烧瓶 round-bottomed-flask-2-500ml",
+    "tags": [
+      "烧瓶",
+      "Chemistry",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "OpenClipart"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Genetics/David-Eccles--gringer-/DNA_symbolic_extending.svg",
+    "name": "DNA DNA_symbolic_extending",
+    "tags": [
+      "DNA",
+      "Genetics",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "David-Eccles--gringer-"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Human_physiology/Fabian-Mikulasch/Pyramidal_Neuron.svg",
+    "name": "神经元 Pyramidal_Neuron",
+    "tags": [
+      "神经元",
+      "Human_physiology",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Fabian-Mikulasch"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Human_physiology/Fang-fang-yang/gut_bacteria.drawio.svg",
+    "name": "细菌 gut_bacteria.drawio",
+    "tags": [
+      "细菌",
+      "Human_physiology",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Fang-fang-yang"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Human_physiology/fang-fangyang/gut_bacteria.svg",
+    "name": "细菌 gut_bacteria",
+    "tags": [
+      "细菌",
+      "Human_physiology",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "fang-fangyang"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Intracellular_components/jaiganesh/mitochondria.svg",
+    "name": "线粒体 mitochondria",
+    "tags": [
+      "线粒体",
+      "Intracellular_components",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "jaiganesh"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Derek-Croote/round-bottomed-flask-cartoon.svg",
+    "name": "烧瓶 round-bottomed-flask-cartoon",
+    "tags": [
+      "烧瓶",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Derek-Croote"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/James-Lloyd/Pipette.svg",
+    "name": "移液管 Pipette",
+    "tags": [
+      "移液管",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "James-Lloyd"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Marcel_Tisch/T75_flask.svg",
+    "name": "烧瓶 T75_flask",
+    "tags": [
+      "烧瓶",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Marcel_Tisch"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Marcel_Tisch/recording_pipette.svg",
+    "name": "移液管 recording_pipette",
+    "tags": [
+      "移液管",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Marcel_Tisch"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Marcel_Tisch/spinning_flask.svg",
+    "name": "烧瓶 spinning_flask",
+    "tags": [
+      "烧瓶",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Marcel_Tisch"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Xavax/1000_ml_Erlenmeyer_flask.svg",
+    "name": "烧瓶 1000_ml_Erlenmeyer_flask",
+    "tags": [
+      "烧瓶",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Xavax"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Lab_apparatus/Xavax/Fernbach_Flask.svg",
+    "name": "烧瓶 Fernbach_Flask",
+    "tags": [
+      "烧瓶",
+      "Lab_apparatus",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Xavax"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Microbiology/James-Lloyd/Bacteria_Swimming.svg",
+    "name": "细菌 Bacteria_Swimming",
+    "tags": [
+      "细菌",
+      "Microbiology",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "James-Lloyd"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Molecular_modelling/Simon_Dürr/protein-backbone-schematic.svg",
+    "name": "蛋白 protein-backbone-schematic",
+    "tags": [
+      "蛋白",
+      "Molecular_modelling",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Simon_Dürr"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Nucleic_acids/James-Lloyd/DNA_double_helix.svg",
+    "name": "DNA DNA_double_helix",
+    "tags": [
+      "DNA",
+      "Nucleic_acids",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "James-Lloyd"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Nucleic_acids/Kumar/DNA.svg",
+    "name": "DNA DNA",
+    "tags": [
+      "DNA",
+      "Nucleic_acids",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Kumar"
+  },
+  {
+    "repo": "duerrsimon/bioicons",
+    "revision": "d29e766ea7580b8063c4f47b29e872db40a4d979",
+    "path": "static/icons/cc-0/Nucleic_acids/Samuel-Nestor-Meckoni/ssDNA-single-stranded.svg",
+    "name": "DNA ssDNA-single-stranded",
+    "tags": [
+      "DNA",
+      "Nucleic_acids",
+      "科研",
+      "生物"
+    ],
+    "collection": "Bioicons",
+    "style": "multicolor",
+    "license": "CC0-1.0",
+    "author": "Samuel-Nestor-Meckoni"
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "format": "graphics-recipe/1",
+  "id": "landscape",
+  "canvas": [960, 540],
+  "points_per_unit": 0.75,
+  "paths": [
+    {"id": "outer", "closed": false, "visible": false,
+      "commands": [["M", 440, 350], ["C", 360, 30, 850, 30, 850, 350]],
+      "style": {"fill": null, "line": "226B4A", "line_width_pt": 2,
+        "line_gradient": {"type": "linear", "angle_deg": 20, "stops": [
+          {"position": 0, "color": "196340", "alpha": 1},
+          {"position": 1, "color": "70A56A", "alpha": 0.12}]}}},
+    {"id": "inner", "closed": false, "visible": false,
+      "commands": [["M", 505, 350], ["C", 465, 135, 775, 135, 785, 350]]},
+    {"id": "tree", "closed": true, "visible": true,
+      "commands": [["M", 675, 335], ["L", 675, 293], ["C", 650, 303, 645, 268, 664, 262],
+        ["C", 653, 240, 680, 227, 690, 250], ["C", 711, 246, 718, 283, 693, 290],
+        ["L", 681, 291], ["L", 681, 335], ["Z"]],
+      "style": {"fill": "226B4A", "line": null}}
+  ],
+  "curve_groups": [
+    {"id": "anniversary", "mode": "interpolate", "source": "outer", "target": "inner", "count": 16}
+  ],
+  "edges": [
+    {"id": "bank", "commands": [["M", 0, 330], ["C", 250, 205, 340, 420, 535, 325],
+      ["C", 715, 270, 830, 210, 960, 235]]},
+    {"id": "far", "commands": [["M", 960, 235], ["L", 960, 200],
+      ["C", 740, 160, 710, 205, 535, 255], ["C", 340, 350, 250, 135, 0, 260], ["L", 0, 330]]},
+    {"id": "shore", "commands": [["M", 0, 330], ["L", 0, 540], ["L", 960, 540], ["L", 960, 235]]}
+  ],
+  "faces": [
+    {"id": "hills", "loops": [[{"edge": "bank"}, {"edge": "far"}]],
+      "style": {"fill": "66A36B", "line": null,
+        "gradient": {"type": "linear", "angle_deg": 90, "stops": [
+          {"position": 0, "color": "237650"}, {"position": 1, "color": "C8DCAB"}]}}},
+    {"id": "water", "loops": [[{"edge": "bank", "reverse": true}, {"edge": "shore"}]],
+      "style": {"fill": "D6E6CB", "line": null,
+        "gradient": {"type": "linear", "angle_deg": 90, "stops": [
+          {"position": 0, "color": "EAF0DE"}, {"position": 1, "color": "71AB82"}]}}}
+  ],
+  "instances": [
+    {"id": "tree_two", "source": "tree", "matrix": [0.65, 0, 0, 0.65, 290, 119],
+      "stroke_scale": "preserve", "state": "linked"},
+    {"id": "reflection", "source": "tree", "matrix": [1, 0, 0, -0.55, 0, 519.25],
+      "style_override": {"fill_alpha": 0.22}, "state": "linked"}
+  ],
+  "order": ["anniversary", "hills", "water", "tree", "tree_two", "reflection"]
+}

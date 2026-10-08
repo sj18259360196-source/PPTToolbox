@@ -1,0 +1,12 @@
+{
+  "version": "",
+  "input_pptx_sha256": "",
+  "output_pptx_sha256": "",
+  "object_ids": [],
+  "category": "",
+  "observation": "",
+  "evidence": [],
+  "change": "",
+  "decision": "not_run",
+  "regressions_checked": []
+}

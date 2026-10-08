@@ -1,0 +1,28 @@
+{
+  "text": "Cu(II)  100 μM  /  Native text",
+  "candidates": [
+    {
+      "font": "DejaVu Sans",
+      "font_size_pt": 25
+    },
+    {
+      "font": "Liberation Sans",
+      "font_size_pt": 25
+    },
+    {
+      "font": "DejaVu Sans",
+      "font_size_pt": 25,
+      "bold": true
+    }
+  ],
+  "canvas": [
+    1000,
+    300
+  ],
+  "sample_bbox": [
+    40,
+    110,
+    920,
+    105
+  ]
+}

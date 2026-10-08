@@ -1,0 +1,240 @@
+{
+  "status": "passed",
+  "scope": "PPTX generation only; not an Office/visual acceptance",
+  "pptx_sha256": "006d393e86bd1bf17808fb191f7bfa6a84b3274f7823a912aaed584444647a93",
+  "scene_sha256": "41e001135c550b895649befe0b3e3d1057d8774695005e419b1606aaa7c021f9",
+  "slide_count": 3,
+  "objects": [
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.caption",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card1",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card1.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card1.body",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card2",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card2.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card2.body",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card3",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card3.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.card3.body",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.mixed",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.gradient",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.asset",
+      "kind": "image",
+      "editability": "image_replace"
+    },
+    {
+      "slide": 1,
+      "slide_id": "page-1",
+      "id": "p01.footer",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.caption",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.table",
+      "kind": "table",
+      "editability": "table"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.chart",
+      "kind": "chart",
+      "editability": "data_chart"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.note",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 2,
+      "slide_id": "page-2",
+      "id": "p02.footer",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.title",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.caption",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.left",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.right",
+      "kind": "shape",
+      "editability": "shape"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.edge",
+      "kind": "connector",
+      "editability": "shape"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.left.text",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.right.text",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.half",
+      "kind": "path",
+      "editability": "path"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.half.value",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.group",
+      "kind": "group",
+      "editability": "group"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.note",
+      "kind": "text",
+      "editability": "text"
+    },
+    {
+      "slide": 3,
+      "slide_id": "page-3",
+      "id": "p03.footer",
+      "kind": "text",
+      "editability": "text"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+.learning-page{max-width:1440px;margin:0 auto;min-width:0}
+.learning-settings{display:flex;gap:24px;align-items:center;justify-content:space-between;margin:20px 0}
+.learning-settings label{flex-shrink:0;display:flex;gap:8px;align-items:center}
+#learning-path{overflow-wrap:anywhere;min-width:0}
+.learning-tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin:22px 0 18px}
+.learning-tabs button{border:0;border-bottom:2px solid transparent;background:none;border-radius:0;padding:10px 0;gap:8px;color:var(--muted)}
+.learning-tabs button[aria-selected=true]{color:var(--text);border-bottom-color:var(--primary)}
+.learning-tabs span{font-size:11px;padding:2px 6px;background:var(--surface2);border-radius:4px;min-width:22px}
+.learning-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+#learning-query{width:280px;max-width:100%;min-width:0}
+#learning-project{max-width:360px;min-width:0}
+.learning-row{padding:18px 16px;border-bottom:1px solid var(--line);background:var(--surface);overflow-wrap:anywhere}
+.learning-name{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.learning-name strong{font-size:14px}
+.learning-badge{padding:3px 8px;font-size:11px;background:var(--surface2);border-radius:4px;color:var(--muted)}
+.learning-badge.active{background:#e8f5ed;color:#276441}
+.learning-row p{font-size:13px;line-height:1.6;margin:8px 0}
+.learning-row-actions{display:flex;gap:10px;margin-top:12px}
+.learning-reason,#learning-error,.learning-dialog [role=alert]{color:var(--danger)}
+.learning-dialog{width:680px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:22px;overflow:auto;overflow-wrap:anywhere}
+.learning-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.learning-dialog h2{font-size:18px}
+.learning-dialog h3{font-size:14px;margin-top:20px}
+.learning-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--surface2);padding:12px}
+.learning-object-list{margin:18px 0}
+.learning-object-list>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.learning-object-list code{font-size:11px}
+@media(max-width:760px){.learning-settings{align-items:start;flex-direction:column;gap:10px}.learning-toolbar>*{max-width:100%!important}.learning-tabs{gap:20px}.learning-tabs button{font-size:12px}#learning-query{width:100%}.learning-object-list>div{grid-template-columns:1fr}}
+
+.source-experience-dialog{width:min(900px,calc(100vw - 40px))}.source-experience-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:8px}.experience-evidence{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:8px}.experience-path{overflow-wrap:anywhere}#experience-filter{padding:9px;border-radius:8px}#experience-count{font-variant-numeric:tabular-nums}

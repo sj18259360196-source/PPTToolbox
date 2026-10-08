@@ -1,0 +1,9 @@
+[
+  {"id":"phosphor","collection":"Phosphor","repo":"phosphor-icons/core","revision":"2b75f3ad12b420c9504ef05df8d2564a28f8500e","license":"MIT","author":"Phosphor Icons contributors"},
+  {"id":"fluent","collection":"Fluent System Icons","repo":"microsoft/fluentui-system-icons","revision":"a563cf9166f4f91aa617557ed272612b7f0a2f72","license":"MIT","author":"Microsoft"},
+  {"id":"material","collection":"Material Symbols","repo":"iconify/icon-sets","revision":"34ae9f5b718f9edafa4fba1f205e10b4bf802e5d","url":"https://raw.githubusercontent.com/iconify/icon-sets/34ae9f5b718f9edafa4fba1f205e10b4bf802e5d/json/material-symbols.json","format":"iconify","license":"Apache-2.0","author":"Google","homepage":"https://github.com/google/material-design-icons"},
+  {"id":"iconoir","collection":"Iconoir","repo":"iconoir-icons/iconoir","revision":"d7dfa4d0341df0670bfed9fc24221c9d7ef2112e","license":"MIT","author":"Iconoir contributors"},
+  {"id":"bootstrap","collection":"Bootstrap Icons","repo":"twbs/icons","revision":"6945b7006285d444cc17ff2e22c7691719229526","license":"MIT","author":"The Bootstrap Authors"},
+  {"id":"servier","collection":"Servier Medical Art","repo":"duerrsimon/bioicons","revision":"d29e766ea7580b8063c4f47b29e872db40a4d979","license":"per-file","author":"Servier Medical Art","homepage":"https://smart.servier.com/"},
+  {"id":"reactome","collection":"Reactome","url":"https://reactome.org/icon/icon-lib-svg.tgz","license":"CC-BY-4.0","author":"Reactome / CSHL, OICR and EBI","homepage":"https://reactome.org/icon-lib"}
+]

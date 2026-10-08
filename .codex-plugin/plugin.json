@@ -1,0 +1,23 @@
+{
+  "name": "ppt-toolbox-manager",
+  "version": "1.21.0",
+  "author": {
+    "name": "PPT Toolbox"
+  },
+  "description": "管理PPT Skill、工具与指令、运行设置、离线版本、插件接入与日志。制作由Agent执行。",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PPT 工具箱管理器",
+    "shortDescription": "受管 PPT 重建、工具检索与任务记录",
+    "longDescription": "在本机通过受管工作流重建、返修和验证可编辑PPT，读取任务日志与实际证据。执行和项目路径仍需用户授权。",
+    "developerName": "PPT Toolbox",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "查看PPT工具箱已启用的Skill和指令，并检查本机接入状态。"
+    ]
+  }
+}

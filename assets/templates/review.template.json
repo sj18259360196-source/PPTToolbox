@@ -1,0 +1,60 @@
+{
+  "pptx_sha256": "",
+  "reviewer": "",
+  "checks": {
+    "content_source": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    },
+    "relationships": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": [],
+      "objects": []
+    },
+    "visual_full": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    },
+    "visual_local": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": [],
+      "regions": []
+    },
+    "editable_behavior": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    },
+    "raster_scope": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    },
+    "text_geometry": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    },
+    "reproducibility": {
+      "status": "not_run",
+      "note": "",
+      "slides": [],
+      "evidence": []
+    }
+  },
+  "limitations": [],
+  "user_acceptance": "not_run",
+  "scene_sha256": "",
+  "comparison_sha256": ""
+}

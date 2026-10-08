@@ -1,0 +1,22 @@
+{
+  "slides": [
+    {
+      "index": 1,
+      "regions": [
+        {
+          "id": "critical-diagram",
+          "bbox": [
+            0,
+            0,
+            100,
+            100
+          ],
+          "object_ids": [
+            "REPLACE_WITH_ACTUAL_OBJECT_ID"
+          ],
+          "note": "替换为实际原图像素xyxy范围与对象ID，不能原样使用"
+        }
+      ]
+    }
+  ]
+}

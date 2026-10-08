@@ -1,0 +1,14 @@
+{
+  "id": "metric",
+  "recipe": "flat_semicircle",
+  "bbox": [
+    40,
+    40,
+    240,
+    120
+  ],
+  "style": {
+    "fill": "28789E",
+    "line": null
+  }
+}

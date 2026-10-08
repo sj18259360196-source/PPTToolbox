@@ -1,0 +1,87 @@
+name: Windows checks and release candidate
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13.16'
+      - name: Install pinned runtime and test tools
+        shell: pwsh
+        run: |
+          python -m pip install -r distribution/requirements-build.txt
+          python -m pip install --no-deps --no-build-isolation --only-binary=:all: --no-binary=proxy_tools --require-hashes -r distribution/requirements-release.lock
+          python -m pip install pytest==8.4.2 PyYAML==6.0.3
+      - name: Audit source and run focused deterministic tests
+        shell: pwsh
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -B scripts/release_info.py check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B distribution/public_source.py --audit . --report dist/source-audit.json
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B -m pytest -q -p no:cacheprovider tests/test_software_updates.py tests/test_version_release.py tests/test_release_readiness.py tests/test_bridge_upgrade.py tests/test_project_management.py tests/test_request_archive.py tests/test_project_flow.py tests/test_illustration_fallback.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-tests"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node --test tests/project_flow.test.mjs tests/projects_model.test.mjs
+  build-draft:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: checks
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13.16'
+      - name: Build complete installer
+        shell: pwsh
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -m pip install -r distribution/requirements-build.txt
+          python -m pip install --no-deps --no-build-isolation --only-binary=:all: --no-binary=proxy_tools --require-hashes -r distribution/requirements-release.lock
+          $version = (Get-Content release.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag differs from release.json' }
+          python -B distribution/build_runtime.py --output dist/runtime --cache .tmp/codex/release/runtime-cache
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B distribution/build_portable.py --donor dist/runtime --output "dist/PPTToolbox-$version"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "dist/PPTToolbox-$version/runtime/python.exe" -B -I "dist/PPTToolbox-$version/app/distribution/runtime_probe.py" --bundle "dist/PPTToolbox-$version"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $compiler = 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw 'Windows runner needs Inno Setup 6' }
+          python -B distribution/build_setup.py --bundle "dist/PPTToolbox-$version" --compiler $compiler --scratch .tmp/codex/release/setup --output dist/setup
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: windows-release-candidate
+          path: |
+            dist/setup/*.exe
+            dist/PPTToolbox-*.zip
+          if-no-files-found: error
+      - name: Create draft for maintainer verification and signing
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content release.json -Raw | ConvertFrom-Json).version
+          gh release view "v$version" --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) { Write-Output 'Existing release preserved. New candidate remains in Actions artifacts.'; exit 0 }
+          gh release create "v$version" "dist/setup/PPTToolbox-$version-Setup.exe" "dist/PPTToolbox-$version.zip" --verify-tag --draft --title "PPT Toolbox $version" --notes-file distribution/RELEASE_NOTES.md
+          exit $LASTEXITCODE

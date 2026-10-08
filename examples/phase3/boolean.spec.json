@@ -1,0 +1,28 @@
+{
+  "id": "hole",
+  "operation": "subtract",
+  "operands": [
+    {
+      "geometry": "rect",
+      "bbox": [
+        40,
+        40,
+        240,
+        160
+      ]
+    },
+    {
+      "geometry": "ellipse",
+      "bbox": [
+        100,
+        75,
+        100,
+        90
+      ]
+    }
+  ],
+  "style": {
+    "fill": "28789E",
+    "line": null
+  }
+}

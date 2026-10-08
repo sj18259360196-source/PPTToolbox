@@ -1,0 +1,6 @@
+# Matches the local icon dependency versions at the initial private snapshot.
+# Install inside a project virtual environment, not the global Python.
+svgelements==1.9.6
+resvg-py==0.2.6
+vtracer==0.6.15
+Shapely==2.1.2

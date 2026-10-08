@@ -1,0 +1,855 @@
+{
+  "version": "1.0",
+  "title": "Synthetic editable object tests",
+  "canvas": {
+    "width": 960,
+    "height": 540,
+    "width_pt": 960,
+    "height_pt": 540,
+    "mapping": "uniform",
+    "background": "FFFFFF"
+  },
+  "slides": [
+    {
+      "id": "page-1",
+      "notes": "Synthetic functional example; not a reconstruction of user sources.",
+      "objects": [
+        {
+          "id": "p01.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "普通信息页 / Editable objects",
+          "bbox": [
+            36,
+            24,
+            880,
+            40
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 27,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p01.caption",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "功能样例，没有参考原图，不代表复刻质量。",
+          "bbox": [
+            36,
+            73,
+            880,
+            28
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 15,
+            "color": "243447"
+          }
+        },
+        {
+          "id": "p01.card1",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            36,
+            132,
+            280,
+            270
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null
+          }
+        },
+        {
+          "id": "p01.card1.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "原生文字",
+          "bbox": [
+            56,
+            160,
+            240,
+            35
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 23,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p01.card1.body",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "中文、英文与数字\n字号与内容可修改",
+          "bbox": [
+            56,
+            222,
+            240,
+            88
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "line_spacing_pt": 27
+          }
+        },
+        {
+          "id": "p01.card2",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            340,
+            132,
+            280,
+            270
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null
+          }
+        },
+        {
+          "id": "p01.card2.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "独立形状",
+          "bbox": [
+            360,
+            160,
+            240,
+            35
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 23,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p01.card2.body",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "填充与轮廓可修改\n渐变需要目标软件检查",
+          "bbox": [
+            360,
+            222,
+            240,
+            88
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "line_spacing_pt": 27
+          }
+        },
+        {
+          "id": "p01.card3",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            644,
+            132,
+            280,
+            270
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null
+          }
+        },
+        {
+          "id": "p01.card3.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "透明素材",
+          "bbox": [
+            664,
+            160,
+            240,
+            35
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 23,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p01.card3.body",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "图片可替换与移动\n内部像素不是矢量",
+          "bbox": [
+            664,
+            222,
+            240,
+            88
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "line_spacing_pt": 27
+          }
+        },
+        {
+          "id": "p01.mixed",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "bbox": [
+            58,
+            332,
+            228,
+            40
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 20
+          },
+          "runs": [
+            {
+              "text": "H"
+            },
+            {
+              "text": "2",
+              "baseline": "subscript"
+            },
+            {
+              "text": "O  ·  12.5%"
+            }
+          ]
+        },
+        {
+          "id": "p01.gradient",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            362,
+            330,
+            236,
+            35
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null,
+            "gradient": {
+              "angle_deg": 0,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "BCD8EC"
+                },
+                {
+                  "position": 1,
+                  "color": "407FA9"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "p01.asset",
+          "kind": "image",
+          "editability": "image_replace",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "bbox": [
+            740,
+            322,
+            75,
+            55
+          ],
+          "asset": "sample-alpha.png",
+          "fit": "contain",
+          "asset_role": "icon",
+          "source_kind": "synthetic",
+          "provenance": "本包生成的透明通道技术测试素材"
+        },
+        {
+          "id": "p01.footer",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "01 / 03   synthetic fixture",
+          "bbox": [
+            36,
+            471,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 14,
+            "color": "243447"
+          }
+        }
+      ]
+    },
+    {
+      "id": "page-2",
+      "notes": "Synthetic functional example; not a reconstruction of user sources.",
+      "objects": [
+        {
+          "id": "p02.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "原生表格与数据图表",
+          "bbox": [
+            36,
+            24,
+            880,
+            40
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 27,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p02.caption",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "全部数值是功能测试数据，不代表实测或模拟结果。",
+          "bbox": [
+            36,
+            75,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 15,
+            "color": "243447"
+          }
+        },
+        {
+          "id": "p02.table",
+          "kind": "table",
+          "editability": "table",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "bbox": [
+            36,
+            151,
+            360,
+            235
+          ],
+          "rows": [
+            [
+              "参数",
+              "方案A",
+              "方案B"
+            ],
+            [
+              "负荷",
+              "10.0",
+              "12.0"
+            ],
+            [
+              "比率",
+              "2.5%",
+              "3.0%"
+            ],
+            [
+              "单位",
+              "mg/L",
+              "mg/L"
+            ]
+          ],
+          "column_widths": [
+            130,
+            115,
+            115
+          ],
+          "header_fill": "CFDFED",
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 17,
+            "margin_pt": 5,
+            "line": "ADBFD0",
+            "line_width_pt": 0.7
+          }
+        },
+        {
+          "id": "p02.chart",
+          "kind": "chart",
+          "editability": "data_chart",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "bbox": [
+            440,
+            127,
+            480,
+            285
+          ],
+          "chart_type": "line",
+          "categories": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "series": [
+            {
+              "name": "A",
+              "values": [
+                1,
+                2,
+                4,
+                5
+              ],
+              "color": "396E9E"
+            },
+            {
+              "name": "B",
+              "values": [
+                2,
+                3,
+                3,
+                6
+              ],
+              "color": "7B9DBA"
+            }
+          ],
+          "data_provenance": "Synthetic function-test values only; not measurements",
+          "style": {
+            "font": "Arial",
+            "font_size_pt": 14
+          }
+        },
+        {
+          "id": "p02.note",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "表格保留单元格；折线图包含嵌入工作簿。",
+          "bbox": [
+            36,
+            432,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447"
+          }
+        },
+        {
+          "id": "p02.footer",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "02 / 03   synthetic fixture",
+          "bbox": [
+            36,
+            471,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 14,
+            "color": "243447"
+          }
+        }
+      ]
+    },
+    {
+      "id": "page-3",
+      "notes": "Synthetic functional example; not a reconstruction of user sources.",
+      "objects": [
+        {
+          "id": "p03.title",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "连接关系、自由路径与组合",
+          "bbox": [
+            36,
+            24,
+            880,
+            40
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 27,
+            "color": "243447",
+            "bold": true
+          }
+        },
+        {
+          "id": "p03.caption",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "双向端点与半圆底边需要局部核对。",
+          "bbox": [
+            36,
+            75,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 15,
+            "color": "243447"
+          }
+        },
+        {
+          "id": "p03.left",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            76,
+            170,
+            180,
+            95
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null
+          }
+        },
+        {
+          "id": "p03.right",
+          "kind": "shape",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "geometry": "round_rect",
+          "bbox": [
+            698,
+            170,
+            180,
+            95
+          ],
+          "style": {
+            "fill": "EBF1F7",
+            "line": null
+          }
+        },
+        {
+          "id": "p03.edge",
+          "kind": "connector",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "points": [
+            [
+              256,
+              218
+            ],
+            [
+              698,
+              218
+            ]
+          ],
+          "begin": {
+            "object_id": "p03.left",
+            "site": 3
+          },
+          "end": {
+            "object_id": "p03.right",
+            "site": 1
+          },
+          "style": {
+            "line": "396E9E",
+            "line_width_pt": 2,
+            "begin_arrow": "triangle",
+            "end_arrow": "triangle"
+          }
+        },
+        {
+          "id": "p03.left.text",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "节点 A",
+          "bbox": [
+            96,
+            200,
+            140,
+            36
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "align": "center",
+            "bold": true
+          }
+        },
+        {
+          "id": "p03.right.text",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "节点 B",
+          "bbox": [
+            718,
+            200,
+            140,
+            36
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "align": "center",
+            "bold": true
+          }
+        },
+        {
+          "id": "p03.group",
+          "kind": "group",
+          "editability": "group",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "children": [
+            {
+              "id": "p03.half",
+              "kind": "path",
+              "editability": "path",
+              "evidence": {
+                "status": "synthetic",
+                "note": "功能测试构造，不来自用户参考稿"
+              },
+              "closed": true,
+              "commands": [
+                [
+                  "M",
+                  378,
+                  369
+                ],
+                [
+                  "C",
+                  378,
+                  275,
+                  578,
+                  275,
+                  578,
+                  369
+                ],
+                [
+                  "L",
+                  378,
+                  369
+                ],
+                [
+                  "Z"
+                ]
+              ],
+              "style": {
+                "fill": "477FAC",
+                "line": null
+              }
+            },
+            {
+              "id": "p03.half.value",
+              "kind": "text",
+              "editability": "text",
+              "evidence": {
+                "status": "synthetic",
+                "note": "功能测试构造，不来自用户参考稿"
+              },
+              "text": "75%",
+              "bbox": [
+                420,
+                316,
+                116,
+                43
+              ],
+              "style": {
+                "font": "Arial",
+                "font_east_asia": "Microsoft YaHei",
+                "font_size_pt": 26,
+                "color": "FFFFFF",
+                "bold": true,
+                "align": "center"
+              }
+            }
+          ]
+        },
+        {
+          "id": "p03.note",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "半圆与数值是分组中的两个独立对象。",
+          "bbox": [
+            225,
+            403,
+            550,
+            35
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 18,
+            "color": "243447",
+            "align": "center"
+          }
+        },
+        {
+          "id": "p03.footer",
+          "kind": "text",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "功能测试构造，不来自用户参考稿"
+          },
+          "text": "03 / 03   synthetic fixture",
+          "bbox": [
+            36,
+            471,
+            880,
+            30
+          ],
+          "style": {
+            "font": "Arial",
+            "font_east_asia": "Microsoft YaHei",
+            "font_size_pt": 14,
+            "color": "243447"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "renderer": "LibreOffice 25.2.3.2 520(Build:2)",
+  "pptx_sha256": "87c09bf62c8d9e4e1293a99c2e253536692e60eb1b51d8188fc4a7ace19c8110",
+  "pages": [
+    {
+      "index": 1,
+      "file": "preview-001.png",
+      "sha256": "d1525957e87e1ff325367982d5e5769cc2302f378ec111f715fc101e5c3f8ff3"
+    },
+    {
+      "index": 2,
+      "file": "preview-002.png",
+      "sha256": "df21a0a95908122047ca88150d8d551f796f403572e3e3d55de738b2824cbe0e"
+    },
+    {
+      "index": 3,
+      "file": "preview-003.png",
+      "sha256": "71faf766a8f227dbd0125299a45a9f52349b8a7521004686df7336fd1acf315a"
+    }
+  ],
+  "viewed_by": "Current assistant using container image viewer",
+  "scope": "Synthetic component examples inspected visually in LibreOffice output. Not Microsoft PowerPoint validation or reconstruction of original22 slides."
+}

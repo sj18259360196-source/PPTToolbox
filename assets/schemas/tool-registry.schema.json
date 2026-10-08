@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Toolbox registry",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "tools",
+    "internal_modules"
+  ],
+  "properties": {
+    "format": {
+      "const": "ppt-toolbox/1.2"
+    },
+    "version": {
+      "type": "string"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "inputs",
+          "outputs",
+          "manuals",
+          "limitations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "python",
+              "powershell",
+              "powershell_module",
+              "host",
+              "manual"
+            ]
+          },
+          "manuals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "internal_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "assets": [],
+  "record_fields": [
+    "asset_id",
+    "path",
+    "source_kind",
+    "source",
+    "license_status",
+    "crop_box_ltrb",
+    "processing",
+    "sha256",
+    "used_by",
+    "editability",
+    "limitations"
+  ]
+}

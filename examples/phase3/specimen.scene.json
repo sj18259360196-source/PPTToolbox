@@ -1,0 +1,2385 @@
+{
+  "version": "1.0",
+  "title": "Phase 3 native toolbox specimens",
+  "canvas": {
+    "width": 1200,
+    "height": 675,
+    "width_pt": 900,
+    "height_pt": 506.25,
+    "mapping": "uniform",
+    "background": "F4F8FA"
+  },
+  "slides": [
+    {
+      "id": "geometry",
+      "objects": [
+        {
+          "id": "title",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            26,
+            1110,
+            45
+          ],
+          "text": "Native geometry recipes",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 26,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "subtitle",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            78,
+            1110,
+            32
+          ],
+          "text": "Eight recipes compile to editable shapes, paths, text and pictures.",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 12,
+            "color": "536B7B",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "footer",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            642,
+            1110,
+            24
+          ],
+          "text": "FUNCTIONAL SPECIMENS  /  synthetic inputs  /  Office rendering still required",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 10,
+            "color": "617886",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "card0",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            132,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label0",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            60,
+            146,
+            320,
+            28
+          ],
+          "text": "Flat-base semicircle",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component0",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              105.0,
+              296.0
+            ],
+            [
+              "C",
+              105.0,
+              240.77152501692063,
+              140.8172200135365,
+              196.0,
+              185.0,
+              196.0
+            ],
+            [
+              "C",
+              229.1827799864635,
+              196.0,
+              265.0,
+              240.77152501692063,
+              265.0,
+              296.0
+            ],
+            [
+              "L",
+              105.0,
+              296.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "closed": true,
+          "style": {
+            "fill": "2A7099",
+            "line": null
+          }
+        },
+        {
+          "id": "card1",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            424,
+            132,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label1",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            440,
+            146,
+            320,
+            28
+          ],
+          "text": "Separate ring sectors",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component1",
+          "kind": "group",
+          "role": "diagram",
+          "editability": "group",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "children": [
+            {
+              "id": "component1_seg1",
+              "kind": "path",
+              "role": "diagram",
+              "editability": "path",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "commands": [
+                [
+                  "M",
+                  644.9751560607278,
+                  268.3978287523208
+                ],
+                [
+                  "C",
+                  643.9656135309122,
+                  306.9507025608041,
+                  612.9507025608041,
+                  337.9656135309122,
+                  574.3978287523208,
+                  338.9751560607279
+                ],
+                [
+                  "L",
+                  573.7525669765317,
+                  314.3336030000804
+                ],
+                [
+                  "C",
+                  599.1974636901307,
+                  313.66730493040205,
+                  619.667304930402,
+                  293.1974636901307,
+                  620.3336030000804,
+                  267.75256697653174
+                ],
+                [
+                  "Z"
+                ]
+              ],
+              "closed": true,
+              "style": {
+                "line": null,
+                "fill": "BEDDEB"
+              }
+            },
+            {
+              "id": "component1_seg2",
+              "kind": "path",
+              "role": "diagram",
+              "editability": "path",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "commands": [
+                [
+                  "M",
+                  570.6021712476792,
+                  338.9751560607279
+                ],
+                [
+                  "C",
+                  532.0492974391959,
+                  337.9656135309122,
+                  501.0343864690878,
+                  306.9507025608041,
+                  500.0248439392721,
+                  268.39782875232083
+                ],
+                [
+                  "L",
+                  524.6663969999196,
+                  267.75256697653174
+                ],
+                [
+                  "C",
+                  525.332695069598,
+                  293.1974636901307,
+                  545.8025363098693,
+                  313.66730493040205,
+                  571.2474330234683,
+                  314.3336030000804
+                ],
+                [
+                  "Z"
+                ]
+              ],
+              "closed": true,
+              "style": {
+                "line": null,
+                "fill": "8DBDD8"
+              }
+            },
+            {
+              "id": "component1_seg3",
+              "kind": "path",
+              "role": "diagram",
+              "editability": "path",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "commands": [
+                [
+                  "M",
+                  500.0248439392721,
+                  264.60217124767917
+                ],
+                [
+                  "C",
+                  501.0343864690878,
+                  226.04929743919593,
+                  532.0492974391959,
+                  195.0343864690878,
+                  570.6021712476792,
+                  194.0248439392721
+                ],
+                [
+                  "L",
+                  571.2474330234683,
+                  218.66639699991958
+                ],
+                [
+                  "C",
+                  545.8025363098693,
+                  219.33269506959795,
+                  525.332695069598,
+                  239.8025363098693,
+                  524.6663969999196,
+                  265.24743302346826
+                ],
+                [
+                  "Z"
+                ]
+              ],
+              "closed": true,
+              "style": {
+                "line": null,
+                "fill": "6FA1C5"
+              }
+            },
+            {
+              "id": "component1_seg4",
+              "kind": "path",
+              "role": "diagram",
+              "editability": "path",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "commands": [
+                [
+                  "M",
+                  574.3978287523208,
+                  194.0248439392721
+                ],
+                [
+                  "C",
+                  612.9507025608041,
+                  195.0343864690878,
+                  643.9656135309122,
+                  226.0492974391959,
+                  644.9751560607278,
+                  264.60217124767917
+                ],
+                [
+                  "L",
+                  620.3336030000804,
+                  265.24743302346826
+                ],
+                [
+                  "C",
+                  619.667304930402,
+                  239.80253630986928,
+                  599.1974636901307,
+                  219.33269506959795,
+                  573.7525669765317,
+                  218.66639699991958
+                ],
+                [
+                  "Z"
+                ]
+              ],
+              "closed": true,
+              "style": {
+                "line": null,
+                "fill": "A9D3E8"
+              }
+            }
+          ]
+        },
+        {
+          "id": "card2",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            804,
+            132,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label2",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            820,
+            146,
+            320,
+            28
+          ],
+          "text": "Two-ended wide arrow",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component2",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              865.0,
+              233.5
+            ],
+            [
+              "L",
+              909.8,
+              201.0
+            ],
+            [
+              "L",
+              909.8,
+              223.1
+            ],
+            [
+              "L",
+              1044.2,
+              223.1
+            ],
+            [
+              "L",
+              1044.2,
+              201.0
+            ],
+            [
+              "L",
+              1089.0,
+              233.5
+            ],
+            [
+              "L",
+              1044.2,
+              266.0
+            ],
+            [
+              "L",
+              1044.2,
+              243.9
+            ],
+            [
+              "L",
+              909.8,
+              243.9
+            ],
+            [
+              "L",
+              909.8,
+              266.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "closed": true,
+          "style": {
+            "fill": "2A7099",
+            "line": null
+          }
+        },
+        {
+          "id": "card3",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            374,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label3",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            60,
+            388,
+            320,
+            28
+          ],
+          "text": "Annular sector",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component3",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              265.0,
+              497.0
+            ],
+            [
+              "C",
+              265.0,
+              523.8070967068998,
+              245.37807018187624,
+              547.8645999608517,
+              215.5889479669869,
+              557.5805115033819
+            ],
+            [
+              "C",
+              185.79982575209755,
+              567.2964230459121,
+              151.95442843273128,
+              560.6776283626924,
+              130.3610063972154,
+              540.913363495018
+            ],
+            [
+              "C",
+              108.76758436169953,
+              521.1490986273434,
+              103.85579536109616,
+              492.293789451814,
+              117.99236253121666,
+              468.25123513576494
+            ],
+            [
+              "C",
+              132.12892970133714,
+              444.2086808197158,
+              162.41388868101913,
+              429.9109521996384,
+              194.2545700629435,
+              432.24734462403654
+            ],
+            [
+              "L",
+              191.9580162415427,
+              454.2632474518641
+            ],
+            [
+              "C",
+              170.94316652947262,
+              452.72122845176136,
+              150.95509360288253,
+              462.15772934101244,
+              141.62495927060297,
+              478.0258151896048
+            ],
+            [
+              "C",
+              132.29482493832347,
+              493.89390103819727,
+              135.53660567872168,
+              512.9384050940466,
+              149.78826422216216,
+              525.9828199067118
+            ],
+            [
+              "C",
+              164.03992276560263,
+              539.027234719377,
+              186.37788499638438,
+              543.395639210302,
+              206.03870565821134,
+              536.9831375922321
+            ],
+            [
+              "C",
+              225.6995263200383,
+              530.5706359741621,
+              238.65,
+              514.6926838265539,
+              238.65,
+              497.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "closed": true,
+          "style": {
+            "fill": "2A7099",
+            "line": null
+          }
+        },
+        {
+          "id": "card4",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            424,
+            374,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label4",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            440,
+            388,
+            320,
+            28
+          ],
+          "text": "Notched native card",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component4",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              480.0,
+              424.0
+            ],
+            [
+              "L",
+              663.4,
+              424.0
+            ],
+            [
+              "L",
+              685.0,
+              445.6
+            ],
+            [
+              "L",
+              685.0,
+              544.0
+            ],
+            [
+              "L",
+              480.0,
+              544.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "closed": true,
+          "style": {
+            "fill": "2A7099",
+            "line": null
+          }
+        },
+        {
+          "id": "card5",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            804,
+            374,
+            352,
+            220
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "label5",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            820,
+            388,
+            320,
+            28
+          ],
+          "text": "Fixed feedback curve",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 15,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "component5",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              887.4,
+              431.0
+            ],
+            [
+              "L",
+              887.4,
+              502.5
+            ],
+            [
+              "C",
+              887.4,
+              535.0,
+              932.2,
+              535.0,
+              954.6,
+              535.0
+            ],
+            [
+              "L",
+              999.4,
+              535.0
+            ],
+            [
+              "C",
+              1044.2,
+              535.0,
+              1066.6,
+              535.0,
+              1066.6,
+              502.5
+            ],
+            [
+              "L",
+              1066.6,
+              431.0
+            ]
+          ],
+          "closed": false,
+          "style": {
+            "line": "2A7099",
+            "line_width_pt": 2,
+            "end_arrow": "triangle",
+            "begin_arrow": "triangle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "composites",
+      "objects": [
+        {
+          "id": "title",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            26,
+            1110,
+            45
+          ],
+          "text": "Composites and native image windows",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 26,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "subtitle",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            78,
+            1110,
+            32
+          ],
+          "text": "Holes remain holes. Text stays text. The image is independently replaceable.",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 12,
+            "color": "536B7B",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "footer",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            642,
+            1110,
+            24
+          ],
+          "text": "FUNCTIONAL SPECIMENS  /  synthetic inputs  /  Office rendering still required",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 10,
+            "color": "617886",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "left",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            132,
+            352,
+            460
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "mid",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            424,
+            132,
+            352,
+            460
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "right",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            804,
+            132,
+            352,
+            460
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "ll",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            65,
+            155,
+            306,
+            32
+          ],
+          "text": "Native ellipse photo",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 16,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "photo1",
+          "kind": "image",
+          "role": "photo",
+          "editability": "image_replace",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            100.0,
+            220.0,
+            240.0,
+            180.0
+          ],
+          "asset": "assets/synthetic-photo.png",
+          "fit": "cover",
+          "mask": {
+            "geometry": "ellipse"
+          },
+          "asset_role": "photo",
+          "source_kind": "user",
+          "provenance": "Locally drawn synthetic picture"
+        },
+        {
+          "id": "lc",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            65,
+            450,
+            306,
+            44
+          ],
+          "text": "Mask is p:pic geometry",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 13,
+            "color": "243F51",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "ml",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            445,
+            155,
+            306,
+            32
+          ],
+          "text": "Independent node parts",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 16,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "node",
+          "kind": "group",
+          "role": "diagram",
+          "editability": "group",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "children": [
+            {
+              "id": "node_base",
+              "kind": "shape",
+              "role": "diagram",
+              "editability": "shape",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "geometry": "ellipse",
+              "bbox": [
+                480.0,
+                214.0,
+                240.0,
+                240.0
+              ],
+              "style": {
+                "fill": "2A7099",
+                "line": null
+              }
+            },
+            {
+              "id": "node_icon",
+              "kind": "image",
+              "role": "diagram",
+              "editability": "image_replace",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "bbox": [
+                559.2,
+                233.2,
+                81.60000000000001,
+                67.2
+              ],
+              "asset": "assets/synthetic-icon.png",
+              "fit": "contain",
+              "asset_role": "icon",
+              "source_kind": "user",
+              "provenance": "Synthetic local icon"
+            },
+            {
+              "id": "node_label",
+              "kind": "text",
+              "role": "diagram",
+              "editability": "text",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "bbox": [
+                496.8,
+                305.2,
+                206.4,
+                48.0
+              ],
+              "text": "EDITABLE",
+              "style": {
+                "font": "DejaVu Sans",
+                "font_east_asia": "Microsoft YaHei",
+                "font_size_pt": 15,
+                "align": "center",
+                "color": "FFFFFF",
+                "valign": "middle"
+              }
+            },
+            {
+              "id": "node_value",
+              "kind": "text",
+              "role": "diagram",
+              "editability": "text",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "bbox": [
+                496.8,
+                355.6,
+                206.4,
+                48.0
+              ],
+              "text": "32.5%",
+              "style": {
+                "font": "DejaVu Sans",
+                "font_east_asia": "Microsoft YaHei",
+                "font_size_pt": 15,
+                "align": "center",
+                "color": "FFFFFF",
+                "valign": "middle",
+                "bold": true
+              }
+            },
+            {
+              "id": "node_description",
+              "kind": "text",
+              "role": "diagram",
+              "editability": "text",
+              "evidence": {
+                "status": "synthetic",
+                "note": "Native toolbox function sample; not real experimental data"
+              },
+              "bbox": [
+                496.8,
+                406.0,
+                206.4,
+                36.0
+              ],
+              "text": "sample only",
+              "style": {
+                "font": "DejaVu Sans",
+                "font_east_asia": "Microsoft YaHei",
+                "font_size_pt": 10.799999999999999,
+                "align": "center",
+                "color": "FFFFFF",
+                "valign": "middle"
+              }
+            }
+          ]
+        },
+        {
+          "id": "mc",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            445,
+            490,
+            306,
+            44
+          ],
+          "text": "Label / value / icon separate",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 12,
+            "color": "243F51",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "rl",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            825,
+            155,
+            306,
+            32
+          ],
+          "text": "Boolean subtract",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 16,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "hole",
+          "kind": "path",
+          "role": "diagram",
+          "editability": "path",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "commands": [
+            [
+              "M",
+              863.0,
+              220.0
+            ],
+            [
+              "L",
+              1083.0,
+              220.0
+            ],
+            [
+              "L",
+              1083.0,
+              400.0
+            ],
+            [
+              "L",
+              863.0,
+              400.0
+            ],
+            [
+              "Z"
+            ],
+            [
+              "M",
+              1027.9337500912845,
+              312.4533837163709
+            ],
+            [
+              "L",
+              1028.0,
+              310.0
+            ],
+            [
+              "L",
+              1027.9337500912845,
+              307.5466162836291
+            ],
+            [
+              "L",
+              1027.7351599669707,
+              305.099142983522
+            ],
+            [
+              "L",
+              1027.404708048063,
+              302.6634762772319
+            ],
+            [
+              "L",
+              1026.9431904221776,
+              300.2454838991936
+            ],
+            [
+              "L",
+              1026.3517189257,
+              297.85099100483677
+            ],
+            [
+              "L",
+              1025.6317184652714,
+              295.48576613727687
+            ],
+            [
+              "L",
+              1024.784923585066,
+              293.155507330389
+            ],
+            [
+              "L",
+              1023.8133742881207,
+              290.8658283817455
+            ],
+            [
+              "L",
+              1022.7194111217893,
+              288.62224532848586
+            ],
+            [
+              "L",
+              1021.5056695391595,
+              286.4301631587001
+            ],
+            [
+              "L",
+              1020.175073550015,
+              284.2948627903389
+            ],
+            [
+              "L",
+              1018.7308286766399,
+              282.22148834901986
+            ],
+            [
+              "L",
+              1017.1764142314355,
+              280.21503477537834
+            ],
+            [
+              "L",
+              1015.5155749349506,
+              278.2803357918177
+            ],
+            [
+              "L",
+              1013.7523118945228,
+              276.42205225764906
+            ],
+            [
+              "L",
+              1011.8908729652601,
+              274.6446609406726
+            ],
+            [
+              "L",
+              1009.9357425165861,
+              272.95244373225205
+            ],
+            [
+              "L",
+              1007.8916306290005,
+              271.34947733186317
+            ],
+            [
+              "L",
+              1005.7634617470839,
+              269.8396234259677
+            ],
+            [
+              "L",
+              1003.5563628160781,
+              268.42651938487273
+            ],
+            [
+              "L",
+              1001.2756509306272,
+              267.1135694999864
+            ],
+            [
+              "L",
+              998.9268205254299,
+              265.90393678258226
+            ],
+            [
+              "L",
+              996.5155301386656,
+              264.80053534382785
+            ],
+            [
+              "L",
+              994.04758878008,
+              263.80602337443565
+            ],
+            [
+              "L",
+              991.5289419365721,
+              262.922796740849
+            ],
+            [
+              "L",
+              988.9656572489954,
+              262.1529832133896
+            ],
+            [
+              "L",
+              986.3639098946795,
+              261.4984373402728
+            ],
+            [
+              "L",
+              983.7299677108871,
+              260.9607359798385
+            ],
+            [
+              "L",
+              981.0701760950449,
+              260.54117450176096
+            ],
+            [
+              "L",
+              978.3909427181258,
+              260.24076366639014
+            ],
+            [
+              "L",
+              975.698722088008,
+              260.0602271897414
+            ],
+            [
+              "L",
+              973.0,
+              260.0
+            ],
+            [
+              "L",
+              970.301277911992,
+              260.0602271897414
+            ],
+            [
+              "L",
+              967.6090572818741,
+              260.24076366639014
+            ],
+            [
+              "L",
+              964.9298239049551,
+              260.54117450176096
+            ],
+            [
+              "L",
+              962.2700322891129,
+              260.9607359798385
+            ],
+            [
+              "L",
+              959.6360901053205,
+              261.4984373402728
+            ],
+            [
+              "L",
+              957.0343427510046,
+              262.1529832133896
+            ],
+            [
+              "L",
+              954.4710580634279,
+              262.922796740849
+            ],
+            [
+              "L",
+              951.95241121992,
+              263.80602337443565
+            ],
+            [
+              "L",
+              949.4844698613344,
+              264.80053534382785
+            ],
+            [
+              "L",
+              947.0731794745701,
+              265.90393678258226
+            ],
+            [
+              "L",
+              944.7243490693728,
+              267.1135694999864
+            ],
+            [
+              "L",
+              942.4436371839219,
+              268.42651938487273
+            ],
+            [
+              "L",
+              940.2365382529161,
+              269.8396234259677
+            ],
+            [
+              "L",
+              938.1083693709995,
+              271.34947733186317
+            ],
+            [
+              "L",
+              936.0642574834139,
+              272.95244373225205
+            ],
+            [
+              "L",
+              934.1091270347399,
+              274.6446609406726
+            ],
+            [
+              "L",
+              932.2476881054772,
+              276.42205225764906
+            ],
+            [
+              "L",
+              930.4844250650494,
+              278.2803357918177
+            ],
+            [
+              "L",
+              928.8235857685645,
+              280.21503477537834
+            ],
+            [
+              "L",
+              927.26917132336,
+              282.2214883490199
+            ],
+            [
+              "L",
+              925.824926449985,
+              284.2948627903389
+            ],
+            [
+              "L",
+              924.4943304608405,
+              286.4301631587001
+            ],
+            [
+              "L",
+              923.2805888782107,
+              288.6222453284859
+            ],
+            [
+              "L",
+              922.1866257118792,
+              290.86582838174553
+            ],
+            [
+              "L",
+              921.2150764149338,
+              293.155507330389
+            ],
+            [
+              "L",
+              920.3682815347286,
+              295.48576613727687
+            ],
+            [
+              "L",
+              919.6482810743,
+              297.8509910048368
+            ],
+            [
+              "L",
+              919.0568095778224,
+              300.2454838991936
+            ],
+            [
+              "L",
+              918.595291951937,
+              302.6634762772319
+            ],
+            [
+              "L",
+              918.2648400330291,
+              305.099142983522
+            ],
+            [
+              "L",
+              918.0662499087155,
+              307.54661628362913
+            ],
+            [
+              "L",
+              918.0,
+              310.0
+            ],
+            [
+              "L",
+              918.0662499087155,
+              312.4533837163709
+            ],
+            [
+              "L",
+              918.2648400330291,
+              314.900857016478
+            ],
+            [
+              "L",
+              918.595291951937,
+              317.3365237227681
+            ],
+            [
+              "L",
+              919.0568095778224,
+              319.7545161008064
+            ],
+            [
+              "L",
+              919.6482810743,
+              322.14900899516323
+            ],
+            [
+              "L",
+              920.3682815347286,
+              324.51423386272313
+            ],
+            [
+              "L",
+              921.2150764149338,
+              326.84449266961104
+            ],
+            [
+              "L",
+              922.1866257118793,
+              329.13417161825447
+            ],
+            [
+              "L",
+              923.2805888782107,
+              331.3777546715141
+            ],
+            [
+              "L",
+              924.4943304608405,
+              333.5698368412999
+            ],
+            [
+              "L",
+              925.824926449985,
+              335.7051372096611
+            ],
+            [
+              "L",
+              927.26917132336,
+              337.77851165098014
+            ],
+            [
+              "L",
+              928.8235857685645,
+              339.78496522462166
+            ],
+            [
+              "L",
+              930.4844250650494,
+              341.7196642081823
+            ],
+            [
+              "L",
+              932.2476881054772,
+              343.57794774235094
+            ],
+            [
+              "L",
+              934.1091270347399,
+              345.3553390593274
+            ],
+            [
+              "L",
+              936.0642574834139,
+              347.04755626774795
+            ],
+            [
+              "L",
+              938.1083693709995,
+              348.6505226681369
+            ],
+            [
+              "L",
+              940.2365382529161,
+              350.1603765740322
+            ],
+            [
+              "L",
+              942.4436371839219,
+              351.57348061512727
+            ],
+            [
+              "L",
+              944.7243490693728,
+              352.8864305000136
+            ],
+            [
+              "L",
+              947.0731794745701,
+              354.09606321741774
+            ],
+            [
+              "L",
+              949.4844698613344,
+              355.19946465617215
+            ],
+            [
+              "L",
+              951.9524112199201,
+              356.19397662556435
+            ],
+            [
+              "L",
+              954.4710580634279,
+              357.077203259151
+            ],
+            [
+              "L",
+              957.0343427510046,
+              357.8470167866104
+            ],
+            [
+              "L",
+              959.6360901053205,
+              358.5015626597272
+            ],
+            [
+              "L",
+              962.2700322891129,
+              359.0392640201615
+            ],
+            [
+              "L",
+              964.9298239049551,
+              359.45882549823904
+            ],
+            [
+              "L",
+              967.6090572818741,
+              359.75923633360986
+            ],
+            [
+              "L",
+              970.301277911992,
+              359.9397728102586
+            ],
+            [
+              "L",
+              973.0,
+              360.0
+            ],
+            [
+              "L",
+              975.698722088008,
+              359.9397728102586
+            ],
+            [
+              "L",
+              978.3909427181259,
+              359.75923633360986
+            ],
+            [
+              "L",
+              981.0701760950449,
+              359.45882549823904
+            ],
+            [
+              "L",
+              983.7299677108871,
+              359.0392640201615
+            ],
+            [
+              "L",
+              986.3639098946795,
+              358.5015626597272
+            ],
+            [
+              "L",
+              988.9656572489954,
+              357.8470167866104
+            ],
+            [
+              "L",
+              991.5289419365721,
+              357.077203259151
+            ],
+            [
+              "L",
+              994.04758878008,
+              356.19397662556435
+            ],
+            [
+              "L",
+              996.5155301386656,
+              355.19946465617215
+            ],
+            [
+              "L",
+              998.9268205254299,
+              354.09606321741774
+            ],
+            [
+              "L",
+              1001.2756509306272,
+              352.8864305000136
+            ],
+            [
+              "L",
+              1003.5563628160781,
+              351.57348061512727
+            ],
+            [
+              "L",
+              1005.7634617470839,
+              350.1603765740322
+            ],
+            [
+              "L",
+              1007.8916306290005,
+              348.65052266813683
+            ],
+            [
+              "L",
+              1009.9357425165861,
+              347.04755626774795
+            ],
+            [
+              "L",
+              1011.8908729652601,
+              345.3553390593274
+            ],
+            [
+              "L",
+              1013.7523118945228,
+              343.57794774235094
+            ],
+            [
+              "L",
+              1015.5155749349506,
+              341.7196642081823
+            ],
+            [
+              "L",
+              1017.1764142314355,
+              339.78496522462166
+            ],
+            [
+              "L",
+              1018.7308286766399,
+              337.77851165098014
+            ],
+            [
+              "L",
+              1020.175073550015,
+              335.7051372096611
+            ],
+            [
+              "L",
+              1021.5056695391595,
+              333.5698368412999
+            ],
+            [
+              "L",
+              1022.7194111217893,
+              331.3777546715141
+            ],
+            [
+              "L",
+              1023.8133742881207,
+              329.13417161825447
+            ],
+            [
+              "L",
+              1024.784923585066,
+              326.844492669611
+            ],
+            [
+              "L",
+              1025.6317184652714,
+              324.51423386272313
+            ],
+            [
+              "L",
+              1026.3517189257,
+              322.1490089951632
+            ],
+            [
+              "L",
+              1026.9431904221776,
+              319.7545161008064
+            ],
+            [
+              "L",
+              1027.404708048063,
+              317.3365237227681
+            ],
+            [
+              "L",
+              1027.7351599669707,
+              314.900857016478
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "closed": true,
+          "style": {
+            "fill": "3B84AD",
+            "line": null
+          }
+        },
+        {
+          "id": "rc",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            825,
+            450,
+            306,
+            44
+          ],
+          "text": "Actual reverse-wound hole",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 12,
+            "color": "243F51",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "objects": [
+        {
+          "id": "title",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            26,
+            1110,
+            45
+          ],
+          "text": "Native tables and data charts",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 26,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "subtitle",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            78,
+            1110,
+            32
+          ],
+          "text": "Synthetic values demonstrate cell formatting, row control, axis settings and editable data.",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 12,
+            "color": "536B7B",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "footer",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            642,
+            1110,
+            24
+          ],
+          "text": "FUNCTIONAL SPECIMENS  /  synthetic inputs  /  Office rendering still required",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 10,
+            "color": "617886",
+            "bold": false,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "tc",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            44,
+            132,
+            460,
+            460
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "cc",
+          "kind": "shape",
+          "role": "card",
+          "editability": "shape",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            534,
+            132,
+            622,
+            460
+          ],
+          "geometry": "round_rect",
+          "style": {
+            "fill": "FFFFFF",
+            "line": null
+          }
+        },
+        {
+          "id": "tl",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            64,
+            155,
+            410,
+            32
+          ],
+          "text": "Merged header + unequal rows",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 16,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "cl",
+          "kind": "text",
+          "role": "content",
+          "editability": "text",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            554,
+            155,
+            570,
+            32
+          ],
+          "text": "XY chart + real embedded data",
+          "style": {
+            "font": "DejaVu Sans",
+            "font_east_asia": "Noto Sans CJK SC",
+            "font_size_pt": 16,
+            "color": "243F51",
+            "bold": true,
+            "margin_pt": 0,
+            "wrap": false
+          }
+        },
+        {
+          "id": "table",
+          "kind": "table",
+          "role": "table",
+          "editability": "table",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            65,
+            223,
+            416,
+            276
+          ],
+          "rows": [
+            [
+              "Synthetic example",
+              ""
+            ],
+            [
+              "Component",
+              "Count"
+            ],
+            [
+              "Ring sectors",
+              "4"
+            ],
+            [
+              "Arrowheads",
+              "2"
+            ]
+          ],
+          "column_widths": [
+            285,
+            131
+          ],
+          "row_heights": [
+            58,
+            56,
+            84,
+            78
+          ],
+          "merges": [
+            [
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "cell_styles": [
+            {
+              "row": 0,
+              "col": 0,
+              "style": {
+                "bold": true,
+                "fill": "D5E9F2"
+              }
+            },
+            {
+              "row": 2,
+              "col": 1,
+              "style": {
+                "bold": true,
+                "color": "25739C"
+              }
+            }
+          ],
+          "style": {
+            "font": "DejaVu Sans",
+            "font_size_pt": 14,
+            "line": "AEC5D3",
+            "fill": "FFFFFF",
+            "margin_pt": 5
+          }
+        },
+        {
+          "id": "chart",
+          "kind": "chart",
+          "role": "chart",
+          "editability": "data_chart",
+          "evidence": {
+            "status": "synthetic",
+            "note": "Native toolbox function sample; not real experimental data"
+          },
+          "bbox": [
+            555,
+            210,
+            577,
+            330
+          ],
+          "chart_type": "xy",
+          "series": [
+            {
+              "name": "A",
+              "points": [
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  3
+                ]
+              ],
+              "color": "378BAE",
+              "marker": "circle",
+              "marker_size_pt": 6,
+              "line_width_pt": 2
+            },
+            {
+              "name": "B",
+              "points": [
+                [
+                  0,
+                  0.5
+                ],
+                [
+                  1,
+                  1.4
+                ],
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2.7
+                ]
+              ],
+              "color": "D59A4A",
+              "marker": "square",
+              "marker_size_pt": 5,
+              "line_width_pt": 1.8
+            }
+          ],
+          "axes": {
+            "x": {
+              "minimum": 0,
+              "maximum": 3,
+              "major_unit": 1,
+              "title": "Sample index",
+              "gridlines": false
+            },
+            "y": {
+              "minimum": 0,
+              "maximum": 5,
+              "major_unit": 1,
+              "number_format": "0.0",
+              "title": "Synthetic value"
+            }
+          },
+          "legend_position": "top",
+          "data_provenance": "All chart values are invented function-test data, not experimental observations."
+        }
+      ]
+    }
+  ]
+}

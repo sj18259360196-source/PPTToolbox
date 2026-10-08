@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Workflow response envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "token",
+    "result"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^task-[0-9]{6,}$"
+    },
+    "token": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "result": {
+      "type": "object"
+    }
+  }
+}

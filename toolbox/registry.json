@@ -1,0 +1,1685 @@
+{
+  "format": "ppt-toolbox/1.2",
+  "version": "1.3.1",
+  "single_entry": "toolbox.py",
+  "tools": [
+    {
+      "id": "experience.search",
+      "title": "按当前症状检索重建经验",
+      "kind": "python",
+      "entry": "scripts/rebuild_assistance.py",
+      "inputs": "query [--limit 1..3]",
+      "outputs": "最多三条历史经验，附有效手册、真实工具类型及单条详情入口",
+      "manuals": [
+        "references/codex-assistance.md",
+        "references/experience-library.md"
+      ],
+      "limitations": "关键词检索不判断当前原因；历史记录未在本次复测，不构成验收。"
+    },
+    {
+      "id": "experience.show",
+      "title": "查看单条经验及真实工具入口",
+      "kind": "python",
+      "entry": "scripts/experience_library.py",
+      "prefix": [
+        "show"
+      ],
+      "inputs": "identifier",
+      "outputs": "历史动作、来源摘录、当前工具类型与发现入口",
+      "manuals": [
+        "references/experience-library.md"
+      ],
+      "limitations": "只读知识库。不会执行建议工具、修改项目或授权；完整性通过不代表经验提炼完整或实际 Office 验收。"
+    },
+    {
+      "id": "experience.source",
+      "title": "按物理行号读取经验原文",
+      "kind": "python",
+      "entry": "scripts/experience_library.py",
+      "prefix": [
+        "source"
+      ],
+      "inputs": "identifier [--start N --end N]",
+      "outputs": "已核对哈希的来源文本，最多80行",
+      "manuals": [
+        "references/experience-library.md"
+      ],
+      "limitations": "只读知识库。不会执行建议工具、修改项目或授权；完整性通过不代表经验提炼完整或实际 Office 验收。"
+    },
+    {
+      "id": "experience.audit",
+      "title": "核对经验库来源与命令关联",
+      "kind": "python",
+      "entry": "scripts/experience_library.py",
+      "prefix": [
+        "audit"
+      ],
+      "inputs": "[--details]",
+      "outputs": "来源哈希、引用、手册及注册工具的完整性报告",
+      "manuals": [
+        "references/experience-library.md"
+      ],
+      "limitations": "只读知识库。不会执行建议工具、修改项目或授权；完整性通过不代表经验提炼完整或实际 Office 验收。"
+    },
+    {
+      "id": "office.edit-readback",
+      "title": "PowerPoint 副本编辑保存重开读回",
+      "kind": "python",
+      "entry": "scripts/office_edit.py",
+      "inputs": "describe | validate --operations JSON | run --operations JSON --pptx PPTX --outdir NEW_DIR",
+      "outputs": "新副本、文字/填充/表格/图片裁切的保存重开读回记录与抽查页渲染",
+      "manuals": [
+        "references/codex-assistance.md",
+        "references/measured-refinement.md"
+      ],
+      "limitations": "实际执行需要Windows PowerPoint。裁切用绝对点值、0.05pt容差；整组移动须分阶段另测。",
+      "timeout_seconds": 240
+    },
+    {
+      "id": "assets.audit",
+      "title": "读取图片尺寸与Alpha",
+      "kind": "python",
+      "inputs": "source",
+      "outputs": "图片/Alpha检查结果；非视觉通过",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "色键需要前景与底色可分离；收紧透明边界可能改变主体缩放，仍需看图。",
+      "entry": "scripts/assets_tool.py",
+      "prefix": [
+        "audit"
+      ]
+    },
+    {
+      "id": "assets.crop",
+      "title": "严格局部裁切",
+      "kind": "python",
+      "inputs": "source output --box left top right bottom",
+      "outputs": "图片/Alpha检查结果；非视觉通过",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "色键需要前景与底色可分离；收紧透明边界可能改变主体缩放，仍需看图。",
+      "entry": "scripts/assets_tool.py",
+      "prefix": [
+        "crop"
+      ]
+    },
+    {
+      "id": "assets.chroma",
+      "title": "纯色底转真实透明",
+      "kind": "python",
+      "inputs": "source output --key FF00FF [--tolerance 28 --feather 16]",
+      "outputs": "图片/Alpha检查结果；非视觉通过",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "色键需要前景与底色可分离；收紧透明边界可能改变主体缩放，仍需看图。",
+      "entry": "scripts/assets_tool.py",
+      "prefix": [
+        "chroma"
+      ]
+    },
+    {
+      "id": "assets.trim",
+      "title": "收紧透明边界",
+      "kind": "python",
+      "inputs": "source output [--padding 4 --threshold 1]",
+      "outputs": "图片/Alpha检查结果；非视觉通过",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "色键需要前景与底色可分离；收紧透明边界可能改变主体缩放，仍需看图。",
+      "entry": "scripts/assets_tool.py",
+      "prefix": [
+        "trim-alpha"
+      ]
+    },
+    {
+      "id": "assets.matte",
+      "title": "检查实际底色上的透明边缘",
+      "kind": "python",
+      "inputs": "source output --background FFFFFF",
+      "outputs": "图片/Alpha检查结果；非视觉通过",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "色键需要前景与底色可分离；收紧透明边界可能改变主体缩放，仍需看图。",
+      "entry": "scripts/assets_tool.py",
+      "prefix": [
+        "matte"
+      ]
+    },
+    {
+      "id": "pptx.validate",
+      "title": "校验已分析scene",
+      "kind": "python",
+      "inputs": "scene.json",
+      "outputs": "字段级错误；不分析图片",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/validate_scene.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "pptx.build",
+      "title": "原生PPTX基础构建",
+      "kind": "python",
+      "inputs": "scene.json candidate.pptx",
+      "outputs": "原生PPTX＋build记录",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/build_pptx.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "pptx.inspect",
+      "title": "检查PPTX内容/结构/图表缓存",
+      "kind": "python",
+      "inputs": "candidate.pptx --scene scene.json --out audit.json",
+      "outputs": "审查报告；不代替看图",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/inspect_pptx.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "compare.page",
+      "title": "单页与局部左右对照",
+      "kind": "python",
+      "inputs": "reference.png rendered.png --outdir NEW [--regions regions.json]；兼容命名区域或旧四整数数组，多页加--slide；替代渲染用--right-label明确标注",
+      "outputs": "左右/叠加/差图与逐页收据",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/compare_images.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "compare.deck",
+      "title": "整套强制来源关联对照",
+      "kind": "python",
+      "inputs": "scene.json --pptx candidate.pptx --render office-render.json --regions regions.json --outdir NEW",
+      "outputs": "全页与必查局部；不自动视觉通过",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/compare_deck.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "delivery.verify",
+      "title": "第一阶段证据门禁",
+      "kind": "python",
+      "inputs": "candidate.pptx --scene scene.json --audit audit.json --render office-render.json --review review.json --comparison deck-comparison.json --out gate.json",
+      "outputs": "passed/failed/blocked",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/verify_delivery.py",
+      "waiting_exit_codes": [
+        3
+      ]
+    },
+    {
+      "id": "legacy.initialize",
+      "title": "旧空白项目初始化",
+      "kind": "python",
+      "inputs": "--project NEW references...",
+      "outputs": "空scene；不建新控制器状态",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/init_project.py",
+      "waiting_exit_codes": []
+    },
+    {
+      "id": "legacy.pipeline",
+      "title": "旧一次性构建流水线",
+      "kind": "python",
+      "inputs": "scene.json --output-dir NEW [--office --regions regions.json]",
+      "outputs": "旧流水线；新任务优先用根入口",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/run_pipeline.py",
+      "waiting_exit_codes": [
+        3
+      ]
+    },
+    {
+      "id": "environment.probe",
+      "title": "本地环境探测",
+      "kind": "python",
+      "inputs": "--out preflight.json",
+      "outputs": "导入/路径真实探测；不安装",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/preflight.py",
+      "waiting_exit_codes": [
+        3
+      ]
+    },
+    {
+      "id": "package.build",
+      "title": "构建并检查完整Skill ZIP",
+      "kind": "python",
+      "inputs": "ROOT NEW.zip",
+      "outputs": "标准UTF-8包、清单、链接验证",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/package_skill.py",
+      "waiting_exit_codes": [],
+      "prefix": [
+        "build"
+      ]
+    },
+    {
+      "id": "package.verify",
+      "title": "检查最终ZIP",
+      "kind": "python",
+      "inputs": "archive.zip",
+      "outputs": "CRC/哈希/文件名/解压链接",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "功能范围以对应脚本及报告为准。",
+      "entry": "scripts/package_skill.py",
+      "waiting_exit_codes": [],
+      "prefix": [
+        "verify"
+      ]
+    },
+    {
+      "id": "office.render",
+      "title": "PowerPoint真实打开和逐页导出",
+      "kind": "powershell",
+      "inputs": "-Pptx <actual.pptx> -OutputDir <NEW> [-SizesJson <sizes.json>] or -ProbeOnly -OutputDir <NEW>",
+      "outputs": "逐页PNG、字体边界及Office收据",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "Windows桌面PowerPoint；当前构建环境未实机验证。",
+      "entry": "scripts/render_powerpoint.ps1"
+    },
+    {
+      "id": "office.smoke",
+      "title": "PowerPoint原生工具小样",
+      "kind": "powershell",
+      "inputs": "-OutputPptx <NEW.pptx>",
+      "outputs": "原生操作测试PPTX；再用office.render实际导出查看",
+      "manuals": [
+        "references/tool-runtime.md"
+      ],
+      "limitations": "Windows桌面PowerPoint；请先tools show并阅读真实参数。",
+      "entry": "scripts/native_smoke.ps1"
+    },
+    {
+      "id": "office.native",
+      "title": "PowerPoint原生函数工具箱",
+      "kind": "powershell_module",
+      "inputs": "Import-Module，再按具体函数具名参数调用；长度、字号与线宽为pt",
+      "outputs": "原生对象或属性修改",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "操作函数，不是通用scene→COM转换器；布尔结果须重新获取引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "ConvertTo-PptRgb",
+        "Set-PptSolidStyle",
+        "Add-PptText",
+        "Add-PptShape",
+        "Set-PptTwoColorGradient",
+        "Add-PptLine",
+        "Add-PptConnector",
+        "Add-PptPath",
+        "Add-PptPicture",
+        "Add-PptTable",
+        "Group-PptObjects",
+        "Set-PptShapePictureFill",
+        "Add-PptPictureFillShape",
+        "Set-PptPictureCrop",
+        "Set-PptZOrder",
+        "Merge-PptShapes"
+      ]
+    },
+    {
+      "id": "office.convertto-pptrgb",
+      "title": "颜色十六进制转COM整数 / ConvertTo-PptRgb",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "ConvertTo-PptRgb"
+      ],
+      "signature": "param([Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{6}$')][string]$Hex)",
+      "parameters": [
+        "Hex"
+      ]
+    },
+    {
+      "id": "office.set-pptsolidstyle",
+      "title": "填充/边框/主题阴影 / Set-PptSolidStyle",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Set-PptSolidStyle"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Shape,[AllowNull()][string]$Fill,[AllowNull()][string]$Line,[double]$LineWidth=1)",
+      "parameters": [
+        "Shape",
+        "Fill",
+        "Line",
+        "LineWidth"
+      ]
+    },
+    {
+      "id": "office.add-ppttext",
+      "title": "中文混排文本框与尺寸恢复 / Add-PptText",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptText"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,\n      [Parameter(Mandatory)][string]$Text,[double]$Left,[double]$Top,[double]$Width,[double]$Height,\n      [string]$Font='Arial',[string]$EastAsiaFont='Microsoft YaHei',[double]$FontSize=18,\n      [string]$Color='222222',[switch]$Bold,[ValidateSet('left','center','right')][string]$Align='left',\n      [ValidateSet('top','middle','bottom')][string]$VerticalAlign='top',[double]$Margin=0,[switch]$Wrap,[double]$LineSpacing=0)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Text",
+        "Left",
+        "Top",
+        "Width",
+        "Height",
+        "Font",
+        "EastAsiaFont",
+        "FontSize",
+        "Color",
+        "Bold",
+        "Align",
+        "VerticalAlign",
+        "Margin",
+        "Wrap",
+        "LineSpacing"
+      ],
+      "example": "$label = Add-PptText -Slide $slide -Id 'title' -Text '原文' -Left 24 -Top 20 -Width 600 -Height 42 -FontSize 24 -Bold"
+    },
+    {
+      "id": "office.add-pptshape",
+      "title": "预设形状/圆角矩形/圆/三角 / Add-PptShape",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptShape"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,\n      [ValidateSet('Rectangle','RoundRectangle','Oval','Triangle','Diamond','RightArrow','LeftRightArrow','Star5')][string]$Geometry='Rectangle',\n      [double]$Left,[double]$Top,[double]$Width,[double]$Height,[string]$Fill='FFFFFF',[string]$Line='',[double]$LineWidth=1)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Geometry",
+        "Left",
+        "Top",
+        "Width",
+        "Height",
+        "Fill",
+        "Line",
+        "LineWidth"
+      ]
+    },
+    {
+      "id": "office.set-ppttwocolorgradient",
+      "title": "两色渐变与调用顺序 / Set-PptTwoColorGradient",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Set-PptTwoColorGradient"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Shape,[Parameter(Mandatory)][string]$Start,[Parameter(Mandatory)][string]$End,\n      [ValidateSet('horizontal','vertical')][string]$Direction='vertical')",
+      "parameters": [
+        "Shape",
+        "Start",
+        "End",
+        "Direction"
+      ]
+    },
+    {
+      "id": "office.add-pptline",
+      "title": "直线/单向/双向箭头 / Add-PptLine",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptLine"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,\n      [double]$X1,[double]$Y1,[double]$X2,[double]$Y2,[string]$Color='345678',[double]$Weight=1,\n      [switch]$BeginArrow,[switch]$EndArrow)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "X1",
+        "Y1",
+        "X2",
+        "Y2",
+        "Color",
+        "Weight",
+        "BeginArrow",
+        "EndArrow"
+      ]
+    },
+    {
+      "id": "office.add-pptconnector",
+      "title": "跟随节点的连接线 / Add-PptConnector",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptConnector"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,\n      [Parameter(Mandatory)]$BeginShape,[Parameter(Mandatory)]$EndShape,\n      [ValidateRange(0,99)][int]$BeginSite=0,[ValidateRange(0,99)][int]$EndSite=0,\n      [ValidateSet('straight','elbow','curve')][string]$Kind='straight',[string]$Color='345678',[double]$Weight=1,\n      [switch]$BeginArrow,[switch]$EndArrow)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "BeginShape",
+        "EndShape",
+        "BeginSite",
+        "EndSite",
+        "Kind",
+        "Color",
+        "Weight",
+        "BeginArrow",
+        "EndArrow"
+      ]
+    },
+    {
+      "id": "office.add-pptpath",
+      "title": "自由路径/异形/贝塞尔曲线 / Add-PptPath",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptPath"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,\n      [Parameter(Mandatory)][object[]]$Commands,[string]$Fill='',[string]$Line='345678',[double]$LineWidth=1)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Commands",
+        "Fill",
+        "Line",
+        "LineWidth"
+      ],
+      "example": "$path = Add-PptPath -Slide $slide -Id 'free' -Commands @(@('M',10,10),@('L',80,10),@('L',80,60),@('Z')) -Fill 'DCEBFA' -Line '345678'"
+    },
+    {
+      "id": "office.add-pptpicture",
+      "title": "嵌入图片或SVG素材 / Add-PptPicture",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptPicture"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,[Parameter(Mandatory)][string]$Path,\n      [double]$Left,[double]$Top,[double]$Width,[double]$Height)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Path",
+        "Left",
+        "Top",
+        "Width",
+        "Height"
+      ]
+    },
+    {
+      "id": "office.add-ppttable",
+      "title": "原生单元格表格 / Add-PptTable",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptTable"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,[Parameter(Mandatory)][object[]]$Rows,\n      [double]$Left,[double]$Top,[double]$Width,[double]$Height,[double]$FontSize=14,[string]$EastAsiaFont='Microsoft YaHei')",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Rows",
+        "Left",
+        "Top",
+        "Width",
+        "Height",
+        "FontSize",
+        "EastAsiaFont"
+      ]
+    },
+    {
+      "id": "office.group-pptobjects",
+      "title": "多对象组合 / Group-PptObjects",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Group-PptObjects"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,[Parameter(Mandatory)][string[]]$Names)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Names"
+      ]
+    },
+    {
+      "id": "office.set-pptshapepicturefill",
+      "title": "形状内图片填充 / Set-PptShapePictureFill",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Set-PptShapePictureFill"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Shape,[Parameter(Mandatory)][string]$Path)",
+      "parameters": [
+        "Shape",
+        "Path"
+      ]
+    },
+    {
+      "id": "office.add-pptpicturefillshape",
+      "title": "圆形/异形图片窗口 / Add-PptPictureFillShape",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Add-PptPictureFillShape"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,[Parameter(Mandatory)][string]$Path,\n      [ValidateSet('Rectangle','RoundRectangle','Oval','Triangle','Diamond','RightArrow','LeftRightArrow','Star5')][string]$Geometry='Rectangle',\n      [double]$Left,[double]$Top,[double]$Width,[double]$Height,[string]$Line='',[double]$LineWidth=1)",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Path",
+        "Geometry",
+        "Left",
+        "Top",
+        "Width",
+        "Height",
+        "Line",
+        "LineWidth"
+      ]
+    },
+    {
+      "id": "office.set-pptpicturecrop",
+      "title": "图片四边裁切 / Set-PptPictureCrop",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Set-PptPictureCrop"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Shape,[double]$Left=0,[double]$Top=0,[double]$Right=0,[double]$Bottom=0)",
+      "parameters": [
+        "Shape",
+        "Left",
+        "Top",
+        "Right",
+        "Bottom"
+      ]
+    },
+    {
+      "id": "office.set-pptzorder",
+      "title": "图层/前后遮挡 / Set-PptZOrder",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Set-PptZOrder"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Shape,[ValidateSet('BringToFront','SendToBack','BringForward','SendBackward')][string]$Action)",
+      "parameters": [
+        "Shape",
+        "Action"
+      ]
+    },
+    {
+      "id": "office.merge-pptshapes",
+      "title": "布尔/合并/相交/剪除/拆分/异形拼接 / Merge-PptShapes",
+      "kind": "powershell_module",
+      "inputs": "真实参数如下signature；Slide/Shape必须是Office对象。长度、字号和线宽为pt；BeginSite/EndSite零基。",
+      "outputs": "相应原生对象/操作结果",
+      "manuals": [
+        "references/native-powerpoint.md",
+        "references/shape-construction.md"
+      ],
+      "limitations": "调用需实际Slide/Shape对象；不能通过CLI凭函数名推断对象引用。",
+      "entry": "scripts/NativePpt.psm1",
+      "functions": [
+        "Merge-PptShapes"
+      ],
+      "signature": "param([Parameter(Mandatory)]$Slide,[Parameter(Mandatory)][string]$Id,[Parameter(Mandatory)][string[]]$Names,\n      [ValidateSet('Union','Combine','Intersect','Subtract','Fragment')][string]$Operation='Union',[string]$PrimaryName='')",
+      "parameters": [
+        "Slide",
+        "Id",
+        "Names",
+        "Operation",
+        "PrimaryName"
+      ],
+      "example": "$result = Merge-PptShapes -Slide $slide -Id 'cutout' -Names @('base','cut') -Operation Subtract -PrimaryName 'base'"
+    },
+    {
+      "id": "host.view-image",
+      "title": "宿主真实看图入口",
+      "kind": "host",
+      "inputs": "当前任务must_view_files中的真实文件",
+      "outputs": "工具实际返回图像；模型另提交对象级观察",
+      "manuals": [
+        "references/task-packets.md"
+      ],
+      "limitations": "由宿主发现和调用。Python不能证明模型看懂，也不会假设缺少原生视觉能力。"
+    },
+    {
+      "id": "host.image-generation",
+      "title": "宿主生图/参考编辑入口",
+      "kind": "host",
+      "inputs": "生成任务+实际参考局部+用户许可",
+      "outputs": "真实PNG及工具报告；模型名仅以返回为准",
+      "manuals": [
+        "references/asset-policy.md",
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "无写死外部端点、API密钥、自动上传。SVG代码重建是单独路线。"
+    },
+    {
+      "id": "asset.request",
+      "title": "区域任务转为素材请求",
+      "kind": "manual",
+      "inputs": "region_objects的request_asset分支，填写prompt、purpose、transparent、allowed_approximation",
+      "outputs": "控制器生成独立asset_material任务",
+      "manuals": [
+        "references/asset-policy.md"
+      ],
+      "limitations": "这是任务协议，不是生图API调用。",
+      "entry": "references/task-packets.md"
+    },
+    {
+      "id": "manual.analysis",
+      "title": "看图与拆解",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/analysis-and-planning.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/analysis-and-planning.md"
+    },
+    {
+      "id": "manual.geometry",
+      "title": "异形/布尔/自由路径",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/shape-construction.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/shape-construction.md"
+    },
+    {
+      "id": "manual.components",
+      "title": "已有组件做法",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/component-recipes.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/component-recipes.md"
+    },
+    {
+      "id": "manual.fonts",
+      "title": "文字/字体/字形",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/text-and-fonts.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/text-and-fonts.md"
+    },
+    {
+      "id": "manual.assets",
+      "title": "提取/素材库/生成",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/assets-and-generation.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/assets-and-generation.md"
+    },
+    {
+      "id": "manual.charts",
+      "title": "图表/工作簿/OOXML",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/charts-and-ooxml.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/charts-and-ooxml.md"
+    },
+    {
+      "id": "manual.review",
+      "title": "渲染/审查",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/rendering-and-review.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/rendering-and-review.md"
+    },
+    {
+      "id": "manual.failures",
+      "title": "故障排查",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/troubleshooting.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/troubleshooting.md"
+    },
+    {
+      "id": "manual.workflow",
+      "title": "新控制器协议",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/workflow-protocol.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/workflow-protocol.md"
+    },
+    {
+      "id": "manual.tasks",
+      "title": "局部任务格式",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/task-packets.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/task-packets.md"
+    },
+    {
+      "id": "manual.sources",
+      "title": "当前31份来源与经验工具索引",
+      "kind": "manual",
+      "inputs": "按需读取",
+      "outputs": "带适用边界的说明",
+      "manuals": [
+        "references/experience-library.md"
+      ],
+      "limitations": "文档不是自动执行功能。",
+      "entry": "references/experience-library.md"
+    },
+    {
+      "id": "ops.components",
+      "title": "参数化原生组件清单",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "components"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops components --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.describe",
+      "title": "组件参数与示例",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "describe"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops describe --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.component",
+      "title": "构建原生组件小样与片段",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "component"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops component --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.boolean",
+      "title": "布尔拼接裁切（原生复合路径）",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "boolean"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops boolean --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.asset-layout",
+      "title": "透明素材主体定位与三底色检查",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "asset-layout"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops asset-layout --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.font-sheet",
+      "title": "原生字体候选样张",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "font-sheet"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops font-sheet --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.font-evaluate",
+      "title": "Office字形边界与局部对照",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "font-evaluate"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops font-evaluate --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.patch-scene",
+      "title": "按允许对象修改scene",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "patch-scene"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops patch-scene --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.patch-pptx",
+      "title": "保留其他部件的PPTX定点修改",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "patch-pptx"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops patch-pptx --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.regression",
+      "title": "局部返修区域外像素回归",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "regression"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": "--before <before.png> --after <after.png> --regions <regions.json> --outdir <new-dir> [--slide N]；可直接复用compare.page的命名区域文件",
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.generation-prepare",
+      "title": "为宿主生成实际生图任务",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "generation-prepare"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops generation-prepare --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.generation-ingest",
+      "title": "接收真实PNG与来源记录",
+      "kind": "python",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "generation-ingest"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use toolbox.py ops generation-ingest --help for exact flags"
+      ],
+      "outputs": [
+        "New versioned artifacts; see operation-specific result"
+      ],
+      "limitations": [
+        "Tool output is not Office or visual acceptance; source files remain unchanged"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.make-suite",
+      "title": "创建合成跨模型测试集",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "make-suite"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench make-suite --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.plan",
+      "title": "核对多模型配置、权限和调用上限",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "plan"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench plan --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.run",
+      "title": "真实多模型API微任务评测（需授权）",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "run"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench run --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 1800
+    },
+    {
+      "id": "bench.export",
+      "title": "导出不含答案的宿主测试任务",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "export"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench export --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.replay",
+      "title": "离线评分器演练，不算模型实测",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "replay"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench replay --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.report",
+      "title": "分轨道重复测试统计",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "report"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench report --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "bench.workflow-record",
+      "title": "完整工具箱工作流证据收集",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "workflow-record"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use toolbox.py bench workflow-record --help for exact flags"
+      ],
+      "outputs": [
+        "Per-track evaluation evidence; no fabricated model identities"
+      ],
+      "limitations": [
+        "Live endpoint/Office availability is external; microtask scores are not deck fidelity"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "office.inspect-recursive-text",
+      "title": "递归读取组内、单元格和旋转文字边界",
+      "kind": "powershell",
+      "entry": "scripts/inspect_text_powerpoint.ps1",
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "-Pptx <file> -OutputDir <new-dir> [-TolerancePt 0.75]"
+      ],
+      "outputs": [
+        "recursive-text.json"
+      ],
+      "limitations": [
+        "Actual Windows PowerPoint required; group/cell/rotation need visual review; not tested in this Linux build"
+      ]
+    },
+    {
+      "id": "ops.fonts",
+      "kind": "python",
+      "title": "列出本机字体名称，不分发字体文件",
+      "entry": "scripts/direct_ops.py",
+      "prefix": [
+        "fonts"
+      ],
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "inputs": [
+        "Use --help"
+      ],
+      "outputs": [
+        "Explicitly scoped JSON result"
+      ],
+      "limitations": [
+        "No implicit Office, model or visual certification"
+      ]
+    },
+    {
+      "id": "bench.workflow-report",
+      "kind": "python",
+      "title": "汇总完整工作流记录（不混入微任务得分）",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "workflow-report"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "Use --help"
+      ],
+      "outputs": [
+        "Explicitly scoped JSON result"
+      ],
+      "limitations": [
+        "No implicit Office, model or visual certification"
+      ]
+    },
+    {
+      "id": "bench.deterministic",
+      "title": "确定性执行与序列化扰动",
+      "kind": "python",
+      "entry": "scripts/benchmark.py",
+      "prefix": [
+        "deterministic"
+      ],
+      "manuals": [
+        "references/cross-model-evaluation.md"
+      ],
+      "inputs": [
+        "--scene",
+        "--outdir",
+        "--repetitions"
+      ],
+      "outputs": [
+        "deterministic-report.json",
+        "build-N.pptx"
+      ],
+      "limitations": [
+        "不检查真实Office或视觉效果",
+        "忽略docProps元数据；验证结构等价，不要求PPTX二进制相同"
+      ],
+      "timeout_seconds": 240
+    },
+    {
+      "id": "regions.normalize",
+      "title": "统一局部区域参数（对照与回归）",
+      "kind": "python",
+      "entry": "scripts/region_contract.py",
+      "prefix": [],
+      "inputs": "--spec <regions.json> --size <width> <height> --output <new.json> [--slide N]",
+      "outputs": "经过校验的原图像素xyxy记录",
+      "manuals": [
+        "references/preview-and-handoffs.md"
+      ],
+      "limitations": "不猜xywh、不缩放坐标，多页需指定--slide。",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "preview.render",
+      "title": "LibreOffice预审渲染（不是Office验收）",
+      "kind": "python",
+      "entry": "scripts/preview_review.py",
+      "prefix": [
+        "render"
+      ],
+      "inputs": "--pptx <candidate> --scene <scene> --outdir <new-dir> [--executable <libreoffice>]",
+      "outputs": "preview-render.json、逐页PNG和真实命令记录",
+      "manuals": [
+        "references/preview-and-handoffs.md"
+      ],
+      "limitations": "不代表Office验收或模型已看图；预审依赖本机LibreOffice与可选PyMuPDF，不自动安装。",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "preview.compare",
+      "title": "预审全页与必查局部左右对照",
+      "kind": "python",
+      "entry": "scripts/preview_review.py",
+      "prefix": [
+        "compare"
+      ],
+      "inputs": "--pptx <candidate> --scene <scene> --render <preview-render.json> --regions <regions.json> --outdir <new-dir>",
+      "outputs": "带实际渲染器标签的左右图、叠加图、差异图、deck-preview.json",
+      "manuals": [
+        "references/preview-and-handoffs.md"
+      ],
+      "limitations": "不代表Office验收或模型已看图；预审依赖本机LibreOffice与可选PyMuPDF，不自动安装。",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "pptx.editing-structure",
+      "title": "分组与重叠重复文字检查",
+      "kind": "python",
+      "entry": "scripts/editing_structure.py",
+      "prefix": [
+        "audit"
+      ],
+      "inputs": "--pptx PPTX --out NEW_JSON",
+      "outputs": "JSON evidence; group test also writes a new PPTX copy and moved/restored renders",
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "limitations": "Structure hints are not visual verdicts. Group test requires Windows PowerPoint; only the explicit translation and inverse are tested.",
+      "timeout_seconds": 240
+    },
+    {
+      "id": "office.group-roundtrip",
+      "title": "PowerPoint 组移动保存重开及恢复检查",
+      "kind": "python",
+      "entry": "scripts/editing_structure.py",
+      "prefix": [
+        "group-roundtrip"
+      ],
+      "inputs": "--pptx PPTX --outdir NEW_DIR --slide 1 --name EXACT_GROUP [--dx 12 --dy 6]",
+      "outputs": "JSON evidence; group test also writes a new PPTX copy and moved/restored renders",
+      "manuals": [
+        "references/direct-operations.md"
+      ],
+      "limitations": "Structure hints are not visual verdicts. Group test requires Windows PowerPoint; only the explicit translation and inverse are tested.",
+      "timeout_seconds": 240
+    },
+    {
+      "id": "ops.text-fit-plan",
+      "title": "原生文字字号与位置测量小样",
+      "kind": "python",
+      "entry": "scripts/text_fit.py",
+      "prefix": [
+        "plan"
+      ],
+      "inputs": "--scene SCENE --references SLIDE_IMAGE_MAP_JSON --outdir NEW_DIR",
+      "outputs": "Frozen text-only PPTX specimens and a bounded measurement plan",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "At most 128 page specimens and 64 plain top-level texts. Does not render Office or modify the candidate.",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "ops.text-fit-evaluate",
+      "title": "核对 Office 文字小样并给出参数建议",
+      "kind": "python",
+      "entry": "scripts/text_fit.py",
+      "prefix": [
+        "evaluate"
+      ],
+      "inputs": "--plan PLAN_DIR --office OFFICE_RENDER_DIR --output NEW_JSON",
+      "outputs": "Per-object font size, color and bounded pixel translation suggestions with confidence and alternatives",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "Requires matching real Office receipts. Plain flat-background text only; no automatic adoption or visual approval.",
+      "timeout_seconds": 90
+    },
+    {
+      "id": "ops.text-refine-plan",
+      "title": "生成混排文字、间距与半像素位置小样",
+      "kind": "python",
+      "entry": "scripts/text_fit.py",
+      "prefix": [
+        "refine-plan"
+      ],
+      "inputs": "--scene SCENE --request SELECTED_TEXT_REQUEST_JSON --outdir NEW_DIR",
+      "outputs": "Packed editable text specimens retaining characters, run order, weight and baseline kinds",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "1..8 short unrotated single-color text objects on integer canvases 320..4096 pixels wide and 180..4096 high. Original physical canvas and font sizes are preserved. At 96 dpi export, compact targets fitting half-width cells use integer translations; wide headings or other export scales retain original coordinates and share pages only for disjoint text bounds and ROIs. At most eight specimens per page and 68 total pages; reduce targets or variants when needed. Height limits still apply; wide headings may span the canvas. Background measurement permits RGB fluctuations within 8 levels around a dominant color only when at least 40% of the ROI supports it. Optional font_deltas_pt uses 1..17 deltas within 2pt, preserves effective script sizes, and permits 1..4 nonoverlapping font_anchors inside each target ROI (at most 68 pages). Anchor scores use their minimum; only the first anchor moves the whole object. Alternatively spacing_deltas_pt targets explicit ASCII-space runs within 12pt, or script_deltas_pt targets explicit scripts within 8pt. These three modes require zero and cannot be combined. Optional shift_limit_px is 0..6, zero required for scripts. Scores cover selected ROIs only. No automatic render, adoption or visual approval.",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "ops.path-fit",
+      "title": "测量原生曲线控制点与箭头线宽",
+      "kind": "python",
+      "entry": "scripts/path_fit.py",
+      "inputs": "--scene SCENE --request BOUNDED_REQUEST_JSON --outdir NEW_DIR",
+      "outputs": "Hash-pinned native path suggestions, bounded solver usage and preview diagnostics",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "Up to 16 isolated regions, 64 scalar parameters each. Solid top-level paths only; triangle arrows use a measured Office preview profile. Requires separate native Office verification.",
+      "timeout_seconds": 800
+    },
+    {
+      "id": "ops.path-office-plan",
+      "title": "生成原生曲线位置与线宽小样",
+      "kind": "python",
+      "entry": "scripts/path_office_fit.py",
+      "prefix": [
+        "plan"
+      ],
+      "inputs": "--scene SCENE --request BOUNDED_REQUEST_JSON --outdir NEW_DIR",
+      "outputs": "Native PPTX specimens at four half-pixel phases and three nearby stroke widths",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "Isolated solid path groups only, at most 48 actual Office page exports. Does not render or modify the candidate.",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "ops.path-office-evaluate",
+      "title": "核对 Office 曲线小样并给出微调建议",
+      "kind": "python",
+      "entry": "scripts/path_office_fit.py",
+      "prefix": [
+        "evaluate"
+      ],
+      "inputs": "--plan PLAN_DIR --office OFFICE_RENDER_DIR --output NEW_JSON",
+      "outputs": "Hash-bound native translations and stroke widths measured against real Office samples",
+      "manuals": [
+        "references/sol-quality-practice.md"
+      ],
+      "limitations": "Requires current source, references and genuine Office exports. Small alignment and width changes only; no automatic adoption or approval.",
+      "timeout_seconds": 180
+    },
+    {
+      "id": "pptx.rebuild-diff",
+      "title": "重建包内容与渲染差异分离检查",
+      "kind": "python",
+      "entry": "scripts/rebuild_diff.py",
+      "inputs": "--left PPTX --right PPTX --out NEW_JSON [--left-render PNG --right-render PNG]",
+      "outputs": "分别记录PPT部件差异、像素差范围及哈希，不自动判定视觉通过",
+      "manuals": [
+        "references/measured-refinement.md"
+      ],
+      "limitations": "读已有文件；不重建、不渲染、不缩放图片，不认定原图保真度。"
+    }
+  ],
+  "internal_modules": [
+    "scripts/material_routes.py",
+    "scripts/python_entry.py",
+    "scripts/text_regression.py",
+    "scripts/raster_occlusion.py",
+    "scripts/native_practice.py",
+    "scripts/graphics_geometry.py",
+    "scripts/graphics_simplify.py",
+    "scripts/graphics_recipe.py",
+    "scripts/graphics_gradient.py",
+    "scripts/graphics_paint.py",
+    "scripts/graphics_preview.py",
+    "scripts/graphics_paint.py",
+    "scripts/native_text_range.py",
+    "scripts/native_topology.py",
+    "scripts/native_capabilities.py",
+    "scripts/native_format.py",
+    "scripts/native_office_readback.py",
+    "scripts/native_recipes.py",
+    "scripts/generate_native_schema.py",
+    "scripts/skill_routing.py",
+    "scripts/skill_recipe.py",
+    "scripts/skill_library.py",
+    "scripts/calibration.py",
+    "scripts/calibration_math.py",
+    "scripts/calibration_exports.py",
+    "scripts/cli_contract.py",
+    "scripts/runtime_env.py",
+    "scripts/local_edit.py",
+    "scripts/local_workflow.py",
+    "scripts/common.py",
+    "scripts/release_info.py",
+    "scripts/evidence_session.py",
+    "scripts/evidence_contract.py",
+    "scripts/workflow.py",
+    "scripts/workflow_scene.py",
+    "scripts/workflow_recovery.py",
+    "scripts/workflow_store.py",
+    "scripts/project_directory.py",
+    "scripts/project_journal.py",
+    "scripts/project_flow.py",
+    "scripts/workflow_evidence.py",
+    "scripts/source_text_review.py",
+    "scripts/tool_registry.py",
+    "scripts/components.py",
+    "scripts/native_extensions.py",
+    "scripts/asset_ops.py",
+    "scripts/text_ops.py",
+    "scripts/patch_ops.py",
+    "scripts/visual_regression.py",
+    "scripts/benchmark_suite.py",
+    "scripts/task_contracts.py",
+    "scripts/usage_store.py",
+    "scripts/review_reuse.py"
+  ],
+  "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
+}

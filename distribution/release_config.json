@@ -1,0 +1,9 @@
+{
+  "repository": "sj18259360196-source/PPTToolbox",
+  "channel": "stable",
+  "manifest": "PPTToolbox-update.json",
+  "signature": "PPTToolbox-update.sig.json",
+  "trusted_keys": {
+    "ed25519-0765d493ebe59219": "igqiaslHbMoqw0Ms3uzWZZL7eZW+aBUgKpGl/m4xfO4="
+  }
+}

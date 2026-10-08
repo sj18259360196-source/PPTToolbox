@@ -1,0 +1,5 @@
+Pillow>=10
+numpy>=1.24
+python-pptx>=1.0.0
+lxml>=4.9
+jsonschema>=4.18

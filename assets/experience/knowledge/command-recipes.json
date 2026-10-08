@@ -1,0 +1,38 @@
+{
+  "format": "ppt-experience-command-recipes/1",
+  "commands": [
+    {
+      "id": "experience_lookup",
+      "title": "查经验并找到实际工具",
+      "description": "按当前症状检索历史复盘，核对来源后选择可用工具。",
+      "body": "处理PPT重建问题时，先读取当前toolbox_context。通过toolbox_describe发现experience.search，用返回的managed_argv_prefix查询具体症状。需要完整动作时读取experience.show，疑点用experience.source按行核对原文。按返回的工具类型选择CLI、模块、宿主能力或手册，再查看当前schema和授权。历史经验只提供建议，不作为当前PPT验收结论，也不自动执行列表中的所有工具。",
+      "tools": [
+        "experience.search",
+        "experience.show",
+        "experience.source"
+      ]
+    },
+    {
+      "id": "experience_integrity",
+      "title": "核对经验库与命令关联",
+      "description": "检查来源哈希、引用行号、手册路径及注册工具是否完整。",
+      "body": "需要检查经验库时，先读取当前toolbox_context，再通过toolbox_describe发现experience.audit。使用返回的managed_argv_prefix并追加--details。报告实际来源数、经验条数和具体问题。引用完整性通过只证明这些检查条件成立，不能宣称经验已经穷尽、Office已经实测或视觉已经通过。发现缺口时保留原文和历史证据，明确区分已修复与待处理。",
+      "tools": [
+        "experience.audit"
+      ]
+    },
+    {
+      "id": "experience_repair_evidence",
+      "title": "按实际差异选择返修与复核",
+      "description": "把对象差异、适用经验、实际操作与同版本复核连起来。",
+      "body": "PPT局部返修先查看当前全页与相关局部，记录对象ID、具体差异和待验证原因。用experience.search查症状，并用experience.show检查动作及限制。按当前授权使用受管返修入口，每轮集中验证一类变化。内容核对、Office渲染、编辑读回和冻结复现分别记录，同版本全页及必要局部检查完成后再判断是否可交付。模板不自动提交通过，不复用旧版审查，也不扩大Office预算或目录权限。",
+      "tools": [
+        "experience.search",
+        "experience.show",
+        "ops.regression",
+        "office.edit-readback",
+        "pptx.rebuild-diff"
+      ]
+    }
+  ]
+}

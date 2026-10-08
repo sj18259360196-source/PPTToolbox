@@ -1,0 +1,2 @@
+# Archived evidence is byte-hashed; do not rewrite its line endings on checkout.
+assets/experience/sources/*.txt -text

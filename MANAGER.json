@@ -1,0 +1,18 @@
+{
+  "name": "ppt-toolbox-manager",
+  "version": "1.21.0",
+  "entry": "manager.py",
+  "ui": "toolbox_manager/web/index.html",
+  "management_api_version": "ppt-toolbox-manager/1",
+  "database_schema_version": 1,
+  "bundled_core": {
+    "name": "ppt-reference-rebuild",
+    "version": "1.21.0",
+    "entry": "SKILL.md"
+  },
+  "scope": "Local project preparation, managed production workbench, reusable assets, experience and unified rules/settings.",
+  "python_minimum": "3.11",
+  "dependencies_for_manager": "Python standard library",
+  "host_installation_verified": false,
+  "online_update_service": true
+}

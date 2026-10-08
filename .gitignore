@@ -1,0 +1,59 @@
+# Python caches and environments
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local task and runtime state
+.tmp/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Machine-local builds, evidence, and Git recovery backups
+/dist/
+/checks/
+/validation/
+/.local-backups/
+/data/
+/logs/
+/runs/
+/toolbox_manager/vendor/icons/
+/toolbox_manager/vendor/graphics/
+node_modules/
+*.sqlite3-*
+*.sqlite-*
+
+# Local authentication and session material
+.envrc
+.npmrc
+auth.json
+credentials.json
+cookies.json
+storage-state.json
+storageState.json
