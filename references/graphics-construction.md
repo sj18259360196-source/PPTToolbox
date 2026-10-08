@@ -8,6 +8,12 @@ an authorized `project` and a `recipe`. MCP exposes the same operations.
 
 ## Capabilities
 
+For semantic object/material decomposition and managed invocation, read
+[Native illustration](native-illustration.md). The `surface_layers` curve-group
+mode creates named closed surfaces from one open centerline. Inspect exposes a
+seven-layer tube example. Authored fill gradients accept up to 16 stops; stroke
+gradients and automatic fitting retain their existing five-stop limits.
+
 - Curve groups support same-topology cubic interpolation, affine repetition,
   and bounded open-path offsets. Offset fitting retains editable cubic segments.
   Invalid, split, collapsed, or self-intersecting offsets are rejected.

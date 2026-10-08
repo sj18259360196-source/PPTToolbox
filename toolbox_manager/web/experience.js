@@ -1,6 +1,7 @@
 import {usageMap,usageLink,track} from './usage.js';
 import {api,copy} from './api.js';
 import {mountLearning as mountComponents,stopLearning as stopComponents} from './learning.js';
+import {mountManagement,editExperience} from './experience-manage.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let generation=0;
 const listHtml=items=>`<ul>${(items||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
@@ -29,7 +30,7 @@ export async function mountLearning(main,{icon}){
    await track('experience',id,'viewed');counts=await usageMap('experience');if(epoch!==generation)return;paint();
    const d=document.createElement('dialog');d.className='learning-dialog source-experience-dialog';
    const evidence=(items,failure=false)=>items.map((s,i)=>`<section class="experience-evidence"><p><strong>${esc(s.source_id)} · ${esc(s.topic)}</strong><br><span class="learning-badge">${/proposed|proposal/.test(s.reported_state)?'待验证建议':'历史记录 · 未复测'}</span> 第 ${s.line_start}–${s.line_end} 行</p><pre>${esc(s.excerpt)}</pre>${failure?'':`<button data-read-source="${i}">查看原文上下文</button><p class="small muted experience-path">归档文件 ${esc(s.file)}${s.original_path?`<br>原始文档 ${esc(s.original_path)}`:""}</p>`}</section>`).join('');
-   d.innerHTML=`<div class="learning-dialog-head"><h2>${esc(r.id)} · ${esc(r.title)}</h2><button data-close aria-label="关闭">关闭</button></div><p class="learning-badge">${r.kind==='proposed_method'?'待验证建议':'历史复盘'} · 未在本次实测</p><h3>适用条件</h3><p>${esc(r.trigger)}</p><h3>具体方法</h3>${listHtml(r.actions)}<h3>验证方法</h3>${listHtml(r.verification)}<h3>限制与边界</h3>${listHtml(r.constraints)}<h3>失败与问题记录</h3><p class="small muted">以下摘录按原文中的问题关键词定位，保留原文语境；其中的建议不代表已发生的失败。</p>${r.failure_records.length?evidence(r.failure_records,true):'<p>当前条目未单独提取失败记录，可继续查看下方原文。</p>'}<h3>原文出处</h3>${evidence(r.sources)}<h3>关联工具</h3>${listHtml(r.tools.map(t=>`${t.id} · ${t.title}`))}<div data-source-reader aria-live="polite"></div><p data-detail-error role="alert"></p>`;
+   d.innerHTML=`<div class="learning-dialog-head"><h2>${esc(r.id)} · ${esc(r.title)}</h2><button data-close aria-label="关闭">关闭</button></div><p class="learning-badge">${r.kind==='proposed_method'?'待验证建议':'历史复盘'} · 未在本次实测</p><p><button data-edit-experience="${esc(r.id)}">编辑与优化</button></p><h3>适用条件</h3><p>${esc(r.trigger)}</p><h3>具体方法</h3>${listHtml(r.actions)}<h3>验证方法</h3>${listHtml(r.verification)}<h3>限制与边界</h3>${listHtml(r.constraints)}<h3>失败与问题记录</h3><p class="small muted">以下摘录按原文中的问题关键词定位，保留原文语境；其中的建议不代表已发生的失败。</p>${r.failure_records.length?evidence(r.failure_records,true):'<p>当前条目未单独提取失败记录，可继续查看下方原文。</p>'}<h3>原文出处</h3>${evidence(r.sources)}<h3>关联工具</h3>${listHtml(r.tools.map(t=>`${t.id} · ${t.title}`))}<div data-source-reader aria-live="polite"></div><p data-detail-error role="alert"></p>`;
    main.append(d);d.showModal();d.onclose=()=>d.remove();d.querySelector('[data-close]').onclick=()=>d.close();
    async function read(s,start){
     try{
@@ -42,9 +43,10 @@ export async function mountLearning(main,{icon}){
      d.querySelector('[data-detail-error]').textContent='';
     }catch(err){d.querySelector('[data-detail-error]').textContent=err.message;}
    }
-   d.onclick=ev=>{const button=ev.target.closest('[data-read-source]');if(button){const s=r.sources[Number(button.dataset.readSource)];read(s,Math.max(1,s.line_start-5));}};
+   d.onclick=async ev=>{const edit=ev.target.closest('[data-edit-experience]');if(edit){d.close();try{await editExperience(main,id,load);}catch(err){$('#experience-error').textContent=err.message;}return;}const button=ev.target.closest('[data-read-source]');if(button){const s=r.sources[Number(button.dataset.readSource)];read(s,Math.max(1,s.line_start-5));}};
   }catch(err){if(epoch===generation)$('#experience-error').textContent=err.message;}
  };
+ mountManagement(main,load,()=>Array.from(main.querySelectorAll('[data-source-experience]')).map(b=>b.dataset.sourceExperience));
  await load();
 }
 export function stopLearning(){generation++;stopComponents();}

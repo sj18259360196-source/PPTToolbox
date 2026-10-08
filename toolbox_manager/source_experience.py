@@ -29,4 +29,5 @@ def call(manager, action, args):
     if action == 'source':
         return read_source(args.get('id'), int(args.get('start', 1)),
                            int(args['end']) if args.get('end') else None, **options)
-    raise ValueError('Unknown source experience operation')
+    from scripts.experience_management import call as manage
+    return manage(manager.root, options['external_root'], action, args)

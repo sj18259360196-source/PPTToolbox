@@ -31,7 +31,7 @@ def local_file(root, relative):
     return path
 
 
-def load_library(root=None, external_root=None):
+def load_library(root=None, external_root=None, _management_state=None):
     root = Path(root or ROOT)
     sources = json.loads(local_file(root, KNOWLEDGE/'sources.json').read_text(encoding='utf-8'))
     rows = [json.loads(line) for line in local_file(root, KNOWLEDGE/'experience-ledger.jsonl')
@@ -62,6 +62,11 @@ def load_library(root=None, external_root=None):
                 row['import_id'] = package.name
                 rows = [r for r in rows if r['id'] != row['id']] + [row]
         rows.sort(key=lambda r: r['id'])
+        if __package__:
+            from .experience_management import overlay
+        else:
+            from experience_management import overlay
+        sources, rows = overlay(sources, rows, external_root, _management_state)
     return sources, rows, tools
 
 

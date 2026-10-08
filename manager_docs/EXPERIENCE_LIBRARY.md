@@ -17,3 +17,6 @@ python -B scripts/experience_library.py import-snapshot --snapshot <已审查快
 ```
 
 此命令接收完整索引快照，保存与随包索引不同的内容。它不自动从任意 Markdown 中提炼经验，也不执行原文里的命令。重复导入相同内容复用已有存储；来源编号冲突或文件摘要不符时返回错误。导入目录独立于程序目录，不随应用安装包分发。
+
+
+导入、导出、去重、编辑及撤销操作见 [经验库管理](../references/experience-management.md)。

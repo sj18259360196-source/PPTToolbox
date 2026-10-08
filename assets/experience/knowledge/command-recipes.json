@@ -33,6 +33,62 @@
         "office.edit-readback",
         "pptx.rebuild-diff"
       ]
+    },
+    {
+      "id": "native_illustration_plan",
+      "title": "原生插画先拆物品与材质",
+      "description": "复杂原生插画开始前使用，形成可核对的物品、材质层与遮挡方案。",
+      "body": "遇到复杂原生插画时，先用experience.search查询物品和材质，并用experience.show读取本机相关经验。看整页后固定插画区和文字位置。列出每个物品的识别轮廓、主要部件和前后关系，再给透明面、厚边、反光、阴影安排独立层。先看大形与实际页面尺寸的辨识度，再补重复细节。保持卡片、物品、部件分组，文字使用原生文本。记录可核查的判断依据与取舍。",
+      "tools": [
+        "experience.search",
+        "experience.show",
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "native_illustration_tube",
+      "title": "共用中心线绘制多层软管",
+      "description": "弯管或连续带状高光使用，避免各层曲线走向漂移。",
+      "body": "绘制软管时先读取本机相关经验，再调用graphics_inspect检查capabilities和schema。返回surface_layers时，使用illustration_example作为结构示例，按参考修改隐藏中心线与各层width、offset、style。先graphics_preview，检查后再经graphics_compile写入当前已授权项目。检查零长段、紧弯、自交、正负法向和独立管口。未发现该能力时沿用当前支持的原生路径合同生成层，不提交新字段、不自动升级。返回的objects按当前区域局部坐标回装，Office导出后检查实际透明叠色。",
+      "tools": [
+        "experience.show",
+        "manual.geometry"
+      ]
+    },
+    {
+      "id": "native_illustration_material",
+      "title": "透明材质、透孔与金属反光",
+      "description": "包装、泵瓶、把手与水珠使用，区分表面和几何结构。",
+      "body": "处理透明容器或金属零件时读取本机相关经验。透明面、真实孔洞和镜面反光分别建对象；alpha相乘后检查可见度。金属先建立相邻明暗带，再叠局部亮边，手工多色标必须符合当前schema。复合路径孔洞用相反绕向，在目标背景和移动后核对。缩回页面尺寸检查，保留原生层及所属部件分组。",
+      "tools": [
+        "experience.show",
+        "manual.geometry",
+        "office.render"
+      ]
+    },
+    {
+      "id": "native_illustration_submit",
+      "title": "原生插画回装与字段核对",
+      "description": "region_objects提交前使用，处理局部坐标和bbox合同。",
+      "body": "回装原生插画时读取本机相关经验和当前任务schema。配方与区域使用同一局部裁图坐标，shape/text使用xywh，路径直接使用命令坐标，font_size_pt和line_width_pt保持点值。只清理当前合同不支持的字段。调用当前rebuild_validate_response预检后，用新读取的context_id、task_id、token提交，return_next=true；accepted_task返回后不重放。整卡和物品分组分别保留，按后到前检查遮挡。",
+      "tools": [
+        "experience.show",
+        "manual.workflow",
+        "pptx.validate"
+      ]
+    },
+    {
+      "id": "native_illustration_verify",
+      "title": "原生插画编辑与复现检查",
+      "description": "候选完成后使用，形成同版本的视觉、编辑和复现证据。",
+      "body": "验证原生插画时读取本机相关经验。全页与局部对照分别检查；字体小样不代替插画审查。通过当前toolbox_describe取得office.edit-readback、office.group-roundtrip、pptx.build和office.render合同。在副本改长文字和材质部件颜色，保存关闭重开读回；整组平移和反向恢复独立记录。从持久scene重建并实际Office导出。分别报告原生结构、真实编辑、视觉和复现，未执行项写明；不自动提交视觉passed。",
+      "tools": [
+        "experience.show",
+        "office.edit-readback",
+        "office.group-roundtrip",
+        "pptx.build",
+        "office.render"
+      ]
     }
   ]
 }

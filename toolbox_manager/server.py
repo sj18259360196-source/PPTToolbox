@@ -13,6 +13,8 @@ PROMPT_WRITES={'prompt.save','prompt.restore','prompt.default'}
 READS={'agent.live','learning.status','learning.source','agent.status','source','boot','tools','tool','packages','versions','settings','docs','doc','commands','logs','integration','startup-prompt'}
 WRITES={'retrospective','learning.configure','learning.collect','learning.disable','agent.plan','agent.apply','agent.probe','agent.challenge','settings.save','storage.setup','storage.pick-directory','toggle','doc.save','command.save','doctor','diagnostic','package.commit','package.trust','package.activate','integration.export','integration.plan','integration.apply','config.export'}
 READS |= {'experience.list','experience.show','experience.source'}
+READS |= {'experience.duplicates','experience.edit-view','experience.history'}
+WRITES |= {'experience.export','experience.import-preview','experience.import','experience.edit','experience.merge','experience.undo'}
 READS |= {'usage.summary','usage.detail'}
 WRITES |= {'usage.record','usage.cite'}
 READS |= PROMPT_READS
@@ -194,7 +196,7 @@ class Handler(BaseHTTPRequestHandler):
                 if self.headers.get_content_type()!='application/octet-stream':raise ValueError('需要ZIP二进制数据')
                 result=self.server.manager.prepare_import(raw)
             else:
-                limit=29_000_000 if u.path=='/api/preparation.upload' else 18_000_000 if u.path.startswith('/api/graphics.') else 10_000_000 if u.path.startswith('/api/icons.') else 512000
+                limit=29_000_000 if u.path=='/api/preparation.upload' else 24_000_000 if u.path in {'/api/experience.import-preview','/api/experience.import'} else 18_000_000 if u.path.startswith('/api/graphics.') else 10_000_000 if u.path.startswith('/api/icons.') else 512000
                 if n>limit or self.headers.get_content_type()!='application/json':raise ValueError('JSON 请求过大或内容类型不正确')
                 if u.path.startswith('/api/software-update.'):
                     op=u.path.removeprefix('/api/software-update.')

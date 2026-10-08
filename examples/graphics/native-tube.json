@@ -1,0 +1,235 @@
+{
+  "format": "graphics-recipe/1",
+  "id": "native-tube",
+  "canvas": [
+    220,
+    240
+  ],
+  "points_per_unit": 0.64,
+  "paths": [
+    {
+      "id": "centerline",
+      "closed": false,
+      "visible": false,
+      "commands": [
+        [
+          "M",
+          154.9,
+          118.8
+        ],
+        [
+          "C",
+          133,
+          104,
+          108.7,
+          110.1,
+          88.8,
+          126.7
+        ],
+        [
+          "C",
+          68,
+          144.1,
+          56.1,
+          166.4,
+          75.1,
+          182.2
+        ],
+        [
+          "C",
+          84.1,
+          189.9,
+          97.7,
+          194.7,
+          112.3,
+          196.6
+        ]
+      ],
+      "style": {
+        "fill": null,
+        "line": null
+      }
+    }
+  ],
+  "curve_groups": [
+    {
+      "id": "tube",
+      "mode": "surface_layers",
+      "source": "centerline",
+      "tolerance": 0.05,
+      "layers": [
+        {
+          "id": "clear-body",
+          "width": 8,
+          "offset": 0,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "88A2B7",
+                  "alpha": 0.8
+                },
+                {
+                  "position": 1,
+                  "color": "DCE8EE",
+                  "alpha": 0.8
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "inner-side",
+          "width": 2.4,
+          "offset": 2.16,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "7292A9",
+                  "alpha": 0.35
+                },
+                {
+                  "position": 1,
+                  "color": "A0B6C6",
+                  "alpha": 0.35
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "outer-white-volume",
+          "width": 3.2,
+          "offset": -1.68,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "F7FCFF",
+                  "alpha": 0.65
+                },
+                {
+                  "position": 1,
+                  "color": "FFFFFF",
+                  "alpha": 0.65
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "inner-clear-channel",
+          "width": 2.08,
+          "offset": 0.08,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "D2E3EE",
+                  "alpha": 0.2
+                },
+                {
+                  "position": 1,
+                  "color": "7F9AAF",
+                  "alpha": 0.2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "outer-specular",
+          "width": 1.04,
+          "offset": -2.32,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "FFFFFF",
+                  "alpha": 0.75
+                },
+                {
+                  "position": 1,
+                  "color": "F7FFFF",
+                  "alpha": 0.75
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "rim-glint",
+          "width": 0.65,
+          "offset": -3.68,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "EAF6FE",
+                  "alpha": 0.7
+                },
+                {
+                  "position": 1,
+                  "color": "FFFFFF",
+                  "alpha": 0.7
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "inner-rim",
+          "width": 0.72,
+          "offset": 3.44,
+          "style": {
+            "line": null,
+            "gradient": {
+              "type": "linear",
+              "angle_deg": 65,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "6E8FA9",
+                  "alpha": 0.65
+                },
+                {
+                  "position": 1,
+                  "color": "F1FAFF",
+                  "alpha": 0.65
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "order": [
+    "tube"
+  ]
+}

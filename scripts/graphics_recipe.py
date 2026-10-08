@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from graphics_geometry import (check_commands, face_commands, flatten, interpolate,
-                               offset, transform, ROOT)
+                               offset, ribbon, transform, ROOT)
 
 
 def obj(fields, required=()):
@@ -44,8 +44,13 @@ STOP = obj({"position": {"type": "number", "minimum": 0, "maximum": 1},
 GRADIENT = obj({"type": {"enum": ["linear", "radial"]},
                 "angle_deg": {"type": "number", "minimum": 0, "exclusiveMaximum": 360},
                 "center": array({"type": "number", "minimum": 0, "maximum": 1}, 2, 2),
-                "stops": array(STOP, 5, 2)}, ("type", "stops"))
-STYLE["properties"].update(gradient=GRADIENT, line_gradient=GRADIENT)
+                "stops": array(STOP, 16, 2)}, ("type", "stops"))
+LINE_GRADIENT = copy.deepcopy(GRADIENT)
+LINE_GRADIENT["properties"]["stops"]["maxItems"] = 5
+STYLE["properties"].update(gradient=GRADIENT, line_gradient=LINE_GRADIENT)
+SURFACE = obj({"id": ID,
+               "width": {"type": "number", "minimum": .12, "maximum": 10000},
+               "offset": N, "style": STYLE}, ("id", "width", "style"))
 PATH = obj({"id": ID, "commands": COMMANDS, "closed": BOOL,
             "visible": BOOL, "style": STYLE}, ("id", "commands", "closed"))
 EDGE = obj({"id": ID, "commands": COMMANDS}, ("id", "commands"))
@@ -53,7 +58,8 @@ REF = obj({"edge": ID, "reverse": BOOL}, ("edge",))
 FACE = obj({"id": ID, "loops": array(array(REF, 128, 1), 8, 1), "style": STYLE},
            ("id", "loops"))
 GROUP = obj({
-    "id": ID, "mode": {"enum": ["affine_repeat", "interpolate", "offset"]}, "source": ID,
+    "id": ID, "mode": {"enum": ["affine_repeat", "interpolate", "offset", "surface_layers"]}, "source": ID,
+    "layers": array(SURFACE, 16, 1),
     "target": ID, "count": {"type": "integer", "minimum": 2, "maximum": 64},
     "matrix_step": MATRIX,
     "positions": array({"type": "number", "minimum": 0, "maximum": 1}, 64, 2),
@@ -64,7 +70,8 @@ GROUP = obj({
 }, ("id", "mode", "source"))
 GROUP["allOf"] = [{"if": {"properties": {"mode": {"const": mode}}},
                     "then": {"required": fields}} for mode, fields in
-                   (("interpolate", ["target"]), ("affine_repeat", ["matrix_step"]), ("offset", ["distances"]))]
+                   (("interpolate", ["target"]), ("affine_repeat", ["matrix_step"]), ("offset", ["distances"]),
+                    ("surface_layers", ["layers"]))]
 INSTANCE = obj({"id": ID, "source": ID, "matrix": MATRIX, "style_override": STYLE,
                 "state": {"enum": ["linked", "locked", "detached"]},
                 "stroke_scale": {"enum": ["preserve", "uniform"]}},
@@ -107,7 +114,12 @@ def validate_recipe(recipe):
             raise ValueError("Path closed flag and final command disagree")
     for e in recipe.get("edges", []):
         check_commands(e["commands"], open_only=True)
-    for o in [*recipe.get("paths", []), *recipe.get("faces", []),
+    layers = [layer for group in recipe.get("curve_groups", []) for layer in group.get("layers", [])]
+    for group in recipe.get("curve_groups", []):
+        names = [layer["id"] for layer in group.get("layers", [])]
+        if len(names) != len(set(names)):
+            raise ValueError("Duplicate surface layer ID")
+    for o in [*layers, *recipe.get("paths", []), *recipe.get("faces", []),
               *recipe.get("curve_groups", []), *recipe.get("instances", [])]:
         style = o.get("style", o.get("style_override", {}))
         for field in ("gradient", "line_gradient"):
@@ -232,7 +244,8 @@ def compile_recipe(recipe, previous=None, current_objects=None):
             allowed = {"id", "mode", "source", "style"} | {
                 "interpolate": {"target", "count", "positions"},
                 "affine_repeat": {"count", "matrix_step"},
-                "offset": {"distances", "tolerance", "join_style", "miter_limit"}}[mode]
+                "offset": {"distances", "tolerance", "join_style", "miter_limit"},
+                "surface_layers": {"layers", "tolerance"}}[mode]
             if spec.keys()-allowed:
                 raise ValueError("Parameters not applicable to curve group mode")
             if mode == "interpolate":
@@ -255,6 +268,16 @@ def compile_recipe(recipe, previous=None, current_objects=None):
                     power = power@step
                 # Validate the requested step even when the first copy is identity.
                 transform(source["commands"], matrix)
+            elif mode == "surface_layers":
+                if source["closed"]:
+                    raise ValueError("Surface layers require an open centerline")
+                paths = []
+                for layer in spec["layers"]:
+                    commands, report = ribbon(source["commands"], layer["width"],
+                                              layer.get("offset", 0), spec.get("tolerance", .1))
+                    children.append(native_path(f"{oid}_{layer['id']}", commands, True,
+                                                merge_style(base_style, layer["style"])))
+                    diagnostics.append({"id": oid, "layer": layer["id"], **report})
             else:
                 if source["closed"]:
                     raise ValueError("Offset groups currently require open paths")

@@ -68,6 +68,8 @@ def run(data, vendor=None, show=False, smoke=False, agent_start=False):
         vendor = Path(vendor).resolve(strict=True)
         sys.path.insert(0, str(vendor))
     import webview
+    # Owner-triggered exports use Blob downloads and the native save dialog.
+    webview.settings['ALLOW_DOWNLOADS'] = True
     import pystray
     from PIL import Image, ImageDraw
     from .server import LocalServer

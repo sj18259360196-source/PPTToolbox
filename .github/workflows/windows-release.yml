@@ -34,7 +34,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -B distribution/public_source.py --audit . --report dist/source-audit.json
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python -B -m pytest -q -p no:cacheprovider tests/test_software_updates.py tests/test_version_release.py tests/test_release_readiness.py tests/test_bridge_upgrade.py tests/test_project_management.py tests/test_request_archive.py tests/test_project_flow.py tests/test_illustration_fallback.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-tests"
+          python -B -m pytest -q -p no:cacheprovider tests/test_software_updates.py tests/test_version_release.py tests/test_release_readiness.py tests/test_bridge_upgrade.py tests/test_project_management.py tests/test_request_archive.py tests/test_project_flow.py tests/test_illustration_fallback.py tests/test_native_illustration.py tests/test_experience_management.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-tests"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node --test tests/project_flow.test.mjs tests/projects_model.test.mjs
   build-draft:

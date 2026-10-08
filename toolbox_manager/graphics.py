@@ -102,7 +102,10 @@ def call(manager, op, args=None, source="mcp"):
                     return {**result, "version": a["version"], "manual_conflicts": conflicts}
                 return {"format": "graphics-recipe/1", "schema": copy.deepcopy(SCHEMA),
                         "example": json.loads((ROOT/"examples/graphics/capabilities.json").read_text(encoding="utf-8")),
-                        "capabilities": ["curve_groups", "shared_boundaries", "gradient_fitting", "linked_instances"],
+                        "capabilities": ["curve_groups", "shared_boundaries", "gradient_fitting", "linked_instances",
+                                         "surface_layers", "authored_gradients_up_to_16_stops"],
+                        "illustration_example": json.loads((ROOT/"examples/graphics/native-tube.json").read_text(encoding="utf-8")),
+                        "illustration_guide": "references/native-illustration.md",
                         "limitations": ["single_region", "no_live_powerpoint_linkage", "no_automatic_visual_approval"]}
             if op == "fit_gradient":
                 return fit_gradient(decode_image(a["image"]), decode_image(a["mask"]) if a.get("mask") else None,

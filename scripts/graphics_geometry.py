@@ -226,6 +226,55 @@ def offset(commands, distance, tolerance=.2, join_style="round", miter_limit=4):
                        "segments": len(candidate)-1, "metric": "sampled_bidirectional"}
 
 
+def ribbon(commands, width, displacement=0, tolerance=.1):
+    """Two checked offsets joined by flat caps; rejects truncated/folded bands.
+
+    This bounded construction generalizes the EED illustration's shared
+    centerline method. It is a 2D surface, not a lighting simulation.
+    """
+    import numpy as np
+    from shapely import LineString, Polygon
+    width, displacement, tolerance = map(finite, (width, displacement, tolerance))
+    if width <= 0 or not .01 <= tolerance <= 2:
+        raise ValueError("Ribbon needs positive width and tolerance in .01..2")
+    # Keep approximation substantially smaller than even a thin highlight.
+    tol = min(tolerance, width/12)
+    if tol < .01:
+        raise ValueError("Ribbon width is below the supported .12 unit minimum")
+    check_commands(commands, open_only=True)
+    sampled = np.asarray(flatten(commands, tol/8)[0])
+    segments = np.diff(sampled, axis=0)
+    lengths = np.linalg.norm(segments, axis=1)
+    if not len(lengths) or np.any(lengths < 1e-10):
+        raise ValueError("Ribbon has a degenerate centerline segment")
+    center = LineString(sampled)
+    if not center.is_simple or center.is_ring:
+        raise ValueError("Ribbon requires an open simple centerline")
+    normals = [np.array([-v[1], v[0]])/np.linalg.norm(v)
+               for v in (segments[0], segments[-1])]
+    sides, reports = [], []
+    for distance in (displacement+width/2, displacement-width/2):
+        side, report = offset(commands, distance, tol)
+        # GEOS may silently trim a tight inner offset. Reject missing ends.
+        for point, origin, normal in zip((side[0][1:], side[-1][-2:]),
+                                         (sampled[0], sampled[-1]), normals):
+            if np.linalg.norm(np.asarray(point)-(origin+distance*normal)) > tol*2:
+                raise ValueError("Ribbon offset truncated an endpoint")
+        sides.append(side)
+        reports.append(report)
+    reverse = reverse_edge(sides[1])
+    result = sides[0]+[["L", *reverse[0][1:]]]+reverse[1:]+[["Z"]]
+    check_commands(result)
+    ring = flatten(result, tol/8)[0]
+    polygon = Polygon(ring)
+    # Area sanity also catches a collapsed inner offset that remains valid.
+    if not polygon.is_valid or polygon.area <= tol*tol:
+        raise ValueError("Ribbon folds, collapses or self-intersects")
+    return result, {"width": width, "offset": displacement,
+                    "tolerance": tol, "boundaries": reports,
+                    "topology": "sampled_simple_polygon", "visual_review": "pending"}
+
+
 def face_commands(loops, edges):
     import numpy as np
     from shapely import Polygon
