@@ -105,6 +105,22 @@ def test_redirect_boundary(url):
     with pytest.raises(ValueError):safe_url(url)
 
 
+@pytest.mark.parametrize('url,accept',[
+    ('https://api.github.com/repos/example/PPTToolbox/releases/latest','application/vnd.github+json'),
+    ('https://github.com/example/PPTToolbox/releases/download/v1.21.0/PPTToolbox-update.json','application/octet-stream'),
+])
+def test_transport_uses_github_json_media_type_only_for_api(monkeypatch,url,accept):
+    from toolbox_manager.software_updates import Transport
+    requests=[]
+    class Opener:
+        def open(self,request,timeout):
+            requests.append(request)
+            return io.BytesIO(b'{}')
+    monkeypatch.setattr('toolbox_manager.software_updates.build_opener',lambda *_:Opener())
+    assert Transport().read(url)==b'{}'
+    assert requests[0].get_header('Accept')==accept
+
+
 def test_download_corruption_removes_partial_file(update):
     updater,manifest,_,_,files,_,_=update
     updater.check();finish(updater)

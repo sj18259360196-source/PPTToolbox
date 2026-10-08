@@ -63,7 +63,8 @@ class ReleaseRedirect(HTTPRedirectHandler):
 class Transport:
     def open(self, url):
         safe_url(url)
-        req = Request(url, headers={'User-Agent': f'PPTToolbox/{VERSION}', 'Accept': 'application/octet-stream'})
+        accept = 'application/vnd.github+json' if urlparse(url).hostname == 'api.github.com' else 'application/octet-stream'
+        req = Request(url, headers={'User-Agent': f'PPTToolbox/{VERSION}', 'Accept': accept})
         return build_opener(ReleaseRedirect()).open(req, timeout=25)
 
     def read(self, url, maximum=MAX_JSON):

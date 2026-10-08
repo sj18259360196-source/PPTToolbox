@@ -4,7 +4,7 @@
 
 ## 下载与安装
 
-在本仓库 Releases 页面下载 `PPTToolbox-1.21.0-Setup.exe`。安装包自带 Python；桌面界面需要 Microsoft Edge WebView2 Runtime 和 .NET Framework，Office 制作与验收功能需要 Microsoft PowerPoint。
+在本仓库 Releases 页面下载 `PPTToolbox-1.21.1-Setup.exe`。安装包自带 Python；桌面界面需要 Microsoft Edge WebView2 Runtime 和 .NET Framework，Office 制作与验收功能需要 Microsoft PowerPoint。
 
 程序默认安装在 `%LOCALAPPDATA%\Programs\PPTToolbox`，管理数据保存在 `%LOCALAPPDATA%\PPTToolbox`，新项目默认放在用户文档目录的 `PPTToolbox\Projects`。安装时可更改位置，升级沿用已保存的位置。
 
@@ -22,9 +22,9 @@
 
 ## 软件更新
 
-从 1.21.0 开始，在版本与更新页检查、下载和安装。默认每天自动检查一次，可关闭。下载和安装由用户发起，签名与 SHA-256 校验通过后才能执行。有活动任务时等待，保留原项目、设置和权限。
+从 1.21.1 开始，在版本与更新页检查、下载和安装。默认每天自动检查一次，可关闭。下载和安装由用户发起，签名与 SHA-256 校验通过后才能执行。有活动任务时等待，保留原项目、设置和权限。
 
-早期版本需要先手动安装一次 1.21.0。无法联网时仍可使用当前软件，也可手动下载完整安装包。首个公开安装包尚未使用 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
+早期版本（包括 1.21.0）需要先手动安装一次 1.21.1。无法联网时仍可使用当前软件，也可手动下载完整安装包。首个公开安装包尚未使用 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
 
 ## 开发
 

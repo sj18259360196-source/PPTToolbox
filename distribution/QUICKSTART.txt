@@ -1,4 +1,4 @@
-PPT Toolbox 1.21.0
+PPT Toolbox 1.21.1
 
 首次使用请运行 Setup.exe，选择程序、管理数据和项目目录。
 已有安装继续使用原位置，日常从开始菜单中的 PPT Toolbox 打开。

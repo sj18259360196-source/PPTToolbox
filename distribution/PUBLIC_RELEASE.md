@@ -1,6 +1,6 @@
 # 发布维护
 
-公开仓库采用经过筛查的源码快照。个人项目、原始反馈、数据库、API 配置、签名私钥和历史验收材料不进入公开快照。首次公开版为 1.21.0，原开发仓库及历史保留。
+公开仓库采用经过筛查的源码快照。个人项目、原始反馈、数据库、API 配置、签名私钥和历史验收材料不进入公开快照。首次公开版本 1.21.0 因版本查询请求头问题退出稳定渠道。当前发行版为 1.21.1，原开发仓库及历史保留。
 
 ## 构建
 
@@ -13,8 +13,8 @@ python -m venv .venv
 .venv\Scripts\python -B scripts/release_info.py check
 .venv\Scripts\python -B distribution/public_source.py --audit . --report dist/source-audit.json
 .venv\Scripts\python -B distribution/build_runtime.py --output dist/runtime --cache .tmp/codex/release/runtime-cache
-.venv\Scripts\python -B distribution/build_portable.py --donor dist/runtime --output dist/PPTToolbox-1.21.0
-.venv\Scripts\python -B distribution/build_setup.py --bundle dist/PPTToolbox-1.21.0 --compiler "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" --scratch .tmp/codex/release/setup --output dist/setup
+.venv\Scripts\python -B distribution/build_portable.py --donor dist/runtime --output dist/PPTToolbox-1.21.1
+.venv\Scripts\python -B distribution/build_setup.py --bundle dist/PPTToolbox-1.21.1 --compiler "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" --scratch .tmp/codex/release/setup --output dist/setup
 ```
 
 CPython 来自官方嵌入式 ZIP，版本与 SHA-256 固定。依赖的版本、平台文件与哈希固定，纯 Python 的 proxy_tools 由固定源码包构建。运行环境不借用本机已有安装。构建脚本遇到同名输出会停止，先保留已有交付，再使用新目录。
@@ -27,7 +27,7 @@ CPython 来自官方嵌入式 ZIP，版本与 SHA-256 固定。依赖的版本�
 
 ```powershell
 python -B distribution/release_manifest.py init-key --private-key <仓库外的私钥路径>
-python -B distribution/release_manifest.py sign --private-key <仓库外的私钥路径> --installer dist/setup/PPTToolbox-1.21.0-Setup.exe --notes distribution/RELEASE_NOTES.md --output dist/signed-update
+python -B distribution/release_manifest.py sign --private-key <仓库外的私钥路径> --installer dist/setup/PPTToolbox-1.21.1-Setup.exe --notes distribution/RELEASE_NOTES.md --output dist/signed-update
 ```
 
 先创建 GitHub Release 草稿。上传安装包、可选便携 ZIP、对应源码材料、`PPTToolbox-update.json`、`PPTToolbox-update.sig.json` 和 `SHA256SUMS.txt`。下载文件并重新核对摘要后再发布。签名只对该安装包有效；重新构建后必须重新签名，不能沿用旧清单。

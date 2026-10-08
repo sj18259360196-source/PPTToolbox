@@ -3,7 +3,7 @@ name: ppt-reference-rebuild
 description: 将PPT设计图片稿或页面截图重建为可编辑PPTX。通过统一工具箱领取局部任务、构建、PowerPoint渲染、左右对照、审查及续作；适用于单页、多页、素材替换和局部返修，不用于无参考图的自由设计。
 metadata:
   compatibility: 可执行本地脚本并查看图像的Agent；Python 3.10+。目标软件验证需要Windows桌面PowerPoint及PowerShell；视觉、生图和参考图编辑由宿主提供。
-  version: "1.21.0"
+  version: "1.21.1"
   language: "zh-CN"
   source-records: "31"
   guidance-revision: "2026-10-02-call-recovery"
