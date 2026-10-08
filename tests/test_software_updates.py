@@ -75,6 +75,63 @@ def test_download_reverify_and_install(update):
     assert update[-1][0][0].read_bytes()==update[4][update[1]['asset']['url']]
 
 
+def test_interrupted_install_reuses_verified_download(update):
+    updater = ready(update)
+    updater._set(phase='error', error='interrupted')
+    assert updater.status()['downloaded'] is True
+    assert updater.install()['phase'] == 'installing'
+    assert len(update[-1]) == 1
+
+
+def test_restarted_new_version_clears_old_install_failure(update, monkeypatch):
+    updater = ready(update)
+    updater._set(phase='error', error='interrupted', install_started=time.time())
+    monkeypatch.setattr('toolbox_manager.software_updates.VERSION', update[1]['version'])
+    assert updater.status()['phase'] == 'installed'
+    assert updater.status()['error'] == ''
+
+
+def test_failed_install_retry_still_checks_hash(update):
+    updater = ready(update)
+    updater._set(phase='error', error='interrupted')
+    target = updater.cache / update[1]['asset']['name']
+    target.write_bytes(b'x' * target.stat().st_size)
+    with pytest.raises(ValueError, match='变化'):
+        updater.install()
+    assert not update[-1]
+
+
+def test_runner_shows_installer_and_records_result(tmp_path, monkeypatch):
+    from distribution.update_runner import run
+    target = tmp_path / 'setup.exe'
+    target.write_bytes(b'fixture')
+    launched = []
+    class Process:
+        def __init__(self, args): launched.append(args)
+        def wait(self): return 2
+    monkeypatch.setattr('distribution.update_runner.subprocess.Popen', Process)
+    result = tmp_path / 'result.json'
+    assert run(target, hashlib.sha256(b'fixture').hexdigest(), tmp_path,
+               '99.0.0', result, tmp_path / 'install.log') == 2
+    assert json.loads(result.read_text())['exit_code'] == 2
+    assert '/NORESTART' in launched[0]
+    assert not any('SILENT' in arg or 'SUPPRESSMSGBOXES' in arg for arg in launched[0])
+
+
+def test_runner_launch_failure_is_diagnosed(tmp_path, monkeypatch):
+    from distribution.update_runner import run
+    target = tmp_path / 'setup.exe'
+    target.write_bytes(b'fixture')
+    def fail(*args, **kwargs): raise OSError('launch failed')
+    monkeypatch.setattr('distribution.update_runner.subprocess.Popen', fail)
+    result = tmp_path / 'result.json'
+    log = tmp_path / 'install.log'
+    assert run(target, hashlib.sha256(b'fixture').hexdigest(), tmp_path,
+               '99.0.0', result, log) == 1
+    assert json.loads(result.read_text())['error'] == 'launch failed'
+    assert 'launch failed' in log.read_text()
+
+
 def test_tampered_manifest_is_rejected_before_download(update):
     updater,manifest,raw,sig,_,_,_=update
     with pytest.raises(ValueError,match='签名'):

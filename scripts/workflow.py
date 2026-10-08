@@ -326,9 +326,26 @@ def _choose(project,s):
 
 def _template(kind,context):
     assertion={'status':'blocked','note':'','reviewer':'','viewed_files':[]}
-    if kind=='page_plan':return {'regions':[{'id':'region-01','bbox':[0,0,*context['reference_size']],'role':'content','summary':'','local_review':False}],'notes':'','uncertainties':[]}
-    if kind=='region_objects':return {'objects':[],'components':[],'source_notes':'','relationship_ids':[],'uncertainties':[],'asset_decisions':[]}
-    if kind=='source_review':return assertion
+    if kind=='page_plan':
+        previous=context.get('previous_element_scope')
+        scope=copy.deepcopy(previous) if previous else {
+            'version':1,'revision':1,'task_requirement':'','units':[{
+                'id':'unit-01','region_id':'region-01','owner_id':None,'semantic_role':'unknown',
+                'input_form':'unknown','requirement':'','evidence':'','counterevidence':'','required_edit':'unresolved'}]}
+        if previous:scope['revision']+=1
+        return {'regions':[{'id':'region-01','bbox':[0,0,*context['reference_size']],'role':'content','summary':'','local_review':False}],
+                'element_scope':scope,'notes':'','uncertainties':[]}
+    if kind=='region_objects':
+        result={'objects':[],'components':[],'source_notes':'','relationship_ids':[],'uncertainties':[],'asset_decisions':[]}
+        if context.get('element_scope'):
+            result['scope_bindings']=[{'unit_id':u['id'],'object_ids':[]} for u in context['element_scope']['units']
+                                      if u['region_id']==context['region']['id']]
+        return result
+    if kind=='source_review':
+        if context.get('element_scope'):
+            assertion['scope_review']={'revision':context['element_scope']['revision'],
+                'units':[{'unit_id':u['id'],'status':'blocked','note':''} for u in context['element_scope']['units']]}
+        return assertion
     if kind=='asset_material':return {'file':'','tool_used':'','provenance':'','model_reported':None}
     if kind=='candidate':return {'file':''}
     if kind=='office_render':return {'receipt':''}
@@ -376,6 +393,11 @@ def _issue(project,s,kind,target):
     if page:
         context.update(reference_size=page['size'],slide_id=page['id'])
         context['native_first'] = page.get('native_first', False)
+        from element_scope import compiled_scope
+        context['element_scope'] = compiled_scope(page)
+        context['previous_element_scope'] = page.get('previous_element_scope')
+        for unit in (context['element_scope'] or {}).get('units', []):
+            if 'source' in unit: include(under(project,unit['source']['asset']))
         notes=(page.get('plan') or page.get('review_plan') or {}).get('notes')
         if notes:context['production_notes']=notes
         if kind in {'page_plan','source_review'}:include(under(project,page['reference']),True)
@@ -612,7 +634,20 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
     kind=t['kind'];target=t['target'];attachments=[]
     page=_page(s,target['slide_id']) if 'slide_id' in target else None
     if kind=='page_plan':
-        page['plan']=valid_plan(result,page['size'])
+        plan=valid_plan(result,page['size'])
+        from element_scope import validate_plan
+        scope=plan.get('element_scope')
+        previous=page.get('previous_element_scope')
+        if previous and (scope is None or scope['revision'] <= previous['revision']):
+            raise ValueError('element_scope: replan must retain obligations with an increased revision')
+        if previous and not {u['id'] for u in previous['units']} <= {u['id'] for u in scope['units']}:
+            raise ValueError('element_scope: replan cannot silently drop existing source obligations')
+        if scope is not None:
+            validate_plan(scope, project=project)
+            for unit in scope['units']:
+                if 'source' in unit:
+                    s['tracked_inputs'][unit['source']['asset']] = unit['source']['sha256']
+        page['plan']=plan
         page['planning_state']='valid'
     elif kind=='region_objects':
         if isinstance(result,dict) and result.get('action') in {'request_asset','request_assets'}:
@@ -623,7 +658,16 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
             from workflow_scene import identifier
             pending=[];ids={j['id'] for j in s['asset_jobs']}
             for r in requests:
-                keys(r,['id','purpose','prompt','transparent','allowed_approximation'],['generation_decision','multi_icon_sheet'])
+                keys(r,['id','purpose','prompt','transparent','allowed_approximation'],['generation_decision','multi_icon_sheet','scope_unit_ids'])
+                scope=(page.get('plan') or {}).get('element_scope')
+                if scope is not None:
+                    units={u['id']:u for u in scope['units'] if u['region_id']==target['region_id']}
+                    requested=r.get('scope_unit_ids')
+                    if (not isinstance(requested,list) or not requested or any(not isinstance(x,str) for x in requested)
+                            or len(requested)!=len(set(requested)) or any(x not in units for x in requested)):
+                        raise ValueError('element_scope: generation requires current regional scope_unit_ids')
+                    if any(units[x]['required_edit'] in {'preserve','unresolved'} for x in requested):
+                        raise ValueError('element_scope: preserved or unresolved sources cannot be regenerated')
                 identifier(r['id'],'asset job id');text(r['purpose'],'asset purpose');text(r['prompt'],'asset prompt')
                 if type(r['transparent']) is not bool or r['allowed_approximation'] is not True:raise ValueError('Generated substitution needs an explicit allowed_approximation decision')
                 if 'multi_icon_sheet' in r and type(r['multi_icon_sheet']) is not bool:raise ValueError('multi_icon_sheet must be boolean')
@@ -661,11 +705,13 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
             if field in job['request']:info[field]=copy.deepcopy(job['request'][field])
         s.setdefault('asset_catalog',[]).append(info);job.update(status='completed',asset=rel)
     elif kind=='source_review':
-        _assertion(result, ('text_checks',));_seen(project,packet,result)
+        _assertion(result, ('text_checks','scope_review'));_seen(project,packet,result)
         from source_text_review import validate_text_checks
         objs = (page['imported_slide']['objects'] if page.get('imported_slide') is not None
                 else [o for r in page['plan']['regions'] for o in page['fragments'][r['id']]['objects']])
         validate_text_checks(result, objs)
+        from element_scope import compiled_scope, validate_review
+        validate_review(compiled_scope(page), result, objs, project)
     elif kind=='candidate':
         require_capabilities('pptx.inspect')
         keys(result,['file']);src=Path(result['file']).resolve()
@@ -963,6 +1009,10 @@ def revise(project:Path,slide_id:str,region_id:str|None,reason:str):
             for job in s['asset_jobs']:
                 if job['slide_id']==slide_id and job['region_id']==region_id and job['status']!='completed':job['status']='cancelled'
         else:
+            from element_scope import compiled_scope
+            scope=compiled_scope(p) or p.get('previous_imported_slide',{}).get('element_scope')
+            if scope is not None:
+                p['previous_element_scope']={k:v for k,v in scope.items() if k!='bindings'}
             p['plan']=None;p['fragments']={};p['previous_fragments']={}
             p.pop('revision_feedback',None)
             p.pop('review_plan',None)
@@ -999,6 +1049,11 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
         for index,slide in enumerate(incoming['slides']):
             if sha256(resolve_asset(scene_path.parent,slide['reference']))!=old_refs[index]:raise ValueError('Replacement reference differs; start a new project')
         if [p['id'] for p in s['pages']]!=[p['id'] for p in incoming['slides']]:raise ValueError('Replacement must keep stable page IDs')
+        from element_scope import compiled_scope
+        for page, slide in zip(s['pages'], incoming['slides']):
+            old_scope=compiled_scope(page)
+            if old_scope is not None and slide.get('element_scope') != old_scope:
+                raise ValueError('element_scope: replacement must retain scope and bindings; revise the page to change decisions')
         # Import in a task-owned temporary project, then copy only new assets and rewrite references.
         import tempfile
         with tempfile.TemporaryDirectory(prefix='ppt-scene-check-') as temp:
@@ -1018,6 +1073,10 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
                 for o in walk_objects(new['imported_slide']['objects']):
                     if o['kind']=='image':
                         rel=import_file(temp/o['asset'],project);o['asset']=rel;s['tracked_inputs'][rel]=sha256(project/rel)
+                for unit in new['imported_slide'].get('element_scope',{}).get('units',[]):
+                    if 'source' in unit:
+                        rel=import_file(temp/unit['source']['asset'],project)
+                        unit['source']['asset']=rel;s['tracked_inputs'][rel]=sha256(project/rel)
             _invalidate_run(s,reason);s.update(canvas=canvas,title=title,pages=pages)
         save(project,s,'scene_replaced',{'reason':reason});return brief(s)
 

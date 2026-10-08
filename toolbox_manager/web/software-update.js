@@ -10,8 +10,8 @@ export function updateHTML(s){
  const phase=s.phase||'idle',release=s.release,disabled=busy.has(phase)||phase==='deferred';
  const progress=release?.asset?.size?Math.min(100,Math.round((s.received||0)*100/release.asset.size)):0;
  let actions=`<button data-update="check" ${disabled?'disabled':''}>检查更新</button>`;
- if(release&&['available','cancelled','error'].includes(phase))actions+='<button class="primary" data-update="download">下载更新</button>';
- if(phase==='ready')actions+=`<button class="primary" data-update="install" ${s.can_install?'':'disabled'}>安装并重新打开</button>`;
+ if(release&&['available','cancelled','error'].includes(phase)&&!s.downloaded)actions+='<button class="primary" data-update="download">下载更新</button>';
+ if(phase==='ready'||(phase==='error'&&s.downloaded))actions+=`<button class="primary" data-update="install" ${s.can_install?'':'disabled'}>${phase==='error'?'重新启动安装':'打开安装程序'}</button>`;
  if(['downloading','verifying','deferred'].includes(phase))actions+=`<button data-update="cancel">${phase==='deferred'?'取消排队':'取消下载'}</button>`;
  return `<p><strong>${esc(labels[phase]||phase)}</strong></p><p class="small muted">当前 ${esc(s.installed_version)}${release?` · 发行版 ${esc(release.version)}`:''}</p>
  ${release?`<p class="small muted">安装包 ${size(release.asset.size)} · 签名清单已验证</p><details><summary>本次更新内容</summary><p style="white-space:pre-wrap">${esc(release.notes)}</p></details>`:''}

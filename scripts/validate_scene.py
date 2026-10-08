@@ -46,6 +46,14 @@ def validate(scene: dict, base: Path, check_files: bool = True) -> list[str]:
         names = [o["id"] for o in flat]
         if len(names) != len(set(names)): errors.append(f"{sid}: duplicate object ID")
         by_id = {o["id"]: o for o in flat}
+        preserved_images = set()
+        if 'element_scope' in slide:
+            from element_scope import validate_plan, validate_outputs
+            try:
+                validate_plan(slide['element_scope'], project=base if check_files else None, compiled=True)
+                preserved_images = validate_outputs(slide['element_scope'], slide['objects'], base if check_files else None)
+            except (ValueError, OSError) as exc:
+                errors.append(f'{sid}: {exc}')
         top_ids = {o["id"] for o in slide["objects"]}
         from evidence_contract import required_review
         try: required_review(slide)
@@ -111,12 +119,14 @@ def validate(scene: dict, base: Path, check_files: bool = True) -> list[str]:
                 if 'raster_content' in o:
                     from material_routes import generated_illustration
                     exception=False
-                    try:exception=generated_illustration(o,base if check_files else None)
+                    try:exception=generated_illustration(o,base if check_files else None) or oid in preserved_images
                     except (ValueError,OSError) as exc:errors.append(f"{oid}: {exc}")
                     if o.get('asset_role') in {'icon','logo'} and not exception:
                         errors.append(f"{oid}: icons/logos require native paths or shapes, not raster substitution")
                     if len(o.get('raster_reason','').strip()) < 12:
                         errors.append(f"{oid}: explain the actual photographic/texture detail requiring raster storage")
+                    if o.get('raster_content') == 'reference_artifact' and oid not in preserved_images:
+                        errors.append(f'{oid}: reference_artifact requires a source-bound preservation decision')
             if kind in {"text", "shape", "image", "table", "chart"} and "bbox" not in o:
                 errors.append(f"{sid}/{oid}: bbox required")
             if "bbox" in o:

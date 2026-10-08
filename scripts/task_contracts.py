@@ -25,6 +25,11 @@ def constraints(kind, context):
         if kind in {'review_local','preview_local'}:
             result['relationship_ids'] = context.get('relationships', [])
         if kind == 'source_review':
+            result['element_scope'] = {
+                'required_when_present': 'scope_review with current revision and every source unit exactly once; each row has unit_id, status, note.',
+                'review': 'Inspect original source and task requirement independently. Check ownership, omitted text, preserved artifacts and conflicting evidence. A declared label or digest is not semantic proof.',
+                'completion': 'Unresolved units forbid passed. Every native text object needs exact text_checks. Tables and chart labels require source review even without separate text objects.',
+            }
             result['first_checks'] = ['proper names and symbols','numbers and units','omitted source content']
             result['text_checks'] = {
                 'optional': True,
@@ -41,7 +46,18 @@ def constraints(kind, context):
             ]
         return result
     if kind == 'page_plan':
-        return {'region_id': {'pattern': '[A-Za-z0-9][A-Za-z0-9_-]{0,39}',
+        from element_scope import SCOPE
+        return {'element_scope_schema': SCOPE,
+                'element_scope_guidance': [
+                    'For newly authored plans include element_scope version 1 and revision 1. Legacy plans remain readable. On replan retain stable source IDs and increment revision.',
+                    'Read the user task before assigning required_edit. Record task_requirement and each unit requirement, semantic_role, input_form, owner_id, evidence and counterevidence. Do not infer scope from OCR or object kind alone.',
+                    'Cover every region and all source content, including uncertain candidates. Use unresolved for a genuine conflict; never drop an obligation to obtain a pass.',
+                    'A cited poster may require preserve; an explicit request to edit that same poster requires text. Full-slide text screenshots do not qualify for automatic preservation.',
+                    'Separate semantic ownership from geometry, draw_order and production order. Analyze whole page then modules; keep existing back-to-front assembly.',
+                    'Preserved raster needs source asset, sha256 and optional exact source crop. Preserve native source using native_sha256 of logical objects via element_scope.native_digest; never rasterize native content for protection.',
+                    'Keep ambiguous candidates visible; ask only when the actual requirement conflict remains unresolved.',
+                ],
+                'region_id': {'pattern': '[A-Za-z0-9][A-Za-z0-9_-]{0,39}',
                               'reserved_case_insensitive': sorted(RESERVED_IDS),
                               'unique_case_insensitive': True},
                 'role_enum': sorted(ROLES),
@@ -65,6 +81,13 @@ def constraints(kind, context):
                     if result is not None: return result
             return None
         return {'image_required': ['id', 'kind', 'bbox', 'asset', 'asset_role', 'source_kind'],
+                'element_scope': {
+                    'bindings': 'When page scope exists, supply scope_bindings rows with unit_id and local object_ids. Cover each regional unit and every output leaf once. A group binding includes its descendants.',
+                    'preserve': 'Preserved raster stays one unchanged source image, using matching user_asset/crop route. reference_artifact requires this binding. No erased text, generated replacement, changed crop or unassigned extra labels.',
+                    'edit': 'Required text/geometry/data/group capabilities must exist. Native preserved objects retain their snapshot. Scope classification alone never waives a requirement.',
+                    'revision': 'Use page revise with a higher scope revision to correct decisions; regional revisions retain current obligations.',
+                    'generation': 'For scoped asset requests include scope_unit_ids; preserve and unresolved units cannot be regenerated.',
+                },
                 'asset_role_enum': [v for v in field(schema, 'asset_role') if v != 'reference_fullpage'],
                 'source_kind_enum': field(schema, 'source_kind'),
                 'provenance_required_for': ['generated', 'external'],
@@ -82,8 +105,8 @@ def constraints(kind, context):
                     'review': 'The entire merged region is validated. New source review, Office render and visual review remain required.',
                 } if context.get('previous_fragment_sha256') else None),
                 'native_first': context.get('native_first', False),
-                'reconstruction_priority': ['editable text and numbers', 'draw icons/illustrations first; Agent similarity below 75% permits generation unless the user requires native-only or prohibits generation', 'explicit user generation requests may skip drawing', 'native gradients and per-stop opacity'],
-                'raster_required_when_native_first': ['raster_content: photograph|texture|continuous_tone_artwork|generated_illustration', 'raster_reason describing the object decision', 'matching asset_decisions entry for every image', 'generated_illustration requires source_kind=generated and generation_decision copied from the accepted asset request'],
+                'reconstruction_priority': ['current task scope and preservation obligations', 'editable text and numbers', 'draw icons/illustrations first; Agent similarity below 75% permits generation unless the user requires native-only or prohibits generation', 'explicit user generation requests may skip drawing', 'native gradients and per-stop opacity'],
+                'raster_required_when_native_first': ['raster_content: '+ '|'.join(field(schema, 'raster_content')), 'reference_artifact requires source-bound preservation scope', 'raster_reason describing the object decision', 'matching asset_decisions entry for every image', 'generated_illustration requires source_kind=generated and generation_decision copied from the accepted asset request'],
                 'generation_decision':{'basis':'low_similarity or user_request','reference':'existing project-relative reference file',
                     'drawing':'existing project-relative drawing, required for low_similarity','similarity_pct':'Agent visual judgment 0..100, strictly below 75 for low_similarity',
                     'reason':'local differences or explicit user request; never claim a software measurement'},
@@ -105,7 +128,7 @@ def examples(kind, context):
     available = context.get('available_assets', [])
     actual = available[-1]['asset'] if available else '<先asset-add取得真实asset路径>'
     w, h = context['local_size']
-    return {'instructions': '先按原图拆分可编辑文字和图形。图标与可用轮廓、色块表达的插画用原生路径或形状。以下只示范字段，坐标与内容须重新观察。',
+    return {'instructions': '先按页面范围合同确认内容归属与编辑要求，再制作当前区域。需编辑的文字保持原生，引用原图按已确认范围保留。以下只示范字段，坐标与内容须重新观察。',
             'native_path': {'id': 'outline', 'kind': 'path', 'closed': True,
                             'commands': [['M',w*.2,h*.8],['C',w*.15,h*.25,w*.7,h*.1,w*.8,h*.8],['Z']],
                             'style': {'gradient': {'type':'linear','angle_deg':0,

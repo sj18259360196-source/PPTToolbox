@@ -20,8 +20,8 @@ try {
         }
     }
     if ((Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $ExpectedSha256) { throw 'Installer hash mismatch' }
-    $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', ('/DIR="' + $Destination + '"'), ('/LOG="' + $LogPath + '"'))
-    $process = Start-Process -FilePath $Installer -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
+    $arguments = @('/NORESTART', ('/DIR="' + $Destination + '"'), ('/LOG="' + $LogPath + '"'))
+    $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -PassThru
     $exitValue = $process.ExitCode
 } catch {
     [IO.File]::AppendAllText($LogPath, "`n" + $_.Exception.Message, [Text.UTF8Encoding]::new($false))
@@ -29,5 +29,5 @@ try {
     $result = @{version=$Version; exit_code=$exitValue; finished_at=[DateTime]::UtcNow.ToString('o')}
     [IO.File]::WriteAllText($ResultPath, ($result | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
     $launcher = Join-Path $Destination 'PPTToolbox.exe'
-    if (Test-Path -LiteralPath $launcher) { Start-Process -FilePath $launcher -WindowStyle Hidden }
+    if ($exitValue -ne 0 -and (Test-Path -LiteralPath $launcher)) { Start-Process -FilePath $launcher -WindowStyle Hidden }
 }

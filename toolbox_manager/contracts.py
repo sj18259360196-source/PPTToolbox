@@ -29,6 +29,7 @@ def array(items, **kw):
 
 
 def result_contracts(root):
+    from scripts.element_scope import SCOPE, BINDINGS, REVIEW
     # Reuse native object/style definitions. Regional compilation supplies only
     # editability/evidence; do not relax the remaining scene contract.
     scene = json.loads((Path(root)/"assets/schemas/scene.schema.json").read_text(encoding="utf-8"))
@@ -61,12 +62,13 @@ def result_contracts(root):
                 "role": {"enum": ["background", "header", "content", "diagram", "chart", "table", "photo", "decoration", "footer"]},
                 "summary": STRING, "local_review": BOOL,
             }, ("id", "bbox", "role", "summary")), minItems=1),
-            "notes": TEXT, "uncertainties": array(STRING),
+            "notes": TEXT, "uncertainties": array(STRING), "element_scope": SCOPE,
         }, ("regions",)),
         "region_objects": {"oneOf": [
             obj({
                 "objects": array({"$ref": "#/$defs/object"}),
                 "source_notes": STRING, "relationship_ids": array(STRING),
+                "scope_bindings": BINDINGS,
                 "uncertainties": array(STRING), "draw_order": array(STRING),
                 "components": array({"oneOf": components}),
                 "asset_decisions": array(obj({
@@ -84,14 +86,17 @@ def result_contracts(root):
             obj({"action": {"const": "request_asset"}, "request": obj({
                 "id": STRING, "purpose": STRING, "prompt": STRING,
                 "transparent": BOOL, "allowed_approximation": {"const": True},
+                "scope_unit_ids": array(STRING, minItems=1, uniqueItems=True),
             }, ("id", "purpose", "prompt", "transparent", "allowed_approximation"))}, ("action", "request")),
             obj({"action": {"const": "request_assets"}, "requests": array(obj({
                 "id": STRING, "purpose": STRING, "prompt": STRING,
                 "transparent": BOOL, "allowed_approximation": {"const": True},
+                "scope_unit_ids": array(STRING, minItems=1, uniqueItems=True),
             }, ("id", "purpose", "prompt", "transparent", "allowed_approximation")), minItems=1, maxItems=8)}, ("action", "requests")),
         ]},
         "source_review": obj({
             **assertion,
+            "scope_review": REVIEW,
             "text_checks": array(obj({"object_id": STRING, "source_text": TEXT},
                                      ("object_id", "source_text")), minItems=1),
         }, base),

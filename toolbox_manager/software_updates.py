@@ -185,6 +185,10 @@ class Updater:
 
     def status(self):
         with self.lock:
+            if (self.state.get('install_started') and
+                    self.state.get('phase') in {'installing', 'error', 'ready', 'deferred'} and
+                    self.state.get('release', {}).get('version') == VERSION):
+                self._set(phase='installed', error='', blockers=[])
             if self.state.get('phase') == 'installing':
                 result_path = no_reparse(self.cache / 'install-result.json')
                 if result_path.is_file():
@@ -204,9 +208,17 @@ class Updater:
                         # Covers a crash between recording intent and launching the helper.
                         interrupted = elapsed > 120
                     if interrupted:
-                        self._set(phase='error', error='安装过程已中断。请查看安装日志，必要时重新运行完整安装包。')
+                        self._set(phase='error', error='安装助手已中断。安装包已保留，可以重新启动安装。')
             value = copy.deepcopy(self.state)
-        return {**value, 'installed_version': VERSION, 'repository': self.cfg['repository'],
+        asset = value.get('release', {}).get('asset', {})
+        downloaded = False
+        if asset.get('name') and value.get('signed_manifest'):
+            try:
+                target = no_reparse(self.cache / asset['name'])
+                downloaded = target.is_file() and target.stat().st_size == asset.get('size')
+            except (OSError, ValueError):
+                pass
+        return {**value, 'downloaded': downloaded, 'installed_version': VERSION, 'repository': self.cfg['repository'],
                 'configured': bool(self.cfg.get('trusted_keys')), 'can_install': self._installed(),
                 'automatic': self.manager.store.get('software_update_preferences', {}).get('automatic', True)}
 
@@ -333,7 +345,7 @@ class Updater:
 
     def install(self):
         with self.lock:
-            if self.state.get('phase') not in {'ready', 'deferred'}:
+            if self.state.get('phase') not in {'ready', 'deferred', 'error'}:
                 raise ValueError('请先下载并校验安装包')
             if not self._installed():
                 raise ValueError('源码或便携预览不能直接更新正式安装，请手动运行安装包')
@@ -362,18 +374,21 @@ class Updater:
     def _launch(self, target, manifest):
         if os.name != 'nt':
             raise ValueError('此安装包仅支持 Windows')
-        from scripts.runtime_env import powershell_path
-        helper = no_reparse(self.cache / 'install-update.ps1')
-        helper.write_bytes((self.manager.root / 'distribution/install_update.ps1').read_bytes())
+        helper = no_reparse(self.manager.root / 'distribution/update_runner.py')
         result = no_reparse(self.cache / 'install-result.json')
         result.unlink(missing_ok=True)
         log = no_reparse(self.cache / 'install.log')
-        args = [powershell_path(), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-                '-File', str(helper), '-Installer', str(target), '-ExpectedSha256', manifest['asset']['sha256'],
-                '-Destination', str(self.manager.root.parent), '-Version', manifest['version'],
-                '-ResultPath', str(result), '-LogPath', str(log)]
-        process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                   creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS, close_fds=True)
+        executable = self.manager.root.parent / 'runtime/python.exe'
+        if not executable.is_file():
+            raise ValueError('安装运行环境缺失，请重新运行完整安装包')
+        args = [str(executable), '-B', '-I', '-X', 'utf8', str(helper),
+                '--installer', str(target), '--expected-sha256', manifest['asset']['sha256'],
+                '--destination', str(self.manager.root.parent), '--version', manifest['version'],
+                '--result-path', str(result), '--log-path', str(log)]
+        # Keep startup errors too, including failures before the runner imports.
+        with no_reparse(self.cache / 'install-helper.log').open('ab') as diagnostics:
+            process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=diagnostics, stderr=diagnostics,
+                                       creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS, close_fds=True)
         return {'pid': process.pid, 'created': installer_process_identity(process.pid)}
 
     def start(self):

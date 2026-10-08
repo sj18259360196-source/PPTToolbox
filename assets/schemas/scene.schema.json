@@ -131,6 +131,161 @@
                 "type": "number"
               }
             }
+          },
+          "element_scope": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "const": 1
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "task_requirement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "units": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"
+                    },
+                    "region_id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"
+                    },
+                    "owner_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "semantic_role": {
+                      "enum": [
+                        "page_content",
+                        "reference_artifact",
+                        "decoration",
+                        "unknown"
+                      ]
+                    },
+                    "input_form": {
+                      "enum": [
+                        "native",
+                        "raster",
+                        "mixed",
+                        "unknown"
+                      ]
+                    },
+                    "requirement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "evidence": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "counterevidence": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "required_edit": {
+                      "enum": [
+                        "preserve",
+                        "text",
+                        "geometry",
+                        "data",
+                        "group",
+                        "image_replace",
+                        "unresolved"
+                      ]
+                    },
+                    "source": {
+                      "type": "object",
+                      "properties": {
+                        "asset": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "crop": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          },
+                          "minItems": 4,
+                          "maxItems": 4
+                        }
+                      },
+                      "required": [
+                        "asset",
+                        "sha256"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "native_sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "region_id",
+                    "owner_id",
+                    "semantic_role",
+                    "input_form",
+                    "requirement",
+                    "evidence",
+                    "counterevidence",
+                    "required_edit"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "bindings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "unit_id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"
+                    },
+                    "object_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "unit_id",
+                    "object_ids"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "version",
+              "revision",
+              "task_requirement",
+              "units",
+              "bindings"
+            ],
+            "additionalProperties": false
           }
         }
       }
@@ -457,9 +612,17 @@
           "type": "string"
         },
         "raster_content": {
-          "enum": ["photograph", "texture", "continuous_tone_artwork", "generated_illustration"]
+          "enum": [
+            "photograph",
+            "texture",
+            "continuous_tone_artwork",
+            "generated_illustration",
+            "reference_artifact"
+          ]
         },
-        "generation_decision": {"type": "object"},
+        "generation_decision": {
+          "type": "object"
+        },
         "raster_reason": {
           "type": "string",
           "minLength": 12
@@ -927,7 +1090,11 @@
               "description": "Radial focal point, normalized in shape box. Stops run from focal point (0) to edge (1)."
             },
             "path": {
-              "enum": ["circle", "shape", "rect"],
+              "enum": [
+                "circle",
+                "shape",
+                "rect"
+              ],
               "description": "Radial distance geometry. Defaults to shape for native ellipses, circle otherwise. Explicit circle preserves physical circular falloff."
             }
           },

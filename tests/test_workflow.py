@@ -137,7 +137,9 @@ def test_repeated_next_is_idempotent(tmp_path):
 def test_invalid_envelope_and_replay_rejected(tmp_path):
     p=tmp_path/'p';wf.start(p,[ref(tmp_path)]);t=wf.next_task(p);f=Path(t['task']['response_template']);r=read_json(f);r['token']='wrong';write_json(f,r)
     with pytest.raises(WorkflowError,match='token'):wf.submit(p,f)
-    r['token']=read_json(t['task']['packet'])['token'];r['result']['regions'][0]['summary']='Known synthetic source';write_json(f,r)
+    r['token']=read_json(t['task']['packet'])['token'];r['result']['regions'][0]['summary']='Known synthetic source'
+    # Exercise legacy contract compatibility; new templates also scaffold scope.
+    r['result'].pop('element_scope', None);write_json(f,r)
     wf.submit(p,f)
     with pytest.raises(WorkflowError,match='No active task'):wf.submit(p,f)
 

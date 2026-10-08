@@ -20,11 +20,13 @@ EDIT = {'text':'text','shape':'shape','line':'shape','connector':'shape','path':
 ROLES = {'background','header','content','diagram','chart','table','photo','decoration','footer'}
 
 
-def native_image_issues(objects):
+def native_image_issues(objects, preserved_images=()):
     from material_routes import generated_illustration
     issues = []
     for obj in walk_objects(objects):
         if obj.get('kind') != 'image':
+            continue
+        if obj['id'] in preserved_images:
             continue
         try:
             if generated_illustration(obj):continue
@@ -61,7 +63,7 @@ def text_list(value, label):
 
 
 def valid_plan(value, size):
-    keys(value, ['regions'], ['notes','uncertainties'])
+    keys(value, ['regions'], ['notes','uncertainties','element_scope'])
     if not isinstance(value['regions'],list) or not value['regions']: raise ValueError('regions: at least one region required')
     seen=set(); rows=[]
     for row in value['regions']:
@@ -74,7 +76,11 @@ def valid_plan(value, size):
         text(row['summary'],'region summary')
         if 'local_review' in row and type(row['local_review']) is not bool: raise ValueError('local_review must be boolean')
         rows.append({**row,'local_review':row.get('local_review',row['role'] in {'diagram','chart','table'})})
-    return {'regions':rows, 'notes':value.get('notes',''), 'uncertainties':text_list(value.get('uncertainties',[]),'uncertainties')}
+    result = {'regions':rows, 'notes':value.get('notes',''), 'uncertainties':text_list(value.get('uncertainties',[]),'uncertainties')}
+    if 'element_scope' in value:
+        from element_scope import validate_plan
+        result['element_scope'] = copy.deepcopy(validate_plan(value['element_scope'], [r['id'] for r in rows]))
+    return result
 
 
 def input_mapping(canvas, size, mode='uniform'):
@@ -115,6 +121,9 @@ def import_scene(scene_path:Path, project:Path):
         review_mapping(scene,s,size)
         for obj in walk_objects(s['objects']):
             if obj['kind']=='image':obj['asset']=import_file(resolve_asset(scene_path.parent,obj['asset']),project)
+        for unit in s.get('element_scope', {}).get('units', []):
+            if 'source' in unit:
+                unit['source']['asset'] = import_file(resolve_asset(scene_path.parent,unit['source']['asset']),project)
         pages.append({'id':s['id'],'index':i,'reference':rel,'size':size,'sha256':sha256(project/rel),
                       'imported_slide':s,'plan':None,'fragments':{},'source_review':None})
     return scene['canvas'],scene.get('title','Reference rebuild'),pages
@@ -194,7 +203,7 @@ def merge_fragment_revision(previous, result):
 
 
 def compile_fragment(page, region, payload, canvas, project):
-    keys(payload,['objects','source_notes'],['relationship_ids','uncertainties','components','draw_order','asset_decisions'])
+    keys(payload,['objects','source_notes'],['relationship_ids','uncertainties','components','draw_order','asset_decisions','scope_bindings'])
     if not isinstance(payload['objects'],list): raise ValueError('objects must be an array')
     if not payload['objects'] and not payload.get('components'): raise ValueError('objects: empty regions cannot be marked reconstructed')
     if not isinstance(payload.get('components',[]),list):raise ValueError('components must be an array')
@@ -212,6 +221,14 @@ def compile_fragment(page, region, payload, canvas, project):
     if len(local)!=len(set(local)):raise ValueError('Duplicate local object IDs')
     from task_contracts import validate_asset_decisions
     decisions=validate_asset_decisions(payload.get('asset_decisions',[]),set(local))
+    from element_scope import validate_outputs
+    scope = (page.get('plan') or {}).get('element_scope')
+    preserved = set()
+    if scope is not None:
+        preserved = validate_outputs(scope, raw, project, region_id=region['id'],
+                                     bindings=payload.get('scope_bindings'), check_native=False)
+    elif 'scope_bindings' in payload:
+        raise ValueError('scope_bindings requires a page element_scope')
     if page.get('native_first'):
         from material_routes import generated_illustration
         by_target = {row['target_id']: row for row in decisions}
@@ -219,8 +236,8 @@ def compile_fragment(page, region, payload, canvas, project):
             if item.get('kind') != 'image':
                 continue
             oid = item['id']
-            exception=generated_illustration(item,project)
-            if (item.get('asset_role') in {'icon', 'logo'} and not exception) or region['role'] in {'chart','table'}:
+            exception=generated_illustration(item,project) or oid in preserved
+            if (item.get('asset_role') in {'icon', 'logo'} and not exception) or (region['role'] in {'chart','table'} and oid not in preserved):
                 raise ValueError(oid + ': native reconstruction required; use shapes/paths, editable text, tables or data charts')
             if not exception and item.get('raster_content') not in {'photograph','texture','continuous_tone_artwork'}:
                 raise ValueError(oid + ': raster_content required; vector-like illustrations and icons must use native shapes/paths')
@@ -273,11 +290,27 @@ def compile_fragment(page, region, payload, canvas, project):
                     if target in local:obj[endpoint]['object_id']=prefix+target
             if kind=='group':convert(obj['children'])
     convert(raw)
+    if scope is not None:
+        scoped = copy.deepcopy(scope)
+        scoped['units'] = [u for u in scoped['units'] if u['region_id'] == region['id']]
+        scoped['bindings'] = [{'unit_id': row['unit_id'], 'object_ids': [prefix + oid for oid in row['object_ids']]}
+                              for row in payload['scope_bindings']]
+        validate_outputs(scoped, raw, project)
     # Validate with already committed sibling fragments to support cross-region connectors.
     siblings=[]
     for rid,frag in page['fragments'].items():
         if rid!=region['id']:siblings.extend(frag['objects'])
     temp={'version':'1.0','canvas':canvas,'slides':[{'id':page['id'],'objects':siblings+raw}]}
+    if scope is not None:
+        from element_scope import compiled_scope
+        shadow = copy.deepcopy(page)
+        shadow['fragments'][region['id']] = {'raw': payload}
+        combined = compiled_scope(shadow)
+        present = {b['unit_id'] for b in combined['bindings']}
+        combined['units'] = [u for u in combined['units'] if u['id'] in present]
+        for unit in combined['units']:
+            if unit['owner_id'] not in present: unit['owner_id'] = None
+        temp['slides'][0]['element_scope'] = combined
     errors=validate(temp,project)
     if errors:raise ValueError('Fragment errors: '+'; '.join(errors[:16]))
     relations=text_list(payload.get('relationship_ids',[]),'relationship_ids')
@@ -301,6 +334,9 @@ def assemble(state):
         slides.append({'id':page['id'],'reference':page['reference'],'reference_mapping':'Regional local pixels mapped by the recorded affine transform',
                        'review_mapping':page['mapping'],'objects':objects,
                        'review_requirements':{'local_objects':sorted(set(locals_)),'relationship_objects':sorted(set(rels))}})
+        from element_scope import compiled_scope
+        scope = compiled_scope(page)
+        if scope is not None: slides[-1]['element_scope'] = scope
     return {'version':'1.0','title':state['title'],'canvas':state['canvas'],'slides':slides}
 
 
@@ -359,10 +395,13 @@ def freeze_scene(state, project, run_dir):
     scene=assemble(state);errors=validate(scene,project)
     for page, slide in zip(state['pages'], scene['slides']):
         if page.get('native_first'):
-            errors.extend(native_image_issues(slide['objects']))
+            from element_scope import validate_outputs
+            preserved = validate_outputs(slide['element_scope'], slide['objects'], project) if 'element_scope' in slide else set()
+            errors.extend(native_image_issues(slide['objects'], preserved))
     if errors:raise ValueError('Assembled scene errors: '+'; '.join(errors[:16]))
     files=set(s['reference'] for s in scene['slides'])
     for s in scene['slides']:
+        files.update(u['source']['asset'] for u in s.get('element_scope', {}).get('units', []) if 'source' in u)
         files.update(o['asset'] for o in walk_objects(s['objects']) if o['kind']=='image')
         for obj in walk_objects(s['objects']):
             if obj.get('raster_content')=='generated_illustration':

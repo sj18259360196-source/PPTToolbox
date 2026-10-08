@@ -61,8 +61,21 @@ def controllers(paths):
                     return True
             except (OSError,ValueError,KeyError):pass
         return False
+    def update_waiter(row):
+        # This exact installed entry only waits for Setup; it owns no project
+        # work. A filename appearing in another command is never an exemption.
+        command = (row.get('CommandLine') or '').casefold()
+        for path in paths:
+            root = Path(path)
+            prefix = subprocess.list2cmdline([
+                str(root / 'runtime/python.exe'), '-B', '-I', '-X', 'utf8',
+                str(root / 'app/distribution/update_runner.py')]).casefold()
+            if command.startswith(prefix + ' --installer '):
+                return True
+        return False
     return [r['ProcessId'] for r in rows if r['ProcessId']!=os.getpid()
-            and any(n in (r.get('CommandLine') or '').casefold() for n in needles) and not parked_bridge(r)]
+            and any(n in (r.get('CommandLine') or '').casefold() for n in needles)
+            and not parked_bridge(r) and not update_waiter(r)]
 
 
 def codex_patch(path, destination):

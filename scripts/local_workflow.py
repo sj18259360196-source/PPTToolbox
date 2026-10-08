@@ -32,6 +32,7 @@ def bundle(scene, source, destination):
     destination.mkdir(parents=True, exist_ok=True)
     deps = set(s["reference"] for s in scene["slides"])
     for s in scene["slides"]:
+        deps.update(u['source']['asset'] for u in s.get('element_scope', {}).get('units', []) if 'source' in u)
         deps.update(o["asset"] for o in walk_objects(s["objects"]) if o["kind"] == "image")
     for relative in deps:
         path = resolve_asset(source, relative)
@@ -481,6 +482,13 @@ def adopt(project, state, args, folder, record, policy):
         updated = copy.deepcopy(state)
         wf._invalidate_run(updated, "Explicit local candidate adoption")
         for page, slide in zip(updated["pages"], scene["slides"]):
+            from element_scope import compiled_scope, validate_plan, validate_outputs
+            old_scope = compiled_scope(page)
+            if old_scope is not None:
+                if slide.get('element_scope') != old_scope:
+                    raise ValueError('element_scope: local adoption cannot change scope; revise the page')
+                validate_plan(old_scope, project=(tf/tr['scene']).parent, compiled=True)
+                validate_outputs(old_scope, slide['objects'], (tf/tr['scene']).parent)
             if sha256(resolve_asset((tf/tr["scene"]).parent, slide["reference"])) != page["sha256"]:
                 raise ValueError("Adoption reference changed")
             page["imported_slide"] = slide
