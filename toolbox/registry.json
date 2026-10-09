@@ -1630,7 +1630,7 @@
       "title": "检查原生插画复杂度与材质层",
       "kind": "python",
       "entry": "manager.py",
-      "inputs": "--json <request.json>",
+      "inputs": "Use MCP graphics_analyze with current inputSchema",
       "outputs": "原生配方或结构检查报告",
       "manuals": [
         "references/native-illustration.md"
@@ -1642,7 +1642,7 @@
       "title": "生成原生水珠与旋转端面配方",
       "kind": "python",
       "entry": "manager.py",
-      "inputs": "--json <request.json>",
+      "inputs": "Use MCP graphics_material_recipe with current inputSchema",
       "outputs": "原生配方或结构检查报告",
       "manuals": [
         "references/native-illustration.md"
@@ -1654,12 +1654,132 @@
       "title": "核对原生插画绘图依赖",
       "kind": "python",
       "entry": "manager.py",
-      "inputs": "--json <request.json>",
+      "inputs": "Use MCP graphics_audit_sources with current inputSchema",
       "outputs": "原生配方或结构检查报告",
       "manuals": [
         "references/native-illustration.md"
       ],
       "limitations": "通过受管 graphics 入口执行；结构检查不替代 Office 与视觉验收。"
+    },
+    {
+      "id": "graphics.probe_gradient",
+      "title": "生成有界原生渐变小样并读取实际 Office 渲染与属性，不自动批准视觉。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_probe_gradient with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.gradient_roundtrip",
+      "title": "在独立副本修改渐变色标与角度，保存重开读回并导出图像。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_gradient_roundtrip with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.scene_preflight",
+      "title": "按场景文件目录预检路径、结构及证据字段，不导入或修改项目。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_scene_preflight with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.select_versions",
+      "title": "核对哈希、坐标框与背景依赖，返回历史原生组拼选提案，不自动采用。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_select_versions with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.read_properties",
+      "title": "在独立副本保存重开，读取原生填充、分组与节点，源文件不变。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_read_properties with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.fit_gradient",
+      "title": "从有效采样区域拟合原生渐变，报告误差及不可识别项。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_fit_gradient with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.inspect",
+      "title": "读取图形构造契约或项目草稿。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_inspect with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.compile",
+      "title": "编译原生图形草稿到已授权项目，保留配方与可编辑样件。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_compile with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.regenerate",
+      "title": "核对草稿及实际 PPT 修改冲突，再生成新的关联副本与共享边。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_regenerate with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.preview",
+      "title": "计算曲线组、共享边与关联副本预览，不修改 PPT。",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_preview with current inputSchema",
+      "outputs": "Bounded proposal or evidence receipt",
+      "manuals": [
+        "references/gradient-capabilities.md"
+      ],
+      "limitations": "Managed graphics API; no implicit adoption or visual approval"
     }
   ],
   "internal_modules": [
@@ -1720,7 +1840,14 @@
     "scripts/source_review_reuse.py",
     "scripts/view_strategy.py",
     "scripts/experience_management.py",
-    "scripts/illustration_tools.py"
+    "scripts/illustration_tools.py",
+    "scripts/gradient_jobs.py",
+    "scripts/gradient_capabilities.py",
+    "scripts/gradient_layered.py",
+    "scripts/gradient_contracts.py",
+    "scripts/native_nodes.py",
+    "scripts/shape_construction.py",
+    "scripts/shape_evidence.py"
   ],
   "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
 }

@@ -276,7 +276,7 @@ def surgical_write(source, destination, prs, slide_index):
     return diff
 
 
-def office_roundtrip(source, output, receipt, *, native=False):
+def office_roundtrip(source, output, receipt, *, native=False, targets=None, detailed=True, export=False):
     """Own only a new copy, never Quit PowerPoint or close another presentation."""
     import shutil
     from win32com.client import Dispatch
@@ -296,6 +296,9 @@ def office_roundtrip(source, output, receipt, *, native=False):
             def visit(items, slide, parent=None):
                 for i in range(1, items.Count+1):
                     s = items.Item(i)
+                    if targets is not None and (slide, str(s.Name)) not in targets:
+                        if int(s.Type)==6: visit(s.GroupItems, slide, str(s.Name))
+                        continue
                     row = {"slide": slide, "name": str(s.Name), "type": int(s.Type), "parent": parent,
                            "bbox_pt": [float(s.Left), float(s.Top), float(s.Width), float(s.Height)]}
                     if s.HasTextFrame:
@@ -323,6 +326,10 @@ def office_roundtrip(source, output, receipt, *, native=False):
                         visit(s.GroupItems, slide, str(s.Name))
             for index in range(1, deck.Slides.Count+1):
                 visit(deck.Slides.Item(index).Shapes, index)
+            if export:
+                for index in sorted({row["slide"] for row in rows}):
+                    deck.Slides.Item(index).Export(str(output.parent/f"slide-{index:03}.png"), "PNG", 1200,
+                        round(1200*float(deck.PageSetup.SlideHeight)/float(deck.PageSetup.SlideWidth)))
             write_json(receipt, {"status": "recorded", "renderer": "Microsoft PowerPoint",
                                 "office_version": str(app.Version), "source_sha256": sha256(source),
                                 "pptx_sha256": sha256(output), "objects": rows,
@@ -330,4 +337,4 @@ def office_roundtrip(source, output, receipt, *, native=False):
         finally:
             if deck is not None:
                 deck.Close()
-    return properties(output)
+    return properties(output) if detailed else None

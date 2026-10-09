@@ -185,6 +185,45 @@
         "office.render",
         "pptx.rebuild-diff"
       ]
+    },
+    {
+      "id": "gradient_probe_first",
+      "title": "先验证 Office 渐变小样",
+      "description": "先验证 Office 渐变小样",
+      "body": "读取当前合同与项目授权，调用 graphics_probe_gradient 检查色标方向、径向 path、透明度和宽高比。查看实际导出图再决定配方。",
+      "tools": [
+        "graphics.probe_gradient"
+      ]
+    },
+    {
+      "id": "gradient_shared_layers",
+      "title": "共享轮廓并拟合渐变材料",
+      "description": "共享轮廓并拟合渐变材料",
+      "body": "固定闭合轮廓与遮挡掩膜，提供背景及材料先验，用 graphics_fit_gradient 的 layered_linear 比较少量层数。查看留出误差和背景透过率，再将选定 layers 写入 material_groups。通过 graphics_compile 生成独立候选并在 Office 中对照。",
+      "tools": [
+        "graphics.fit_gradient",
+        "graphics.compile"
+      ]
+    },
+    {
+      "id": "gradient_edit_verify",
+      "title": "验证渐变编辑与保存重开",
+      "description": "验证渐变编辑与保存重开",
+      "body": "先用 graphics_read_properties 核对对象与有效色标，提交带 expected 的 graphics_gradient_roundtrip，分别测试颜色、位置、透明度和角度。查看保存重开读回与图像，超时先查 stage 和日志。",
+      "tools": [
+        "graphics.read_properties",
+        "graphics.gradient_roundtrip"
+      ]
+    },
+    {
+      "id": "gradient_select_preflight",
+      "title": "拼选历史材料并预检导入",
+      "description": "拼选历史材料并预检导入",
+      "body": "用 graphics_select_versions 明确基准哈希、历史组和背景依赖。提案保持场景相对路径基准，先 graphics_scene_preflight，再按当前受管流程导入审查。",
+      "tools": [
+        "graphics.select_versions",
+        "graphics.scene_preflight"
+      ]
     }
   ]
 }

@@ -42,6 +42,7 @@ STOP = obj({"position": {"type": "number", "minimum": 0, "maximum": 1},
             "alpha": {"type": "number", "minimum": 0, "maximum": 1}},
            ("position", "color"))
 GRADIENT = obj({"type": {"enum": ["linear", "radial"]},
+                "path": {"enum": ["circle", "rect", "shape"]},
                 "angle_deg": {"type": "number", "minimum": 0, "exclusiveMaximum": 360},
                 "center": array({"type": "number", "minimum": 0, "maximum": 1}, 2, 2),
                 "stops": array(STOP, 16, 2)}, ("type", "stops"))
@@ -81,6 +82,7 @@ SCHEMA = obj({
     "canvas": array({"type": "number", "exclusiveMinimum": 0, "maximum": 10000}, 2, 2),
     "points_per_unit": {"type": "number", "exclusiveMinimum": 0, "maximum": 10},
     "paths": array(PATH), "edges": array(EDGE), "faces": array(FACE),
+    "material_groups": array(obj({"id": ID, "source": ID, "layers": array(obj({"id": ID, "style": STYLE}, ("id", "style")), 8, 1)}, ("id", "source", "layers")), 32),
     "curve_groups": array(GROUP, 32), "instances": array(INSTANCE, 64),
     "order": array(ID, 256, 1),
 }, ("format", "id", "canvas", "order"))
@@ -102,7 +104,7 @@ def validate_recipe(recipe):
     from jsonschema import Draft202012Validator
     Draft202012Validator(SCHEMA).validate(recipe)
     digest(recipe)
-    ids = [r["id"] for key in ("paths", "edges", "faces", "curve_groups", "instances")
+    ids = [r["id"] for key in ("paths", "edges", "faces", "curve_groups", "material_groups", "instances")
            for r in recipe.get(key, [])]
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate construction ID")
@@ -114,8 +116,8 @@ def validate_recipe(recipe):
             raise ValueError("Path closed flag and final command disagree")
     for e in recipe.get("edges", []):
         check_commands(e["commands"], open_only=True)
-    layers = [layer for group in recipe.get("curve_groups", []) for layer in group.get("layers", [])]
-    for group in recipe.get("curve_groups", []):
+    layers = [layer for group in [*recipe.get("curve_groups", []), *recipe.get("material_groups", [])] for layer in group.get("layers", [])]
+    for group in [*recipe.get("curve_groups", []), *recipe.get("material_groups", [])]:
         names = [layer["id"] for layer in group.get("layers", [])]
         if len(names) != len(set(names)):
             raise ValueError("Duplicate surface layer ID")
@@ -129,7 +131,7 @@ def validate_recipe(recipe):
             pos = [s["position"] for s in g["stops"]]
             if pos != sorted(set(pos)) or pos[0] != 0 or pos[-1] != 1:
                 raise ValueError("Gradient stops must increase from 0 to 1")
-            if g["type"] == "linear" and ("angle_deg" not in g or "center" in g):
+            if g["type"] == "linear" and ("angle_deg" not in g or "center" in g or "path" in g):
                 raise ValueError("Linear gradient requires angle and excludes center")
             if g["type"] == "radial" and (field == "line_gradient" or "angle_deg" in g):
                 raise ValueError("Radial gradient is fill-only and excludes angle")
@@ -191,10 +193,10 @@ def compile_recipe(recipe, previous=None, current_objects=None):
         if conflicts:
             raise ValueError("Manual edit conflict; preserve/detach before regeneration: "+", ".join(conflicts))
     nodes = {}
-    for kind in ("paths", "faces", "curve_groups", "instances"):
+    for kind in ("paths", "faces", "curve_groups", "material_groups", "instances"):
         nodes.update({r["id"]: (kind, r) for r in recipe.get(kind, [])})
     visible = {p["id"] for p in recipe.get("paths", []) if p.get("visible", True)}
-    visible |= {r["id"] for k in ("faces", "curve_groups", "instances") for r in recipe.get(k, [])}
+    visible |= {r["id"] for k in ("faces", "curve_groups", "material_groups", "instances") for r in recipe.get(k, [])}
     if len(recipe["order"]) != len(set(recipe["order"])) or set(recipe["order"]) != visible:
         raise ValueError("Draw order must list exactly the visible top-level objects")
     edges = {e["id"]: e["commands"] for e in recipe.get("edges", [])}
@@ -223,6 +225,14 @@ def compile_recipe(recipe, previous=None, current_objects=None):
                 uses.setdefault(edge, []).append((oid, direction))
                 dependencies[oid].append(edge)
             out = native_path(oid, commands, True, style)
+        elif kind == "material_groups":
+            source = dependency(spec["source"])
+            if source["kind"] != "path" or not source["closed"]:
+                raise ValueError("Material layers require one closed source path")
+            out = native_group(oid, [native_path(oid+"_"+layer["id"], source["commands"], True,
+                               layer["style"]) for layer in spec["layers"]])
+            diagnostics.append({"id":oid,"geometry_owner":spec["source"],
+                                "geometry_sha256":digest(source["commands"]),"layer_order":"back_to_front"})
         elif kind == "instances":
             state = spec.get("state", "linked")
             source = dependency(spec["source"]) if state != "detached" else None

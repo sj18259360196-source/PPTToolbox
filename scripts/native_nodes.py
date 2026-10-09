@@ -33,10 +33,11 @@ def topology(commands):
     return {'rings':len(polys),'holes':sum(d%2 for d in depths),'nesting':depths,
             'winding':[bool(p.exterior.is_ccw) for p in polys]}
 
-def summary(pptx):
+def summary(pptx, targets=None):
     from local_edit import shapes_by_name
     result={}
     for (si,name),(shape,parent) in shapes_by_name(Presentation(pptx)).items():
+        if targets is not None and (si+1,name) not in targets: continue
         paths=shape._element.xpath('./p:spPr/a:custGeom/a:pathLst/a:path')
         if not paths:continue
         rows=[]

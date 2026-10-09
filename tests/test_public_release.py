@@ -8,9 +8,10 @@ def test_default_library_is_valid():
     assert result['status']=='passed',result['issues']
     sources,rows,_=load_library(ROOT)
     ids={r['id'] for r in rows}
-    assert {f'EXP-{i}' for i in range(162,191)}<=ids
+    assert {f'EXP-{i:03d}' for i in range(1,203)}<=ids
     if (ROOT/'PUBLIC_DISTRIBUTION.json').exists():
-        assert len(rows)==29
+        marker=json.loads((ROOT/'PUBLIC_DISTRIBUTION.json').read_text('utf-8'))
+        assert len(rows)==marker['builtin_method_count']
         assert len(sources)==1 and sources[0]['source_id']=='S38'
         assert all(r['origin']=='bundled_method_guidance' for r in rows)
 

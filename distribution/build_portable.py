@@ -30,6 +30,9 @@ def source_files(root, *, release=False):
     result = {}
     for folder, dirs, names in os.walk(root):
         dirs[:] = [name for name in dirs if name not in excluded]
+        # Development wheels belong to the developer interpreter, not the verified donor runtime.
+        if release and Path(folder)==root/'toolbox_manager':
+            dirs[:] = [name for name in dirs if name!='vendor']
         if release:
             dirs[:] = [name for name in dirs if name not in {"validation", "benchmarks", "tests", "docs"}]
         for name in dirs:
@@ -99,6 +102,9 @@ def build(root, donor, output):
     archive = output.parent / (output.name + ".zip")
     if output.exists() or archive.exists():
         raise ValueError("Existing release is preserved; do not overwrite")
+    if not public_distribution:
+        from distribution.builtin_experience import build as build_defaults
+        build_defaults(root)
     release = check_release(root)
     contract = release_contract(root)
     files = source_files(root, release=True)

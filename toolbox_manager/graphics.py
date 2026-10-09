@@ -77,6 +77,12 @@ SPECS = {
 }
 
 
+from gradient_contracts import SPECS as GRADIENT_SPECS, LAYERED, TIME
+SPECS.update(GRADIENT_SPECS)
+READBACK_INPUT['properties']['timeout_seconds']=TIME
+SPECS['fit_gradient'][1]['properties']['layered_linear']=LAYERED
+
+
 def decode_image(value):
     from PIL import Image
     raw = base64.b64decode(value.split(",", 1)[-1], validate=True)
@@ -131,11 +137,26 @@ def call(manager, op, args=None, source="mcp"):
     with manager.lock:
         from .storage import stamp
         started_at=stamp()
+        import uuid
+        call_id=uuid.uuid4().hex
+        manager.store.event('graphics.started','Graphics operation started',source=source,status='running',
+                            details={'call_id':call_id,'operation':op,'project':a.get('project'),'started_at':started_at})
         status = "ok"
         try:
             project = None
             if "project" in a:
                 project, _ = authorize(manager, a["project"])
+            if op in {'scene_preflight','select_versions','probe_gradient'}:
+                import gradient_capabilities
+                if op=='probe_gradient':
+                    for required in ['pptx.build','office.edit-readback']:
+                        if not manager.override(p['id'],'tool',required,True): raise PolicyDenied(required+' disabled')
+                    a={**a,'_office_lock':str(manager.data/'office-writer.lock')}
+                return getattr(gradient_capabilities,{'scene_preflight':'preflight','select_versions':'select_versions','probe_gradient':'probe'}[op])(project,a)
+            if op=='gradient_roundtrip':
+                if not manager.override(p['id'],'tool','office.edit-readback',True): raise PolicyDenied('office.edit-readback disabled')
+                from gradient_jobs import run_job
+                return run_job(project,op,{**a,'_office_lock':str(manager.data/'office-writer.lock')})
             if op=='construct':
                 from shape_construction import construct
                 return construct(a)
@@ -146,8 +167,8 @@ def call(manager, op, args=None, source="mcp"):
             if op=='read_properties':
                 for required in ['office.edit-readback','pptx.inspect']:
                     if not manager.override(p['id'],'tool',required,True):raise PolicyDenied(required+' disabled')
-                from shape_evidence import read_properties
-                return read_properties(project,a)
+                from gradient_jobs import run_job
+                return run_job(project,'read_properties',{**a,'_office_lock':str(manager.data/'office-writer.lock')})
             if op=='boolean_trials':
                 if not manager.override(p['id'],'tool','workflow.patch',True):raise PolicyDenied('workflow.patch disabled')
                 from shape_evidence import boolean_trials
@@ -170,7 +191,7 @@ def call(manager, op, args=None, source="mcp"):
                 return {"format": "graphics-recipe/1", "schema": copy.deepcopy(SCHEMA),
                         "example": json.loads((ROOT/"examples/graphics/capabilities.json").read_text(encoding="utf-8")),
                         "capabilities": ["curve_groups", "shared_boundaries", "gradient_fitting", "linked_instances",
-                                         "surface_layers", "authored_gradients_up_to_16_stops",
+                                         "surface_layers", "material_groups", "layered_linear_fit", "gradient_probe", "gradient_roundtrip", "scene_preflight", "version_selection", "bounded_target_readback", "authored_gradients_up_to_16_stops",
                                          "illustration_analysis", "material_recipes", "source_dependency_audit",
                                          'shape_construction','contour_comparison','native_property_readback','boolean_trial_planning','bounded_node_edits'],
                         "material_presets": ["droplet", "rotated_end"],
@@ -180,6 +201,10 @@ def call(manager, op, args=None, source="mcp"):
                         "illustration_guide": "references/native-illustration.md",
                         "limitations": ["single_region", "no_live_powerpoint_linkage", "no_automatic_visual_approval"]}
             if op == "fit_gradient":
+                if 'layered_linear' in a:
+                    if 'models' in a or 'max_stops' in a: raise ValueError('Single and layered model controls cannot be mixed')
+                    from gradient_layered import fit
+                    return fit(decode_image(a['image']),decode_image(a['mask']) if a.get('mask') else None,a['layered_linear'])
                 from graphics_gradient import fit_gradient
                 return fit_gradient(decode_image(a["image"]), decode_image(a["mask"]) if a.get("mask") else None,
                                     models=a.get("models", ["linear"]), max_stops=a.get("max_stops", 3))
@@ -258,4 +283,4 @@ def call(manager, op, args=None, source="mcp"):
         finally:
             manager.store.event("graphics."+op, "Graphics operation", source=source, status=status,
                                 details={"project": str(project) if "project" in locals() and project else None,
-                                         "version": a.get("version"), "started_at": started_at, "ended_at": stamp()})
+                                         "call_id":call_id,"version": a.get("version"), "started_at": started_at, "ended_at": stamp()})

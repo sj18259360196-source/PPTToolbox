@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import sha256, write_json
 
 CONTRACTS = {
+    'gradient.stop': {'required':['op','slide','name','index','property','expected','value'], 'kind':'gradient'},
+    'gradient.angle': {'required':['op','slide','name','expected','value'], 'kind':'gradient'},
     'text.set': {'required': ['op', 'slide', 'name', 'text'], 'kind': 'text'},
     'shape.fill': {'required': ['op', 'slide', 'name', 'color'], 'kind': 'shape'},
     'table.cell': {'required': ['op', 'slide', 'name', 'row', 'column', 'text'], 'kind': 'table'},
@@ -49,7 +51,20 @@ def validate_operations(operations):
                 raise ValueError('edge must be left/top/right/bottom')
             if type(op['points']) not in (int,float) or not math.isfinite(op['points']) or op['points']<0:
                 raise ValueError('points must be a finite nonnegative absolute crop value')
-        key = (op['slide'], op['name'], op['op'], op.get('row'), op.get('column'), op.get('edge'))
+        if op['op'].startswith('gradient.'):
+            if op['op']=='gradient.stop':
+                if type(op['index']) is not int or not 1 <= op['index'] <= 16:
+                    raise ValueError('Gradient stop index must be 1..16')
+                if op['property'] not in {'color','alpha','position'}:
+                    raise ValueError('Unknown gradient stop property')
+            for field in ('expected','value'):
+                v=op[field]
+                if op.get('property')=='color':
+                    if not isinstance(v,str) or not re.fullmatch(r'[0-9a-fA-F]{6}',v):
+                        raise ValueError('Gradient color must be six hex digits')
+                elif type(v) not in (int,float) or not math.isfinite(v) or not 0<=v<=(360 if op['op']=='gradient.angle' else 1):
+                    raise ValueError('Gradient value outside finite range')
+        key = (op.get('index'),op.get('property'),op['slide'], op['name'], op['op'], op.get('row'), op.get('column'), op.get('edge'))
         if key in seen:
             raise ValueError('Duplicate sample edit target')
         seen.add(key)
@@ -76,13 +91,25 @@ def rgb(value):
 
 
 def expected(op):
+    if op['op'].startswith('gradient.'):
+        return rgb(op['value']) if op.get('property')=='color' else float(op['value'])
     if op['op']=='picture.crop':return float(op['points'])
     return rgb(op['color']) if op['op'] == 'shape.fill' else op['text'].replace('\r\n', '\n').replace('\r', '\n')
 
 def values_match(op,actual):
+    if op['op'].startswith('gradient.') and op.get('property')!='color':
+        return abs(actual-expected(op))<=0.0001
     return abs(actual-expected(op))<=.05 if op['op']=='picture.crop' else actual==expected(op)
 
 def read_value(shape, op):
+    if op['op'].startswith('gradient.'):
+        if int(shape.Fill.Type)!=3: raise ValueError('Native gradient fill required')
+        if op['op']=='gradient.angle': return float(shape.Fill.GradientAngle)
+        if op['index']>shape.Fill.GradientStops.Count: raise ValueError('Gradient stop missing')
+        stop=shape.Fill.GradientStops.Item(op['index'])
+        if op['property']=='color': return int(stop.Color.RGB)
+        if op['property']=='alpha': return 1-float(stop.Transparency)
+        return float(stop.Position)
     if op['op']=='picture.crop':
         if int(shape.Type)!=13:
             raise ValueError('picture.crop requires an embedded picture: '+op['name'])
@@ -99,7 +126,18 @@ def read_value(shape, op):
 
 
 def apply_edit(shape, op):
-    if op['op'] == 'text.set':
+    if op['op'].startswith('gradient.'):
+        if op['op']=='gradient.angle': shape.Fill.GradientAngle=float(op['value'])
+        else:
+            stops=shape.Fill.GradientStops; stop=stops.Item(op['index'])
+            if op['property']=='color': stop.Color.RGB=rgb(op['value'])
+            elif op['property']=='alpha': stop.Transparency=1-float(op['value'])
+            else:
+                lo=float(stops.Item(op['index']-1).Position) if op['index']>1 else -1
+                hi=float(stops.Item(op['index']+1).Position) if op['index']<stops.Count else 2
+                if not lo<float(op['value'])<hi: raise ValueError('Stop position would reorder stops')
+                stop.Position=float(op['value'])
+    elif op['op'] == 'text.set':
         shape.TextFrame.TextRange.Text = op['text']
     elif op['op'] == 'shape.fill':
         shape.Fill.Solid()
@@ -149,7 +187,7 @@ def execute(source, outdir, operations, application_factory=None):
     copy = outdir/'edited-copy.pptx'
     receipt = {'format': 'ppt-edit-readback/1', 'status': 'failed', 'renderer': 'Microsoft PowerPoint',
                'source': str(source), 'source_sha256': source_hash, 'checks': [], 'renders': [],
-               'scope': 'sampled text/fill/table/picture-crop only', 'visual_status': 'not_run',
+               'scope': 'explicit sampled operations only; see checks for gradient properties', 'visual_status': 'not_run',
                'longer_text_layout': 'not_assessed', 'all_objects_tested': False}
     deck = None
     try:
@@ -160,6 +198,9 @@ def execute(source, outdir, operations, application_factory=None):
         for op in operations:
             shape = find_shape(deck.Slides.Item(op['slide']).Shapes, op['name'])
             before = read_value(shape, op)
+            if op['op'].startswith('gradient.'):
+                prior=rgb(op['expected']) if op.get('property')=='color' else float(op['expected'])
+                if abs(before-prior)>0.0001: raise ValueError('Stale gradient expectation: '+op['name'])
             if values_match(op,before):
                 raise ValueError('Sample must change the existing value: '+op['name'])
             targets.append((shape, op, before))

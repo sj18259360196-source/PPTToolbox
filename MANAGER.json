@@ -1,13 +1,13 @@
 {
   "name": "ppt-toolbox-manager",
-  "version": "1.23.0",
+  "version": "1.24.1",
   "entry": "manager.py",
   "ui": "toolbox_manager/web/index.html",
   "management_api_version": "ppt-toolbox-manager/1",
   "database_schema_version": 1,
   "bundled_core": {
     "name": "ppt-reference-rebuild",
-    "version": "1.23.0",
+    "version": "1.24.1",
     "entry": "SKILL.md"
   },
   "scope": "Local project preparation, managed production workbench, reusable assets, experience and unified rules/settings.",

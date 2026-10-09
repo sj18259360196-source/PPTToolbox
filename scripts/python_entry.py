@@ -22,6 +22,8 @@ def main():
     allowed = {str(row.get('entry')) for row in registry.get('tools', []) if row.get('kind') == 'python'}
     if registry.get('single_entry'):
         allowed.add(str(registry['single_entry']))
+    # Private worker spawned only after graphics manager authorization. Not a CLI tool.
+    allowed.add('scripts/gradient_jobs.py')
     if relative not in allowed:
         raise ValueError('Expected a registered Python entry')
     sys.path[:0] = [str(root/'scripts'), str(root)]

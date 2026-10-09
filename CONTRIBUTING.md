@@ -18,3 +18,8 @@ A draft is not available to in-app updates. The maintainer verifies the installe
 signs its metadata with a locally protected private key, uploads the signed
 manifest and publishes the tested draft. Do not put the private signing key in
 the repository, Actions logs or issue attachments.
+# 项目默认能力
+
+维护者要求更新的工具、指令和经验均纳入项目默认能力，随正常版本发布。经验目录全部参与默认构建，不按固定编号筛选。新经验需要保留适用条件、动作、证据范围与限制，并关联有效手册和已注册工具。新增能力同时补充发现入口、测试及发行说明。
+
+构建与公开导出须验证默认经验覆盖当前完整目录。公开方法摘要保留来源归属，个人项目文件与原始私有记录不进入公开包。用户已有覆盖与停用设置继续优先。

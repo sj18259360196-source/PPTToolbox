@@ -4,9 +4,11 @@
 
 制作时按[看图与修订流程](references/multipage-efficiency.md)选择整页和局部，保留未变范围的有效审查。原生对象与图片的选择遵循[素材规则](references/asset-policy.md)。
 
+项目默认提供完整的 202 条经验、21 条指令模板及 70 个 MCP 工具。后续维护者要求更新的工具、指令和经验均纳入默认版本。新安装无需导入开发机历史即可使用这些方法；已有用户覆盖和停用设置仍优先。经验用于指导操作，当前项目仍需独立验证。
+
 ## 下载与安装
 
-在本仓库 Releases 页面下载 `PPTToolbox-1.21.1-Setup.exe`。安装包自带 Python；桌面界面需要 Microsoft Edge WebView2 Runtime 和 .NET Framework，Office 制作与验收功能需要 Microsoft PowerPoint。
+在本仓库 Releases 页面选择已发布版本的安装包，源码版本可能先于安装包。安装包自带 Python；桌面界面需要 Microsoft Edge WebView2 Runtime 和 .NET Framework，Office 制作与验收功能需要 Microsoft PowerPoint。
 
 程序默认安装在 `%LOCALAPPDATA%\Programs\PPTToolbox`，管理数据保存在 `%LOCALAPPDATA%\PPTToolbox`，新项目默认放在用户文档目录的 `PPTToolbox\Projects`。安装时可更改位置，升级沿用已保存的位置。
 

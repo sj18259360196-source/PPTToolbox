@@ -32,12 +32,16 @@ jobs:
         run: |
           python -B scripts/release_info.py check
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python -B distribution/public_source.py --audit . --report dist/source-audit.json
+          if (Test-Path PUBLIC_DISTRIBUTION.json) {
+            python -B distribution/public_source.py --audit . --report dist/source-audit.json
+          } else {
+            python -B distribution/public_source.py --output dist/public-ci --report dist/source-audit.json
+          }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -B -m pytest -q -p no:cacheprovider tests/test_software_updates.py tests/test_version_release.py tests/test_release_readiness.py tests/test_bridge_upgrade.py tests/test_project_management.py tests/test_request_archive.py tests/test_project_flow.py tests/test_illustration_fallback.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-tests"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node --test tests/project_flow.test.mjs tests/projects_model.test.mjs
-          python -B -m pytest -q -p no:cacheprovider tests/test_shape_tools.py tests/test_public_release.py tests/test_illustration_tools.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-shapes"
+          python -B -m pytest -q -p no:cacheprovider tests/test_shape_tools.py tests/test_public_release.py tests/test_illustration_tools.py tests/test_gradient_capabilities.py tests/test_default_capabilities.py --basetemp "$env:RUNNER_TEMP/ppttoolbox-shapes"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
   build-draft:
     if: startsWith(github.ref, 'refs/tags/v')
