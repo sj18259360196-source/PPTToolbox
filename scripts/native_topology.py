@@ -282,6 +282,14 @@ def protected_check(before, after, index, touched, outputs):
             for node in root.iter(qn("a:endParaRPr")):
                 if not node.attrib and not len(node) and not node.text:
                     node.getparent().remove(node)
+            # PowerPoint may omit these schema defaults on the second save.
+            # Compare effective defaults, while retaining non-default materials.
+            for node in root.iter(qn('a:path')):
+                for attr,default in [('fill','norm'),('stroke','1'),('extrusionOk','1')]:
+                    effective=node.get(attr,default)
+                    if attr!='fill' and effective=='true':effective='1'
+                    if attr!='fill' and effective=='false':effective='0'
+                    node.set(attr,effective)
             value["xml"]=etree.tostring(root,method="c14n").decode()
             result.append((key,value))
         return result

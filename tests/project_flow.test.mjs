@@ -2,7 +2,34 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../toolbox_manager/web/project-flow.js',import.meta.url),'utf8');
-const {projectGraph,layoutGraph}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const {projectGraph,layoutGraph,renderVisualActivity,edgeBadges,renderRelations}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+
+test('decision labels and evidence are preserved and escaped in relationship details',()=>{
+ const layout=layoutGraph([{id:'a',title:'路线判断',after:[]},{id:'b',title:'原生绘制',after:['a'],
+  links:[{from:'a',relation:'decision',basis:'agent',label:'<script>可编辑优先</script>',evidence_ids:['e-1']}]}],800);
+ const edge=layout.edges[0];assert.equal(edge.relation,'decision');assert.equal(edge.basisLabel,'Agent 登记');
+ const html=renderRelations(layout.nodes[1],layout);
+ assert.ok(html.includes('路线判断 → 原生绘制')&&html.includes('e-1')&&html.includes('&lt;script&gt;'));
+ assert.ok(!html.includes('<script>'));
+});
+
+test('relationship badges do not overlap cards or one another in a dense graph',()=>{
+ const layout=layoutGraph(Array.from({length:40},(_,i)=>({id:'a'+i,after:i?[...new Set([i-1,Math.max(0,i-5)])].map(j=>'a'+j):[]})),1100);
+ const badges=edgeBadges(layout);assert.ok(badges.length>0);
+ for(const a of badges)for(const b of [...layout.nodes,...badges]){
+  if(a===b)continue;
+  assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
+ }
+});
+test('visual counters distinguish evidence from unknown transport and escape failures',()=>{
+ const html=renderVisualActivity({coverage:'partial',overview:{required:6,submitted:2},detail:{required:4,submitted:1},
+  required_file_bytes:1048576,diagnostic_count:1,diagnostics:[{message:'<script>bad</script>'}],recent_tasks:[]});
+ assert.ok(html.includes('6 / 2')&&html.includes('4 / 1')&&html.includes('1.00 MiB'));
+ assert.ok(html.includes('上传量')&&html.includes('尚不可观测')&&html.includes('统计不完整'));
+ assert.ok(!html.includes('<script>')&&html.includes('&lt;script&gt;'));
+ assert.ok(renderVisualActivity({coverage:'unavailable'}).includes('未知'));
+ assert.ok(source.includes('projectGraph(next),next.activity?.visual'),'counter-only changes trigger repaint');
+});
 const nodes=[{id:'plan',after:[]},{id:'text',after:['plan']},{id:'search',after:['plan']},{id:'draw',after:['search']},{id:'merge',after:['draw','text']}];
 
 function clearRoutes(layout){

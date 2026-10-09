@@ -11,7 +11,7 @@ from evidence_contract import (EVIDENCE_VERSION, reference_snapshot, validate_re
 
 
 def compare_deck(scene_path: Path, render_receipt: Path, outdir: Path, regions_path: Path | None = None,
-                 resize_render=False, region_scale=2, pptx_path: Path | None = None):
+                 resize_render=False, region_scale=1, pptx_path: Path | None = None, *, include_source_crops=False):
     if pptx_path is None:
         raise ValueError('Supply the actual candidate PPTX with --pptx; a receipt hash alone is insufficient')
     if type(region_scale) is not int or not 1 <= region_scale <= 8:
@@ -38,7 +38,7 @@ def compare_deck(scene_path: Path, render_receipt: Path, outdir: Path, regions_p
             reference = safe_file(scene_path.parent, ref['path'])
             render = safe_file(render_receipt.parent, rendered_row['file'])
             page_out = stage / f'slide-{idx:03}'
-            result = compare(reference, render, page_out, regions, resize_render, region_scale)
+            result = compare(reference, render, page_out, regions, resize_render, region_scale,include_source_crops=include_source_crops)
             full = result['regions'][0]
             rows.append({'index': idx, 'slide_id': slide['id'],
                          'reference_sha256': ref['sha256'], 'render_sha256': rendered_row['sha256'],
@@ -68,12 +68,13 @@ def main():
     ap.add_argument('scene', type=Path); ap.add_argument('--pptx', required=True, type=Path)
     ap.add_argument('--render', required=True, type=Path); ap.add_argument('--outdir', required=True, type=Path)
     ap.add_argument('--regions', type=Path); ap.add_argument('--resize-render', action='store_true')
-    ap.add_argument('--region-scale', type=int, default=2)
+    ap.add_argument('--region-scale', type=int, default=1)
+    ap.add_argument('--include-source-crops',action='store_true')
     args = ap.parse_args()
     try:
         compare_deck(args.scene.resolve(), args.render.resolve(), args.outdir.resolve(),
                      args.regions.resolve() if args.regions else None, args.resize_render, args.region_scale,
-                     args.pptx.resolve())
+                     args.pptx.resolve(),include_source_crops=args.include_source_crops)
     except Exception as exc:
         print(f'Deck compare failed: {exc}', file=sys.stderr); return 1
     return 0

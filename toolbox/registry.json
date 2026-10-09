@@ -1624,6 +1624,42 @@
         "references/measured-refinement.md"
       ],
       "limitations": "读已有文件；不重建、不渲染、不缩放图片，不认定原图保真度。"
+    },
+    {
+      "id": "graphics.analyze",
+      "title": "检查原生插画复杂度与材质层",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "--json <request.json>",
+      "outputs": "原生配方或结构检查报告",
+      "manuals": [
+        "references/native-illustration.md"
+      ],
+      "limitations": "通过受管 graphics 入口执行；结构检查不替代 Office 与视觉验收。"
+    },
+    {
+      "id": "graphics.material_recipe",
+      "title": "生成原生水珠与旋转端面配方",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "--json <request.json>",
+      "outputs": "原生配方或结构检查报告",
+      "manuals": [
+        "references/native-illustration.md"
+      ],
+      "limitations": "通过受管 graphics 入口执行；结构检查不替代 Office 与视觉验收。"
+    },
+    {
+      "id": "graphics.audit_sources",
+      "title": "核对原生插画绘图依赖",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "--json <request.json>",
+      "outputs": "原生配方或结构检查报告",
+      "manuals": [
+        "references/native-illustration.md"
+      ],
+      "limitations": "通过受管 graphics 入口执行；结构检查不替代 Office 与视觉验收。"
     }
   ],
   "internal_modules": [
@@ -1681,7 +1717,10 @@
     "scripts/task_contracts.py",
     "scripts/usage_store.py",
     "scripts/review_reuse.py",
-    "scripts/experience_management.py"
+    "scripts/source_review_reuse.py",
+    "scripts/view_strategy.py",
+    "scripts/experience_management.py",
+    "scripts/illustration_tools.py"
   ],
   "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
 }

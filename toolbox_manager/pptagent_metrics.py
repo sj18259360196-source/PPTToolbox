@@ -110,6 +110,8 @@ def snapshot(manager, project=None):
                   recent=[r for r in state.get('recent',[]) if not project or r.get('project')==project][:12],
                   effects=[r for r in state.get('effects',[]) if not project or r.get('project')==project][:8])
     if not project: result['task_usage']=state.get('tasks',{})
+    from .pptagent_budget import snapshot as budget_snapshot
+    result['budget']=budget_snapshot(manager,project)
     return result
 
 def project_status(manager, key, state):
@@ -125,6 +127,9 @@ def project_status(manager, key, state):
     task=next((r for r in scoped if r['status'] in {'queued','running'}),None)
     summary=state.get('summary',{})
     status='disabled' if not cfg['enabled'] else 'unconfigured' if not cfg['endpoint'] or not cfg['model'] else 'working' if processing or metrics['active'] or (task and task['status']=='running') else 'queued' if pending or task else 'unavailable' if summary.get('status')=='unavailable' else 'ready' if summary.get('status')=='ready' else 'waiting'
+    budget=metrics['budget']
+    if status not in {'disabled','unconfigured','working'} and (budget['blocked'] or (pending and budget['summary_retry_at'])):
+        status='rate_limited'
     last=scoped[0] if scoped else None
     if status in {'ready','waiting'} and last and last['status'] in {'failed','interrupted'} and last.get('updated_at','')>summary.get('at',''):
         status='task_failed'

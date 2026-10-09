@@ -158,6 +158,18 @@ def observe(manager, key):
     items, limited = files(root, children)
     with manager.store.db() as db:
         events = db.execute("SELECT id,time,action,status,message,details FROM events WHERE json_extract(details,'$.project')=? AND (action LIKE 'tool.%' OR action LIKE 'activity.%' OR action LIKE 'icons.%' OR action LIKE 'graphics.%') ORDER BY id DESC LIMIT 120", (str(root),)).fetchall()
+        # Revisit evidence around old unbound failures, even outside the recent window.
+        extra=[]
+        for issue in state.get('activity',{}).get('issues',[]):
+            if issue.get('state')!='open' or issue.get('task_id') or issue.get('tool') not in {'workflow.start','workflow.submit'}:
+                continue
+            evidence=issue.get('evidence_id','').removeprefix('audit-')
+            if not evidence.isdigit():continue
+            eid=int(evidence)
+            query="SELECT id,time,action,status,message,details FROM events WHERE json_extract(details,'$.project')=? AND action='tool.finished' AND json_extract(details,'$.tool_id') LIKE 'workflow.%' AND id"
+            extra+=db.execute(query+"<? ORDER BY id DESC LIMIT 1",(str(root),eid)).fetchall()
+            extra+=db.execute(query+">=? ORDER BY id ASC LIMIT 32",(str(root),eid)).fetchall()
+        events=sorted({e['id']:e for e in [*events,*extra]}.values(),key=lambda e:e['id'],reverse=True)
     calls = {}
     wrapped = {}
     for e in events:
@@ -182,10 +194,13 @@ def observe(manager, key):
             status = 'running' if alive is True else 'outcome_unknown'
         from .project_status import safe_message
         calls[cid] = {'id': cid, 'tool': detail.get('tool_id',event['action'] if legacy else ''), 'status': status,
+            'project':str(root), 'project_id':detail.get('project_id'),
+            'revision_before':detail.get('revision_before'), 'revision_after':detail.get('revision_after'),
             'at': event['time'], 'task_id': detail.get('task_id'), 'task_kind': detail.get('task_kind'),
             'error_code':detail.get('error_code'), 'reason_code':detail.get('reason_code'),
             'message':safe_message(detail.get('error_message') or detail.get('error') or detail.get('reason') or ''),
             'recovery':detail.get('recovery') or {}, 'evidence_id': 'audit-'+str(event['id'])}
+        calls[cid]['elapsed_seconds']=(detail.get('timings') or {}).get('through_worker_seconds')
     history = [{'at': e.get('at'), 'event': e.get('event'), 'detail': {k:v for k,v in e.get('detail',{}).items() if k in {'kind','id','reason','region_id','slide_id'}}}
                for e in workflow.get('history', [])[-25:]]
     from .agent_presence import status as connection_status
@@ -198,6 +213,12 @@ def observe(manager, key):
                 'connection': {'state': connection['state'], 'connected_count': connection['connected_count']},
                 'task': {k:v for k,v in (workflow.get('active_task') or {}).items() if k in {'id','kind','target'}},
                 'file_scan_limited': limited}
+    from .visual_activity import project_visuals
+    try:
+        activity['visual']=project_visuals(manager,root,workflow,activity['calls'])
+    except Exception as exc:
+        activity['visual']={'coverage':'unavailable','diagnostics':[{'message':safe_message(exc)}],
+                            'diagnostic_count':1,'measurement_note':'图片统计暂不可用；未将缺失数据记为零。'}
     # Connection loss never rewrites a successful/failed tool result.
     changes={'activity': activity, 'files': items, 'notes_revision': journal.notes(root)['revision']}
     phase=state.get('phase',{})
@@ -293,11 +314,17 @@ def stage_context(manager, project):
         return None
     root, row, _ = entry(manager, project)
     state = journal.ensure(root, row['project_id'], row['label'])
+    visual=state.get('activity',{}).get('visual')
+    visual_context=({'coverage':visual.get('coverage'),'observed_at':state.get('updated_at'),
+        **{k:visual.get(k) for k in ('overview','detail','recent_required_file_bytes','repeated_next_calls','diagnostic_count','notices')},
+        'measurement_note':'项目观察器的最近快照，可能晚于当前任务；字节为本地文件统计，宿主查看及供应商流量未知。'}
+        if visual else {'coverage':'pending','measurement_note':'项目观察器尚未采集图片统计；未知值不能当作零。'})
     return {k:state.get(k) for k in ('project_id','run_id','phase_revision','phase','checkpoint_required')} | {
+        'visual_context':visual_context,
         'stages':[{'id':i,'label':t} for i,t in journal.STAGES], 'tool':'toolbox_checkpoint',
         'step_types':STEP_TYPES,
         'recommendations':recommendations(manager,root,state),
-        'instructions':'大阶段开始、切换及交付收尾必须打卡。正常流程共六次，可随 rebuild_next 或 rebuild_submit 的 checkpoint 一起提交。阶段内无需逐调用或定时汇报。遇到改道、阻塞、暂停、恢复时登记对应事件；同一请求重试保留 checkpoint_id。used_experiences 只填写实际采用的条目。工作图默认按阶段生成；需要细分或分支时，可在打卡的 flow 中提交步骤数组，新增项填 id、kind、after，kind 从 step_types 选择，标题和功能入口由软件补齐，也可填写 title 自定义，后续只传 id 与变化字段，软件自动排布连线。'}
+        'instructions':'大阶段开始、切换及交付收尾必须打卡。正常流程共六次，可随 rebuild_next 或 rebuild_submit 的 checkpoint 一起提交。阶段内无需逐调用或定时汇报。遇到改道、阻塞、暂停、恢复时登记对应事件；同一请求重试保留 checkpoint_id。used_experiences 只填写实际采用的条目。工作图自动归类任务并显示建议后续；细分路径可在同一次打卡的 flow 中批量提交变化项。新增项填 id、kind、after，优先 step_types，不适用时每批增一到两个 title 自定义节点。after 多项表示汇合；links 按 from 标明 relation（dependency/sequence/decision/merge/revision/suggested/grouping）、label 条件、basis（recorded/agent/inferred/suggested）和 evidence_ids。有据才填依赖，推断或建议必须标明。task_ids 绑定任务，result 记结果，next_action 记下一步。反馈后新增修改范围、返修、复查节点及 round，保留旧路径；分支接回合成或复查，再到交付。无需新增图片、每步汇报或为更新图而重试制作。'}
 
 
 def previews(manager, key):

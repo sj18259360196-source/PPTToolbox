@@ -53,8 +53,8 @@ DESCRIPTIONS={
  'adopt':'核对试制与对照身份后成对采用，清除旧任务与验收，不等于交付。',
  'start':'从已授权参考图或既有 scene 建立新项目，不覆盖已有项目。',
  'next':'推进已就绪的构建/导出步骤并返回当前任务，有写入及 Office 副作用。',
- 'submit':'提交实际完成的 result，核对任务身份、revision 和哈希。多页任务设置 return_next=true，提交后直接返回下一任务；accepted_task 表明提交已完成，不得因 next_error 重放提交。',
- 'validate_response':'预检当前任务响应，返回字段错误，不消费任务、不写工作流状态、不启动 Office。调用审计仍保留。',
+ 'submit':'提交实际完成的 result，核对任务身份、revision 和哈希。复杂路径优先把 result 单独保存为项目内 UTF-8 JSON，用 result_file 与 result_sha256 替代 result，避免 1 MiB MCP 上限。文件上限 16 MiB。设置 return_next=true 接续任务；accepted_task 表明已提交，不得重放。',
+ 'validate_response':'预检当前任务响应，返回字段错误，不消费任务、不写工作流状态、不启动 Office。大结果用 result_file 与 result_sha256 替代 result，文件只含 result 对象。调用审计仍保留。',
  'revision_candidate':'从当前交付版创建局部修订候选，保留旧交付并清空新候选的验收记录。',
  'status':'读取当前任务与工作流，不修复中断或自动重试。',
  'revise':'按明确 slide/region 和 reason 返修，保留历史证据。',
@@ -197,7 +197,7 @@ class MCP:
         if rid is None:return None
         if not self.ready:return err(-32002,'Initialize first')
         if method=='ping':return ok({})
-        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','icons_trace_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_fit_gradient'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
+        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','icons_trace_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_fit_gradient','graphics_analyze','graphics_material_recipe','graphics_audit_sources'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
         if method=='tools/call':
             try:
                 params=req.get('params',{});name=params['name'];args=params.get('arguments',{})
@@ -268,7 +268,33 @@ def run(data_dir):
                 closing=True
                 continue
             try:
-                if len(line)>1024*1024:raise ValueError('Request too large')
+                from .payload_transport import oversized_rpc
+                rejected = oversized_rpc(line)
+                if rejected is not None:
+                    try:
+                        m.manager.store.event('mcp.rejected', 'MCP payload too large; not dispatched',
+                            source='mcp', status='error', details=rejected['error']['data'])
+                    except Exception:
+                        pass  # Audit failure must not turn a known rejection into a parse error.
+                    # Attribute the rejected attempt without invoking the requested tool.
+                    try:
+                        from .payload_transport import WORKER_BYTES, PayloadTooLarge
+                        if rejected['error']['data']['request_bytes'] <= WORKER_BYTES:
+                            rejected_req = json.loads(line)
+                            params = rejected_req.get('params', {})
+                            from .project_activity import observe_call
+                            def reject_payload():
+                                raise PayloadTooLarge('MCP 请求超过 1 MiB，尚未执行。' +
+                                    ('请将 result 保存为项目内 JSON，通过 result_file 和 result_sha256 提交。'
+                                     if params.get('name') in {'rebuild_submit', 'rebuild_validate_response'} else
+                                     '请核对当前工具支持的文件输入或受管 CLI 文件入口，勿重发同一超限请求。'))
+                            observe_call(m.manager, str(params.get('name', 'mcp')).replace('rebuild_', 'workflow.', 1),
+                                params.get('arguments', {}), 'mcp', reject_payload,
+                                (m.current_project or {}).get('project_root'))
+                    except Exception:
+                        pass  # The correlated transport rejection must always reach the host.
+                    emit(rejected)
+                    continue
                 req=json.loads(line)
                 if not isinstance(req,dict):raise ValueError('Request must be object')
                 if active is not None and req.get('method')=='tools/call':

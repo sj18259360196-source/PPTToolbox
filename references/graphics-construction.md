@@ -125,6 +125,15 @@ The point-to-polyline check samples both directions and includes margins for
 the sample spacing and cubic flattening. This does not replace a fresh actual
 Office render or node-edit verification.
 
+## Shape construction case
+
+For irregular polygons, radial repetition, alpha overlaps, compound holes and
+reference overlays, read [Shape construction case](shape-construction-case.md).
+It links EXP-181 through EXP-190 to the actual case evidence, distinguishes
+drawn Boolean-like silhouettes from executed Boolean operations, and provides
+two generic recipes. These additions are source guidance; check the currently
+installed schema before invocation. Example compilation is not Office approval.
+
 ## Dependencies
 
 Install `requirements-graphics.txt` into the application's Python environment,
@@ -133,3 +142,6 @@ icon dependencies. NumPy must satisfy SciPy's own dependency requirements.
 Run `tests/test_graphics_construction.py` and the existing manager, native and
 workflow suites before packaging. Preserve the normal installation identity
 defined in `manager_docs/INSTALLATION_CONTRACT.md`.
+# 参数构建与操作读回
+
+圆角多边形、布尔学习试制、显式掩膜轮廓比较、独立原生属性读回和受限节点修改见 [异形工具](shape-tools.md)。这些入口复用 graphics 配方与 rebuild_patch/compare/adopt，保持现有权限及审查。

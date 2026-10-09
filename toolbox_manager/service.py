@@ -135,7 +135,8 @@ class Manager:
                       'inputs':'--json <request.json>','outputs':'Native graphics drafts and evidence',
                       'manuals':['references/graphics-construction.md'],
                       'limitations':'Authorized project assets only; no automatic adoption or visual approval.'}
-                     for op,(description,_) in GRAPHICS.items()]
+                     for op,(description,_) in GRAPHICS.items()
+                     if 'graphics.'+op not in {row['id'] for row in rows}]
         # One fresh snapshot per catalog request; never cache permission switches
         # across requests. Per-tool SQLite connections dominated task dispatch.
         with self.store.db() as c:
@@ -233,7 +234,19 @@ class Manager:
         self.store.event('instruction.saved','保存用户指令覆盖 '+path,details={'package':p['id'],'revision':current+1})
         return self.document(path,p['id'])
     def commands(self):
-        with self.store.db() as c:return [dict(r) for r in c.execute('SELECT * FROM commands ORDER BY updated DESC').fetchall()]
+        with self.store.db() as c:
+            saved=[dict(r) for r in c.execute('SELECT * FROM commands ORDER BY updated DESC').fetchall()]
+        # Built-in templates are readable without a database migration. Explicit
+        # edits, including disabled commands, always win over bundled defaults.
+        package=self.package()
+        path=self.root/'assets/experience/knowledge/command-recipes.json'
+        if package['id']!='builtin' or not package['enabled'] or not package['trusted'] or not path.is_file():
+            return saved
+        known={row['id'] for row in saved}
+        defaults=json.loads(path.read_text(encoding='utf-8')).get('commands',[])
+        return saved+[{**{k:row[k] for k in ('id','title','description','body')},
+                       'enabled':1,'revision':0,'updated':'','builtin':True}
+                      for row in defaults if row['id'] not in known]
     def save_command(self,b):
         tid=b.get('id') or 'cmd-'+secrets.token_hex(5);title=b.get('title','');body=b.get('body','')
         if not re.fullmatch('[a-zA-Z0-9_-]{1,70}',tid) or not 1<=len(title)<=100 or not isinstance(body,str) or not 1<=len(body)<=30000:raise ValueError('指令名称或内容不合法')

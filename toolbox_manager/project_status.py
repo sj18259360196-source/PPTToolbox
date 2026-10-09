@@ -36,6 +36,15 @@ def step_kind(tool, task_kind=''):
     tool = str(tool).replace('_', '.').replace('-', '.')
     task = str(task_kind).replace('_', '.').replace('-', '.')
     value = tool + ' ' + task
+    # Prefer exact managed task semantics to broad matches on workflow.submit.
+    tasks={'source.text.review':'source_text','text.fit':'text_fit','text.refine':'text_fit',
+           'visual.review':'visual_review','detail.review':'detail_review',
+           'office.edit.readback':'edit_verify','fragment.revise':'repair',
+           'page.plan':'region_plan','region.objects':'native_draw','source.review':'source_text',
+           'review.full':'visual_review','review.local':'detail_review',
+           'editable.behavior':'edit_verify','reproducibility':'reproducibility','candidate':'compose','office.render':'preview'}
+    if task in tasks:return tasks[task]
+    if 'edit.readback' in tool:return 'edit_verify'
     if 'asset.material' in task or any(s in value for s in ('image.generation','generation.prepare','generation.ingest')):
         return 'generation'
     if tool in {'assets.crop','assets.chroma','assets.trim','assets.matte','ops.asset.layout'}:
@@ -139,12 +148,26 @@ def incident(call):
 def reconcile(previous, calls):
     """Only the same call, or a known task's successful retry, settles a failure."""
     issues = {i['id']:copy.deepcopy(i) for i in previous}
-    for call in calls:
+    context = None
+    for call in sorted(calls, key=lambda c:c.get('at','')):
         found = incident(call)
         if found:
+            if (not found.get('task_id') and found.get('tool')=='workflow.submit'
+                and found.get('error_code')=='invalid_arguments'
+                and found.get('recovery',{}).get('dispatch')=='not_dispatched'
+                and context and context.get('tool')=='workflow.next' and call_state(context)=='done'
+                and context.get('task_id') and context.get('project_id')
+                and context.get('project')==found.get('project') and found.get('project')
+                and context.get('revision_after') is not None):
+                found['task_context']={k:context.get(k) for k in ('task_id','project_id','revision_after','evidence_id')}
             old = issues.get(found['id'])
             if not old or old.get('evidence_id')!=found.get('evidence_id'):
                 issues[found['id']] = found
+            elif found.get('task_context'):
+                old['task_context']=found['task_context']
+            if old and old.get('evidence_id')==found.get('evidence_id'):
+                for field in ('project','project_id','revision_before','revision_after'):
+                    if field in found:old[field]=found[field]
         elif call_state(call) == 'done':
             for old in issues.values():
                 if old.get('state')!='open': continue
@@ -153,11 +176,26 @@ def reconcile(previous, calls):
                          old.get('task_id')==call.get('task_id') and old.get('tool')==call.get('tool') and
                          (old.get('recovery') or {}).get('outcome')!='accepted_next_failed' and
                          call.get('at','')>old.get('at',''))
-                if same or retry:
-                    old.update(state='resolved', resolved_by=call['id'], resolved_at=call.get('at'))
+                bound=old.get('task_context') or {}
+                scoped=bool(old.get('project') and old.get('project')==call.get('project') and call.get('at','')>old.get('at',''))
+                initialized=(scoped and old.get('tool')==call.get('tool')=='workflow.start'
+                    and old.get('error_code')=='project_exists' and call.get('project_id')
+                    and call.get('revision_after')==1 and (old.get('recovery') or {}).get('outcome')=='rejected')
+                submitted=(scoped and old.get('tool')==call.get('tool')=='workflow.submit'
+                    and bound.get('task_id') and bound['task_id']==call.get('task_id')
+                    and bound.get('project_id')==call.get('project_id')
+                    and bound.get('revision_after')==call.get('revision_before'))
+                if same or retry or initialized or submitted:
+                    old.update(state='resolved', resolved_by=call['id'], resolved_at=call.get('at'),
+                        resolved_evidence_id=call.get('evidence_id'),
+                        resolution_reason='项目已成功初始化' if initialized else '已领取任务成功提交' if submitted else '成功重试已确认')
+        if call.get('tool','').startswith('workflow.') and call_state(call)=='done':
+            context=call
+        elif call.get('tool','').startswith('workflow.') and call.get('recovery',{}).get('dispatch')!='not_dispatched':
+            context=None
     # Never discard unresolved failures when the recent-call window rolls forward.
     active = [i for i in issues.values() if i.get('state')=='open']
-    closed = [i for i in issues.values() if i.get('state')!='open'][-30:]
+    closed = [i for i in issues.values() if i.get('state')!='open']
     return closed + active
 
 
@@ -167,7 +205,8 @@ def graph(state):
     issues = [i for i in state.get('activity', {}).get('issues', []) if i.get('state')=='open']
     phase = state.get('phase', {})
     custom = state.get('work_graph', {}).get('nodes', [])
-    routes = state.get('activity', {}).get('generation_routes', [])
+    all_routes = state.get('activity', {}).get('generation_routes', [])
+    routes = all_routes[-4:]
     routed_tasks = {r['task_id'] for r in routes if r.get('task_id')} if not custom else set()
     templates = {t['id']:t for t in STEP_TYPES}
     nodes = copy.deepcopy(custom)
@@ -182,21 +221,37 @@ def graph(state):
             nodes.append({'id':stage,'title':title,'stage':stage,'after':[previous] if previous else [],
                           'status':status,'source':'stage','detail':phase.get('blocker') or phase.get('result_summary','') if stage==phase.get('stage') else ''})
             previous=stage
-        # Tool observations are side branches. Their order is not a fabricated dependency.
-        kinds = dict.fromkeys(step_kind(c.get('tool'),c.get('task_kind')) for c in calls+issues if c.get('task_id') not in routed_tasks)
-        for kind in kinds:
-            if not kind: continue
+        # Keep task occurrences separate so a later review doesn't overwrite an
+        # earlier failed review. Unresolved issues remain in the project panel.
+        import hashlib
+        groups={}
+        for c in calls+issues:
+            kind=step_kind(c.get('tool'),c.get('task_kind'))
+            if kind and c.get('task_id') not in routed_tasks:
+                groups.setdefault((kind,c.get('task_id')),[]).append(c)
+        for (kind,task_id), observations in list(groups.items())[-16:]:
             if routes and kind=='generation':continue
             t=templates[kind]
-            nodes.append({'id':'observed-'+kind,'kind':kind,'title':t['title'],'stage':t['stage'],
+            suffix='-'+hashlib.sha256(task_id.encode()).hexdigest()[:8] if task_id else ''
+            nodes.append({'id':'observed-'+kind+suffix,'kind':kind,'title':t['title'],'stage':t['stage'],
                           'after':[t['stage']],'status':'planned','source':'observer',
-                          'detail':'软件按实际调用归类，显示最近一次调用结果。制作进度以阶段打卡或 Agent 登记的步骤为准。'})
+                          'task_ids':[task_id] if task_id else [],
+                          'evidence_ids':list(dict.fromkeys(c['evidence_id'] for c in observations if c.get('evidence_id'))),
+                          'detail':'软件按任务归类，显示该任务的调用结果。制作进度以阶段打卡或 Agent 登记的步骤为准。'})
         nodes.extend(generation_nodes(routes))
+        from .flow_projection import connect_suggestions, checkpoint_nodes
+        nodes.extend(checkpoint_nodes(state.get('checkpoints', [])))
+        nodes=connect_suggestions(nodes, continuations=phase.get('status')!='finished')
     for node in nodes:
         kind=node.get('kind'); template=templates.get(kind,{})
         node['actions']=template.get('actions',['calls','files'])
-        node['evidence']={'stage':'阶段打卡','observer':'软件自动采集','pptagent':'PPTAgent 整理','generation_route':'素材任务 · Agent 判断'}.get(node.get('source'),'制作 Agent 登记')
+        node['evidence']={'stage':'阶段打卡','checkpoint':'制作 Agent 调整记录','observer':'软件自动采集','pptagent':'PPTAgent 整理','generation_route':'素材任务 · Agent 判断','suggested':'预设建议 · 尚无执行记录'}.get(node.get('source'),'制作 Agent 登记')
         def matches(c):
+            if node.get('source')=='suggested':return False
+            if node.get('source')=='checkpoint':return False
+            if node.get('task_ids'):
+                return c.get('task_id') in node['task_ids'] and (not kind or step_kind(c.get('tool'),c.get('task_kind'))==kind)
+            if node.get('evidence_ids'):return c.get('evidence_id') in node['evidence_ids']
             if node.get('route_job'):
                 return bool(node.get('call_task_id')) and c.get('task_id')==node['call_task_id']
             if c.get('task_id') in routed_tasks:return False
@@ -222,4 +277,28 @@ def graph(state):
                 if node.get('source')=='observer': node['status']='observed'
                 node.update(evidence='关联工具调用已完成')
         node['actions']=list(dict.fromkeys(node['actions']+['calls']))
-    return {'nodes':nodes,'format':'ppttool-work-graph/1'}
+    visual=state.get('activity',{}).get('visual')
+    if visual:
+        for role,kind,title,stage in [('overview','visual_overview','整页主视觉','plan'),('detail','visual_detail','高清局部','production')]:
+            counts=visual.get(role)
+            existing=next((n for n in nodes if n.get('kind')==kind),None)
+            if not existing and len(nodes)>=64:continue  # Summary remains visible beside a full custom graph.
+            identifier='visual-'+role
+            while any(n['id']==identifier for n in nodes):identifier+='-stats'
+            node=existing if existing is not None else {'id':identifier,'kind':kind,'title':title,'stage':stage,
+                'after':[stage] if any(n['id']==stage for n in nodes) else [],'source':'visual_telemetry','actions':['files','calls']}
+            if existing is None:
+                node['links']=[{'from':p,'relation':'grouping','basis':'recorded','label':'图片任务计数'} for p in node['after']]
+            if counts:
+                label=f"要求 {counts['required']} · 观察 {counts['submitted']}"
+                detail=f"要求查看 {counts['required']} 张次，已提交观察 {counts['submitted']} 张次。\n记录来自任务与 Agent 回执，不代表宿主实际打开次数或视觉通过。"
+                if existing is None:node.update(status='observed',status_label=label,detail=detail,evidence='视觉任务计数')
+                else:node.update(visual_counts=copy.deepcopy(counts),detail=node.get('detail','')+'\n'+detail)
+            else:node.update(status='blocked',status_label='统计不可用',detail=visual.get('measurement_note','图片统计暂不可用'),evidence='视觉统计异常')
+            if visual.get('diagnostic_count'):
+                node.update(status='failed',status_label='统计待核对',detail=node['detail']+'\n图片或记录存在异常，请查看上方图片统计。')
+            if existing is None:nodes.append(node)
+    from scripts.project_flow import diagnostics
+    return {'nodes':nodes,'format':'ppttool-work-graph/1','diagnostics':diagnostics(nodes),
+            'relationship_note':('虚线为建议路径，点线为阶段归属；均不代表实际执行依赖。仅展开最近 16 组工具任务、6 条调整记录和 4 条素材路线，完整历史仍在调用与阶段记录中。'
+                                 if not custom else '连线依据由步骤记录提供；返修保留旧轮次。')}

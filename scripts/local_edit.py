@@ -132,9 +132,13 @@ def prepare(scene_path, pptx, slide_id, allowed, changes, *, calibration=False):
         touched.add(oid)
         if op != "native.format" and shape._element.xpath(".//a:effectLst/*|.//a:effectDag/*"):
             raise ValueError("Effects/shadows are outside supported incremental bounds")
-        if parent or shape.rotation or obj.get("rotation_deg", 0):
+        if (parent and op != 'native.nodes') or shape.rotation or obj.get("rotation_deg", 0):
             raise ValueError("Only unrotated top-level targets supported; use group.translate for groups")
-        if op == "text.range":
+        if op == 'native.nodes':
+            from native_nodes import apply as apply_nodes
+            replacement=apply_nodes(obj,shape,ch,canvas,native,si,parent)
+            new[oid].clear();new[oid].update(replacement)
+        elif op == "text.range":
             from native_text_range import apply as apply_range
             replacement=apply_range(obj,shape,ch)
             new[oid].clear();new[oid].update(replacement)

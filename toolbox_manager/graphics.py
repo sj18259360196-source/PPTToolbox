@@ -10,12 +10,55 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT/"scripts") not in sys.path:
     sys.path.insert(0, str(ROOT/"scripts"))
-from graphics_recipe import SCHEMA, compile_recipe, digest, obj, array
+from graphics_recipe import SCHEMA, compile_recipe, digest, obj, array, STYLE, COMMANDS, ID
 
 S = {"type": "string", "minLength": 1}
 VERSION = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
 PROJECT = {"project": S}
+ANALYSIS_INPUT = obj({"objects": array({"type": "object"}, 10000, 1),
+                      "cubic_warning": {"type": "integer", "minimum": 1, "maximum": 100000},
+                      "subpath_warning": {"type": "integer", "minimum": 1, "maximum": 100000}}, ("objects",))
+MATERIAL_INPUT = obj({"preset": {"enum": ["droplet", "rotated_end"]},
+                      "id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,19}$"},
+                      "box": {"type": "array", "prefixItems": [
+                          {"type": "number", "minimum": 0, "maximum": 10000},
+                          {"type": "number", "minimum": 0, "maximum": 10000},
+                          {"type": "number", "minimum": .12, "maximum": 10000},
+                          {"type": "number", "minimum": .12, "maximum": 10000}], "minItems": 4, "maxItems": 4},
+                      "canvas": array({"type": "number", "exclusiveMinimum": 0, "maximum": 10000}, 2, 2),
+                      "rotation": {"type": "number", "minimum": -360, "maximum": 360},
+                      "points_per_unit": {"type": "number", "exclusiveMinimum": 0, "maximum": 10}},
+                     ("preset", "id", "box", "canvas"))
+SOURCES_INPUT = obj({**PROJECT, "dependencies": array(obj({
+    "path": S, "role": {"enum": ["generator", "recipe", "schema", "helper", "reference"]},
+    "sha256": VERSION}, ("path", "role")), 64, 1)}, ("project", "dependencies"))
+POINT=array({'type':'number','minimum':0,'maximum':10000},2,2)
+CONSTRUCT_BASE={'id':ID,'canvas':POINT,'points_per_unit':{'type':'number','exclusiveMinimum':0,'maximum':10},'style':STYLE}
+CONSTRUCT_INPUT={'type':'object','oneOf':[
+    obj({**CONSTRUCT_BASE,'mode':{'const':'rounded_polygon'},'points':array(POINT,64,3),
+         'corner_inset':{'type':'number','minimum':0,'maximum':1000}},('id','canvas','style','mode','points','corner_inset')),
+    obj({**CONSTRUCT_BASE,'mode':{'const':'radial_repeat'},'commands':COMMANDS,'center':POINT,
+         'count':{'type':'integer','minimum':2,'maximum':64},'step_deg':{'type':'number','exclusiveMinimum':0,'maximum':360}},
+        ('id','canvas','style','mode','commands','center','count'))]}
+IMAGE={'type':'string','minLength':1,'maxLength':8_000_000}
+CONTOUR_INPUT=obj({k:IMAGE for k in ['reference','candidate','reference_mask','candidate_mask','exclude_mask']},
+                  ('reference','candidate','reference_mask','candidate_mask'))
+READBACK_INPUT=obj({**PROJECT,'pptx':S,'pptx_sha256':VERSION,
+    'targets':array(obj({'slide':{'type':'integer','minimum':1},'id':S},('slide','id')),50,1)},
+    ('project','pptx','pptx_sha256','targets'))
+BOOLEAN_INPUT=obj({**PROJECT,'slide':S,'region':S,'inputs':array(S,8,2),'primary':S,
+    'prefix':{'type':'string','pattern':'^[A-Za-z][A-Za-z0-9_-]{0,23}$'},'reason':S,
+    'actions':{'type':'array','uniqueItems':True,'minItems':1,'maxItems':5,
+               'items':{'enum':['union','combine','intersect','subtract','fragment']}}},
+    ('project','slide','region','inputs','prefix','reason'))
 SPECS = {
+    'construct':('构建有界圆角多边形或放射实例，输出现有配方。',CONSTRUCT_INPUT),
+    'compare_contours':('依据显式二值掩膜测量轮廓偏差并返回叠图，不判定视觉通过。',CONTOUR_INPUT),
+    'read_properties':('在独立副本保存重开，读取原生填充、分组与节点，源文件不变。',READBACK_INPUT),
+    'boolean_trials':('预检有序操作数，生成复用 rebuild_patch 的独立布尔试制请求。',BOOLEAN_INPUT),
+    "analyze": ("检查原生插画的路径复杂度、透明叠层与预览边界。", ANALYSIS_INPUT),
+    "material_recipe": ("生成可编辑水珠或旋转端面的参数化配方。", MATERIAL_INPUT),
+    "audit_sources": ("核对项目内列明的绘图依赖、哈希及临时目录风险。", SOURCES_INPUT),
     "inspect": ("读取图形构造契约或项目草稿。", obj({**PROJECT, "version": VERSION})),
     "preview": ("计算曲线组、共享边与关联副本预览，不修改 PPT。",
                 obj({**PROJECT, "version": VERSION, "recipe": SCHEMA}, ("recipe",))),
@@ -73,8 +116,7 @@ def _load(project, version):
 def call(manager, op, args=None, source="mcp"):
     from jsonschema import Draft202012Validator
     from .policy import PolicyDenied, authorize, plain_path
-    from graphics_preview import png, svg, readback
-    from graphics_gradient import fit_gradient
+    from illustration_tools import analyze, material_recipe, audit_sources
     a = args or {}
     if op not in SPECS:
         raise ValueError("Unknown graphics operation")
@@ -84,7 +126,7 @@ def call(manager, op, args=None, source="mcp"):
         raise PolicyDenied("Graphics package is disabled or untrusted")
     if not manager.override(p["id"], "tool", "graphics."+op, True):
         raise PolicyDenied("Graphics tool disabled")
-    if op not in {"inspect", "validate"} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
+    if op not in {"inspect", "validate", "analyze", "audit_sources",'compare_contours','boolean_trials'} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
         raise PolicyDenied("Agent execution is disabled")
     with manager.lock:
         from .storage import stamp
@@ -94,7 +136,32 @@ def call(manager, op, args=None, source="mcp"):
             project = None
             if "project" in a:
                 project, _ = authorize(manager, a["project"])
+            if op=='construct':
+                from shape_construction import construct
+                return construct(a)
+            if op=='compare_contours':
+                from shape_construction import compare_contours
+                return compare_contours(*[decode_image(a[k]) for k in ['reference','candidate','reference_mask','candidate_mask']],
+                                        decode_image(a['exclude_mask']) if a.get('exclude_mask') else None)
+            if op=='read_properties':
+                for required in ['office.edit-readback','pptx.inspect']:
+                    if not manager.override(p['id'],'tool',required,True):raise PolicyDenied(required+' disabled')
+                from shape_evidence import read_properties
+                return read_properties(project,a)
+            if op=='boolean_trials':
+                if not manager.override(p['id'],'tool','workflow.patch',True):raise PolicyDenied('workflow.patch disabled')
+                from shape_evidence import boolean_trials
+                return boolean_trials(project,a)
+            if op == "analyze":
+                return analyze(a["objects"], cubic_warning=a.get("cubic_warning", 128),
+                               subpath_warning=a.get("subpath_warning", 32))
+            if op == "material_recipe":
+                return material_recipe(a["preset"], a["id"], a["box"], a["canvas"],
+                                       rotation=a.get("rotation", 0), points_per_unit=a.get("points_per_unit", 1))
+            if op == "audit_sources":
+                return audit_sources(project, a["dependencies"])
             if op == "inspect":
+                from native_nodes import NODES
                 if "version" in a:
                     if project is None:
                         raise ValueError("Version inspection requires a project")
@@ -103,11 +170,17 @@ def call(manager, op, args=None, source="mcp"):
                 return {"format": "graphics-recipe/1", "schema": copy.deepcopy(SCHEMA),
                         "example": json.loads((ROOT/"examples/graphics/capabilities.json").read_text(encoding="utf-8")),
                         "capabilities": ["curve_groups", "shared_boundaries", "gradient_fitting", "linked_instances",
-                                         "surface_layers", "authored_gradients_up_to_16_stops"],
+                                         "surface_layers", "authored_gradients_up_to_16_stops",
+                                         "illustration_analysis", "material_recipes", "source_dependency_audit",
+                                         'shape_construction','contour_comparison','native_property_readback','boolean_trial_planning','bounded_node_edits'],
+                        "material_presets": ["droplet", "rotated_end"],
+                        'node_edit_schema':copy.deepcopy(NODES),
+                        'node_edit_entry':'rebuild_patch',
                         "illustration_example": json.loads((ROOT/"examples/graphics/native-tube.json").read_text(encoding="utf-8")),
                         "illustration_guide": "references/native-illustration.md",
                         "limitations": ["single_region", "no_live_powerpoint_linkage", "no_automatic_visual_approval"]}
             if op == "fit_gradient":
+                from graphics_gradient import fit_gradient
                 return fit_gradient(decode_image(a["image"]), decode_image(a["mask"]) if a.get("mask") else None,
                                     models=a.get("models", ["linear"]), max_stops=a.get("max_stops", 3))
             if op == "validate":
@@ -115,6 +188,7 @@ def call(manager, op, args=None, source="mcp"):
                 return {"version": a["version"], "manual_conflicts": conflicts,
                         "structure": "unchanged" if not conflicts else "changed",
                         "office": "not_run", "visual_review": "pending"}
+            from graphics_preview import png, svg, readback
             previous = None
             if op == "regenerate" or (op == "preview" and "version" in a):
                 if project is None:
@@ -123,13 +197,14 @@ def call(manager, op, args=None, source="mcp"):
                 if conflicts:
                     raise ValueError("Manual PowerPoint edits detected; old draft preserved: "+", ".join(conflicts))
             result = compile_recipe(a["recipe"], previous, previous["objects"] if previous else None)
+            result["illustration_analysis"] = analyze(result["objects"])
             if op == "preview":
                 return {**result, "preview": "data:image/png;base64,"+base64.b64encode(png(result)).decode()}
             if not manager.override(p["id"], "tool", "pptx.build", True):
                 raise PolicyDenied("PPTX build is disabled")
             import hashlib
             compiler = digest({name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in (
-                "scripts/graphics_geometry.py", "scripts/graphics_recipe.py",
+                "scripts/graphics_geometry.py", "scripts/graphics_recipe.py", "scripts/illustration_tools.py",
                 "scripts/graphics_preview.py", "scripts/build_pptx.py",
                 "scripts/graphics_paint.py", "assets/graphics/office16-gradient-profile.json",
                 "assets/schemas/scene.schema.json")})
@@ -174,6 +249,7 @@ def call(manager, op, args=None, source="mcp"):
             return {"version": version, "directory": str(target), "pptx": str(target/"editable.pptx"),
                     "objects": result["objects"], "recipe": result["recipe"],
                     "changed": result["changed"], "dependencies": result["dependencies"],
+                    "illustration_analysis": result["illustration_analysis"],
                     "scope": "immutable_asset_draft_not_adopted", "office": "not_run",
                     "visual_review": "pending"}
         except Exception:

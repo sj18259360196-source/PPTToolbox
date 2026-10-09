@@ -301,7 +301,8 @@ def cli_arguments(manager, command, args):
     if command == "submit":
         project, roots = authorize(manager, a["project"])
         response = check_input(a.pop("response"), project, roots)
-        payload = json.loads(response.read_text(encoding="utf-8-sig"))
+        from .payload_transport import read_json_file
+        payload = read_json_file(response)
         if not isinstance(payload, dict) or set(payload) != {"task_id", "token", "result"}:
             raise ValueError("Response requires task_id, token and result only")
         a.update(payload)
@@ -332,6 +333,11 @@ def enrich_task(manager, result, project, response_detail='full'):
     result["submit_tool"] = "rebuild_submit"
     result["validation_tool"] = "rebuild_validate_response"
     result["next_tool"] = "rebuild_next"
+    from .payload_transport import MCP_INLINE_BYTES, RESULT_FILE_BYTES, FILE_HINT
+    result['submission_transport'] = {
+        'preferred_for_geometry': 'result_file', 'inline_limit_bytes': MCP_INLINE_BYTES,
+        'file_limit_bytes': RESULT_FILE_BYTES, 'file_content': 'result object only',
+        'file_fields': ['result_file', 'result_sha256'], 'instruction': FILE_HINT}
     for key in ("submit_argv", "next_argv", "preview_alternative_argv"):
         if key in result:
             tool = {"submit_argv": "workflow.submit", "next_argv": "workflow.next",
@@ -449,6 +455,13 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         timings['authorize_seconds']=time.perf_counter()-mark
         context=ProjectContext(manager,project)
         arguments={**arguments,'project':str(context.root)}
+        if command in {'submit', 'validate_response'} and 'result_file' in arguments:
+            from .payload_transport import read_json_file
+            path = check_input(arguments['result_file'], project, inputs)
+            payload = read_json_file(path, arguments['result_sha256'])
+            arguments = {k: v for k, v in arguments.items() if k not in {'result_file', 'result_sha256'}}
+            arguments['result'] = payload
+            validate(command, arguments, root)
         checkpoint_payload = arguments.pop('checkpoint', None)
         if checkpoint_payload is not None:
             from .project_hub import checkpoint
@@ -494,6 +507,8 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                         "allowed": [r["id"] for r in manager.catalog() if r["enabled"]],
                         "command": command, "arguments": arguments}
             argv = [settings["python_path"] or sys.executable, str(manager.root/"toolbox_manager/worker.py")]
+            from .payload_transport import encode_worker
+            worker_payload = encode_worker(envelope)
             with (output_dir/"stdout.json").open("w", encoding="utf-8") as out, (output_dir/"stderr.log").open("w", encoding="utf-8") as err:
                 mark=time.perf_counter()
                 child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=out, stderr=err,
@@ -501,7 +516,7 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                 record["worker_pid"] = child.pid
                 manager.store.event("tool.launched", "Managed worker launched", source=source, details=record)
                 try:
-                    child.communicate(json.dumps(envelope, ensure_ascii=False, allow_nan=False),
+                    child.communicate(worker_payload,
                                       timeout=timeout if timeout is not None else min(tool.get("timeout_seconds", 300), 900))
                 except subprocess.TimeoutExpired:
                     # Deliberately do not kill the worker or PowerPoint. Durable

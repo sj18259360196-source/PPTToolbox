@@ -123,9 +123,10 @@ def dispatch(envelope, policy, root, wf):
 
 def main():
     try:
-        raw = sys.stdin.read(1024*1024 + 1)
-        if len(raw) > 1024*1024:
-            raise ValueError("Managed request too large")
+        from toolbox_manager.payload_transport import WORKER_BYTES, PayloadTooLarge
+        raw = sys.stdin.buffer.read(WORKER_BYTES + 1)
+        if len(raw) > WORKER_BYTES:
+            raise PayloadTooLarge("Managed request exceeds 32 MiB; not dispatched")
         envelope = json.loads(raw)
         with contextlib.redirect_stdout(sys.stderr):
             result = execute(envelope)

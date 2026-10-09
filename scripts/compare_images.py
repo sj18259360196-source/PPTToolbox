@@ -53,7 +53,7 @@ def _labelled_side(a, b, left_label=None, right_label=None, display_scale=1):
     return side
 
 
-def compare(reference: Path, rendered: Path, outdir: Path, regions=None, resize_render=False, region_scale=2, *, slide_index=None, left_label=None, right_label=None):
+def compare(reference: Path, rendered: Path, outdir: Path, regions=None, resize_render=False, region_scale=1, *, slide_index=None, left_label=None, right_label=None, include_source_crops=False):
     reference, rendered, outdir = Path(reference), Path(rendered), Path(outdir)
     if type(region_scale) is not int or not 1 <= region_scale <= 8:
         raise ValueError('region_scale must be an integer from 1 to 8')
@@ -72,18 +72,18 @@ def compare(reference: Path, rendered: Path, outdir: Path, regions=None, resize_
             mae = float(np.abs(arr - brr).mean())
             paths = {'side_by_side': stage / f'{name}-side-by-side.png',
                      'overlay': stage / f'{name}-overlay.png',
-                     'absolute_difference': stage / f'{name}-absolute-difference.png',
-                     'reference_crop': stage / f'{name}-reference.png',
-                     'rendered_crop': stage / f'{name}-rendered.png'}
-            a.save(paths['reference_crop']);b.save(paths['rendered_crop'])
-            _labelled_side(a, b, left_label=left_label, right_label=right_label, display_scale=scale).save(paths['side_by_side'])
+                     'absolute_difference': stage / f'{name}-absolute-difference.png'}
+            if include_source_crops:
+                paths.update(reference_crop=stage/f'{name}-reference.png',rendered_crop=stage/f'{name}-rendered.png')
+                a.save(paths['reference_crop'],compress_level=3);b.save(paths['rendered_crop'],compress_level=3)
+            _labelled_side(a, b, left_label=left_label, right_label=right_label, display_scale=scale).save(paths['side_by_side'],compress_level=3)
             overlay = Image.blend(a, b, .5)
             difference = Image.fromarray(np.abs(arr - brr).clip(0, 255).astype('uint8'))
             if scale != 1:
                 size = (a.width * scale, a.height * scale)
                 overlay = overlay.resize(size, Image.Resampling.LANCZOS)
                 difference = difference.resize(size, Image.Resampling.NEAREST)
-            overlay.save(paths['overlay']); difference.save(paths['absolute_difference'])
+            overlay.save(paths['overlay'],compress_level=3); difference.save(paths['absolute_difference'],compress_level=3)
             row = {'region': name, 'bbox': box, 'object_ids': object_ids,
                    'mae_rgb': mae, 'normalized_pixel_agreement': 1 - mae / 255,
                    'pixel_size': list(a.size), 'display_scale': scale}
@@ -119,11 +119,12 @@ def main():
     ap.add_argument('reference', type=Path); ap.add_argument('rendered', type=Path)
     ap.add_argument('--outdir', required=True, type=Path); ap.add_argument('--regions', type=Path)
     ap.add_argument('--slide', type=int, help='Select page for a shared deck regions file'); ap.add_argument('--right-label', help='Explicit renderer label for standalone comparisons');
-    ap.add_argument('--resize-render', action='store_true'); ap.add_argument('--region-scale', type=int, default=2)
+    ap.add_argument('--resize-render', action='store_true'); ap.add_argument('--region-scale', type=int, default=1)
+    ap.add_argument('--include-source-crops',action='store_true',help='Also emit separate reference/render crops; comparison evidence always retains both sides')
     args = ap.parse_args()
     try:
         compare(args.reference, args.rendered, args.outdir,
-                read_json(args.regions) if args.regions else None, args.resize_render, args.region_scale, slide_index=args.slide, right_label=args.right_label)
+                read_json(args.regions) if args.regions else None, args.resize_render, args.region_scale, slide_index=args.slide, right_label=args.right_label,include_source_crops=args.include_source_crops)
     except Exception as exc:
         print(f'Compare failed: {exc}', file=sys.stderr); return 1
     return 0

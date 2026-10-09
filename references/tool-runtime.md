@@ -71,7 +71,7 @@ python scripts/compare_deck.py ./new-project/scene.json --pptx ./new-project/bui
 单页调试可以单独调用，输出目录不能与整套证据目录相同：
 
 ```powershell
-python scripts/compare_images.py ./new-project/input/slide-001.png ./new-project/build/v001/office/slide-001.png --outdir ./new-project/build/v001/local-debug --regions ./regions.json --region-scale 2
+python scripts/compare_images.py ./new-project/input/slide-001.png ./new-project/build/v001/office/slide-001.png --outdir ./new-project/build/v001/local-debug --regions ./regions.json
 ```
 
 分步路线的review从 `assets/templates/review.template.json`复制到同一个run目录，再填写当前PPTX、scene、对照收据的实际身份和已执行的审查。自动run_pipeline已生成review空模板。不得通过补填哈希把旧审查冒充新审查。
@@ -126,6 +126,12 @@ python scripts/assets_tool.py matte assets/icon.png evidence/icon-preview.png --
 ```
 
 这些COM函数在本包Linux验证环境无法实机运行。首次在Windows+PowerPoint使用时先做一个最小页并导出，再批量应用。
+
+## 大结果提交
+
+复杂地图、自由路径或大量对象应先把 `result` 对象写入项目内 UTF-8 JSON，再用 `result_file` 和 `result_sha256` 调用 `rebuild_submit` 或 `rebuild_validate_response`。文件只包含原 `result` 的内容，任务身份和 `base_revision` 留在调用参数中。两种 result 输入互斥，路径须在项目授权范围内，文件哈希必须匹配。任务令牌、修订、对象结构和质量门禁仍照常检查。
+
+MCP 内联请求上限为 1 MiB，按 UTF-8 字节计算。本地 JSON 文件上限为 16 MiB，内部进程信封上限为 32 MiB。超限会返回 `payload_too_large` 和未派发状态。明确未派发时改用文件；结果未知时先查询状态。不要循环重发，也不要为传输限制简化原始图形。CLI 的 `--response` 仍接收包含 `task_id`、`token`、`result` 的完整响应文件，与 MCP 的仅 result 文件格式不同。
 
 ## 发布ZIP的检查
 

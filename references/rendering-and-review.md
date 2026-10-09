@@ -6,6 +6,8 @@
 
 同一裁切框和同一缩放倍率比较。把左右图缩小只能完成整页检查；不得不同缩放或加模糊来掩盖偏差。每轮大改后重新导出，同名旧图不能当新证据。
 
+按当前任务 view_strategy 取图，先理解整页布局，再用原始像素局部检查细节。工具只保留依赖与实际对照图都未变范围的观察，改动页仍需整页复查。具体见[看图与修订流程](multipage-efficiency.md)。
+
 ## 任务提交状态
 
 `rebuild_submit` 的审查状态只接受 `passed`、`needs_changes`、`blocked`。发现需要修改的问题使用 `needs_changes`，不使用 `failed`。当前任务的 `submission_constraints` 和响应模板给出适用字段。
@@ -99,7 +101,7 @@ python scripts/compare_deck.py scene.json `
 
 ```powershell
 python scripts/compare_images.py input/slide-001.png run/office/slide-001.png `
-  --outdir run/compare-001 --regions evidence/slide-001-regions.json --region-scale 2
+  --outdir run/compare-001 --regions evidence/slide-001-regions.json
 ```
 
 ### 复杂页必须有局部对照

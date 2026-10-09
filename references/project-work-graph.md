@@ -1,6 +1,10 @@
 # 项目运行路径
 
-软件在项目内用流程图显示步骤、分支和汇合，从左到右排列，满行后接下一行。分支过多时分组展开，折线自动绕开方框，不同路径使用不同颜色，步骤状态另有文字标记。没有细分计划时，图按大阶段记录和已观察到的工具调用生成。自动采集的步骤挂在所属阶段下；需要表达具体先后关系时，Agent 提交 after 字段。展开步骤可查看说明和状态来源，可以缩放、适应宽度或查看全图。这些操作只影响显示。
+运行路径附带图片使用统计及整页主视觉、高清局部节点。数字来自任务要求和 Agent 观察回执，不能当成实际上传量或视觉通过。图片缺失和证据异常在项目顶部及统计面板同时显示，统计暂不可用时显示未知。手工登记的步骤状态保持独立，图片统计不推进大阶段。详细口径见 [多页制作与修订](multipage-efficiency.md)。
+
+软件在项目内用流程图显示步骤、分支和汇合，从左到右排列，满行后接下一行。折线绕开方框，连线显示关系类型，选择节点后可查看条件、依据、结果和下一步。没有细分计划时，软件按任务编号归类调用，并给出通往合成、预览、核对、编辑验证和交付的建议路径。虚线为建议，点线为阶段归属。历史调用本身不能证明依赖关系，软件不会把建议连接当成执行事实。已结束的项目不再补待执行的建议节点。
+
+默认图展开最近 16 组任务、6 条重新规划或恢复记录、4 条素材路线，完整历史留在调用与阶段记录中。同类步骤在不同任务中分开显示，避免旧错误覆盖新任务。图片计数只表示任务要求和观察回执。自定义图的末端没有后续、又没有结束结果时会提示补充关系，不阻断制作。
 
 软件负责方框位置、箭头和状态样式，Agent 不提供坐标、颜色、SVG 或截图。工作图不会推进制作阶段，也不会自动批准交付。
 
@@ -42,12 +46,31 @@
 | detail | 可选说明，最多 1500 字 |
 | stage | 可选关联大阶段 |
 | tools | 可选关联工具 ID，软件据实际调用显示执行中或异常，单次调用成功不会自动完成整个步骤 |
+| task_ids | 绑定具体任务编号，隔离不同轮次的调用和错误，最多 12 项 |
+| evidence_ids | 可选依据编号，最多 12 项 |
+| links | 对 after 中的每个来源补充 from、relation、label、basis、evidence_ids，同一个来源只出现一次 |
+| result / next_action | 结果和下一步，各最多 600 字 |
+| round | 修订轮次，1 到 999 |
+
+relation 支持 dependency 依赖、sequence 先后、decision 决策、merge 汇合、revision 返修、suggested 建议、grouping 阶段归属。basis 支持 recorded 记录依据、agent 制作 Agent 登记、inferred 推断、suggested 建议。调用先后只能证明顺序，不能单独证明依赖。label 用于说明条件或去向，最多 120 字。未填写 links 的旧 after 继续按 Agent 登记的依赖显示。
+
+优先使用 33 种预设类型。预设不适用时，每批补一到两个自定义节点即可，无需凑齐全部节点。新增自定义节点省略 kind，填写 title。分支接回合成或核对；返修新增节点和 round，之后连接复查与交付，不覆盖上一轮的失败。相同任务重试沿用编号，不重复登记路径。
+
+```json
+[
+  {"id":"feedback-2","kind":"feedback","after":["review"],"round":2,"result":"用户要求调整标题"},
+  {"id":"repair-2","kind":"repair","after":["feedback-2"],"round":2,"task_ids":["task-000021"],"links":[{"from":"feedback-2","relation":"revision","basis":"agent","label":"只修改标题","evidence_ids":["feedback-checkpoint-2"]}]},
+  {"id":"recheck-2","kind":"recheck","after":["repair-2"],"round":2,"next_action":"通过后整理交付文件"}
+]
+```
 
 每图最多 64 个步骤。软件检查重复编号、缺失前置步骤与循环。返工应新增步骤并连接到后续环节；旧路径保留，取消或替换的步骤标为 skipped 或 replaced。
 
 ## 驻留 PPTAgent 更新
 
 PPTAgent 可在用户选定的项目内调用 read_project，取得 sequence 与已有 work_graph，再调用 update_work_graph。patch_json 是上述步骤数组的 JSON 字符串，支持相同的增量更新。
+
+read_project 同时返回步骤字段合同、近期阶段说明和缺少后续关系的节点。驻留助手根据已接入的工具结果、阶段说明与明确反馈整理关系，不能读取外部制作 Agent 的全部对话。默认图由本地规则生成，不请求模型。需要助手整理自定义图时仍沿用现有管理任务入口和 API 配额；不为每次工具调用另起请求。制作 Agent 在已有打卡中批量附带 flow 即可，正常工具调用无需增加汇报。
 
 并发更新时，旧 sequence 会被拒绝。重新读取后，只提交仍需要修改的字段。驻留助手只整理展示信息，不能代替制作 Agent 打卡、修改 PPT 或宣称用户已验收。
 
@@ -74,6 +97,8 @@ PPTAgent 可在用户选定的项目内调用 read_project，取得 sequence 与
 | preview | 导出与预览 | 当前 PPT、调用记录 |
 | review | 核对与修订 | 当前 PPT、调用记录 |
 | delivery | 交付整理 | 项目文件、调用记录 |
+
+补充预设包括 requirements 需求与修改范围、resume 恢复上下文、region_plan 页面分区、source_text 原文与数字核对、route_decision 制作路线决策、native_draw 原生图形绘制、asset_place 素材回装、text_fit 文字适配、visual_review 整页视觉核对、detail_review 局部细节核对、edit_verify 编辑与读回验证、feedback 用户反馈、revision_plan 修改范围判断、repair 局部返修、recheck 返修复查、recovery 异常诊断与恢复、reproducibility 重建与复现验证、acceptance 等待用户确认。
 
 例如新增素材制作分支只需 `{"id":"draw","kind":"material","after":["search"]}`。只有状态变化时继续提交 id 和 status。阶段打卡次数保持原样。
 

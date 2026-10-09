@@ -1,0 +1,66 @@
+{
+  "format": "graphics-recipe/1",
+  "id": "shape-radial-repeat",
+  "canvas": [
+    120,
+    120
+  ],
+  "paths": [
+    {
+      "id": "seed",
+      "visible": false,
+      "closed": true,
+      "style": {
+        "fill": "568DF5",
+        "line": null
+      },
+      "commands": [
+        [
+          "M",
+          60,
+          56
+        ],
+        [
+          "C",
+          49,
+          43,
+          48,
+          25,
+          60,
+          18
+        ],
+        [
+          "C",
+          72,
+          25,
+          71,
+          43,
+          60,
+          56
+        ],
+        [
+          "Z"
+        ]
+      ]
+    }
+  ],
+  "curve_groups": [
+    {
+      "id": "petals",
+      "mode": "affine_repeat",
+      "source": "seed",
+      "count": 6,
+      "matrix_step": [
+        0.5000000000000001,
+        0.8660254037844386,
+        -0.8660254037844386,
+        0.5000000000000001,
+        81.9615242270663,
+        -21.96152422706632
+      ]
+    }
+  ],
+  "order": [
+    "petals"
+  ]
+}

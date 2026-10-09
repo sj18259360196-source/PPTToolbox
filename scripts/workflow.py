@@ -400,7 +400,17 @@ def _issue(project,s,kind,target):
             if 'source' in unit: include(under(project,unit['source']['asset']))
         notes=(page.get('plan') or page.get('review_plan') or {}).get('notes')
         if notes:context['production_notes']=notes
-        if kind in {'page_plan','source_review'}:include(under(project,page['reference']),True)
+        if kind == 'page_plan':
+            with Image.open(under(project,page['reference'])) as image:
+                if max(image.size) > 1600:
+                    image.thumbnail((1600,1600),Image.Resampling.LANCZOS)
+                    image.save(folder/'layout-overview.png',compress_level=3)
+                    include(folder/'layout-overview.png',True)
+                    context['overview_size']=list(image.size)
+                    context['coordinate_note']='Overview is for layout only. Region coordinates use reference_size, not overview pixels. Read original-size crops for uncertain details.'
+                    context['whole_page']=page['reference']
+                else:include(under(project,page['reference']),True)
+        if kind == 'source_review':include(under(project,page['reference']),True)
         if kind in {'region_objects','asset_material'}:
             region=next(r for r in page['plan']['regions'] if r['id']==target['region_id'])
             with Image.open(under(project,page['reference'])) as im:im.crop(region['bbox']).save(folder/'reference-crop.png')
@@ -420,6 +430,8 @@ def _issue(project,s,kind,target):
                 feedback=revision_feedback(project,s,page,region,folder,include)
                 if feedback:context['revision_feedback']=feedback
         if kind=='source_review':
+            from source_review_reuse import binding
+            context['source_binding'] = binding(project,s,page)
             if page.get('imported_slide') is not None:objs=page['imported_slide']['objects']
             else:objs=[o for r in page['plan']['regions'] for o in page['fragments'][r['id']]['objects']]
             context['text_and_tables']=[{'id':o['id'],'kind':o['kind'],'text':o.get('text'), 'runs':o.get('runs'),'paragraphs':o.get('paragraphs'),'rows':o.get('rows')} for o in walk_objects(objs) if o['kind'] in {'text','table'}]
@@ -565,6 +577,8 @@ def _public_task(project,s):
             'read_only_when_needed':[str((ROOT/f).resolve()) for f in p['references']],
             'suggested_tools':p['suggested_tools'], 'submission_constraints':p['context'].get('submission_constraints',{}), 'examples_file':str(folder/'response.examples.json') if (folder/'response.examples.json').exists() else None, 'context_chars':len(json.dumps(p['context'],ensure_ascii=False))})
     if task:
+        from view_strategy import strategy
+        if p['required_view_files']:result['task']['view_strategy']=strategy(project,p)
         result['submit_argv']=[sys.executable,str(ROOT/'toolbox.py'),'submit','--project',str(project.resolve()),'--response',result['task']['response_template']]
         result['next_argv']=[sys.executable,str(ROOT/'toolbox.py'),'next','--project',str(project.resolve())]
         if task['kind'] == 'review_full':
@@ -580,6 +594,8 @@ def _public_task(project,s):
             result['preview_alternative_argv']=[sys.executable,str(ROOT/'toolbox.py'),'preview','--project',str(project.resolve())]
             result['preview_note']='Optional LibreOffice pre-review. This does not satisfy or replace the Office gate.'
     if s.get('run'):result['run_directory']=str((project/s['run']['dir']).resolve())
+    retained=[page['id'] for page in s['pages'] if page.get('source_review_reuse') and (page.get('source_review') or {}).get('status')=='passed']
+    if retained:result['retained_source_reviews']={'slide_ids':retained,'scope':'Identical page content and dependencies; Office rendering and edit checks remain required.'}
     reuse=(s.get('run') or {}).get('reused_observations')
     if reuse:result['reused_observations']={'count':len(reuse['records']),'sources':reuse.get('sources'),
                                          'scope':reuse['scope']}
@@ -923,7 +939,10 @@ def submit(project:Path,response_path:Path|dict,expected_revision=None,*,lock_he
             s['run']['reviews'][key] = extra_ref
         for attachment in attachments:s['tracked_inputs'][attachment['file']]=attachment['sha256']
         kind=t['kind'];r=response['result']
-        if kind=='source_review':_page(s,t['target']['slide_id'])['source_review']={**rec,'status':r['status']}
+        if kind=='source_review':
+            reviewed_page=_page(s,t['target']['slide_id'])
+            reviewed_page['source_review']={**rec,'status':r['status']}
+            reviewed_page.pop('source_review_reuse',None)
         if kind in {'review_full','review_local','editable_behavior','reproducibility'}:s['run']['reviews'][t['target']['key']]=rec
         if kind in {'preview_full','preview_local'}:
             s['run']['preview']['reviews'][t['target']['key']]=rec
@@ -1077,6 +1096,8 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
                     if 'source' in unit:
                         rel=import_file(temp/unit['source']['asset'],project)
                         unit['source']['asset']=rel;s['tracked_inputs'][rel]=sha256(project/rel)
+                from source_review_reuse import retain
+                retain(project,s,old,new,canvas)
             _invalidate_run(s,reason);s.update(canvas=canvas,title=title,pages=pages)
         save(project,s,'scene_replaced',{'reason':reason});return brief(s)
 

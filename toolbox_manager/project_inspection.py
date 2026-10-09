@@ -29,10 +29,11 @@ def inspect(manager, args):
         for relative in files[offset:offset+limit]:
             path=under(project,relative)
             with Image.open(path) as im:size=list(im.size)
-            items.append({'path':str(path),'sha256':sha256(path),'size':size,'observation':'not_recorded',
+            items.append({'path':str(path),'sha256':sha256(path),'size':size,'file_bytes':path.stat().st_size,'observation':'not_recorded',
                           'detail_view_needed':max(size)>2048,
                           'view_hint':'Inspect native-size detail crops if the viewer downsizes this image.' if max(size)>2048 else None})
-        return {'identity':identity,'task_id':task['id'],'items':items,'total':len(files),
+        from view_strategy import strategy
+        return {'identity':identity,'task_id':task['id'],'view_strategy':strategy(project,packet),'items':items,'total':len(files),
                 'next_offset':offset+limit if offset+limit<len(files) else None,
                 'note':'Listing, thumbnails and truncated output do not record viewing. Submit only actually viewed files.'}
     if action!='scene':raise ValueError('Unknown action')

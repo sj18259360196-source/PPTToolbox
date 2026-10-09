@@ -17,6 +17,21 @@ def example():
     return json.loads((ROOT/'examples/graphics/native-tube.json').read_text('utf-8'))
 
 
+@pytest.mark.parametrize('query,identifier', [
+    ('软管 中心线 七层', 'EXP-164'),
+    ('金属 泵头 七色标', 'EXP-166'),
+    ('把手 透孔 复合路径', 'EXP-169'),
+    ('bbox 回装 坐标', 'EXP-170'),
+])
+def test_case_lessons_discoverable(query, identifier):
+    from rebuild_assistance import search
+    from experience_library import show
+    assert identifier in {r['id'] for r in search(query)['matches']}
+    detail = show(identifier)
+    assert detail['sources'][0]['source_id'] == 'S35'
+    assert detail['runtime_retested'] is False
+
+
 def test_straight_band_has_exact_width_offset_area():
     from shapely import Polygon
     commands, report = ribbon([['M', 10, 20], ['L', 110, 20]], 8, 3)

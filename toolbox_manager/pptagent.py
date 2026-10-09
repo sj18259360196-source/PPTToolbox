@@ -34,16 +34,18 @@ def _secret(data, decrypt=False):
 
 
 def config(manager):
+    from .pptagent_budget import DEFAULTS
     value = manager.store.get('pptagent_config', {})
     health = manager.store.get('pptagent_health', {})
     protocol = value.get('protocol') or ('chat' if value.get('endpoint') and not value['endpoint'].endswith('/responses') else 'responses')
-    return {'enabled':False, 'endpoint':'', 'model':'', 'revision':0, **value, 'protocol':protocol,
+    return {'enabled':False, 'endpoint':'', 'model':'', 'revision':0, **DEFAULTS, **value, 'protocol':protocol,
             'connection':health if health.get('revision')==value.get('revision') else {'status':'untested'},
             'key_saved':(manager.data/'pptagent/key.dpapi').is_file()}
 
 
 def save_config(manager, body):
-    if not isinstance(body,dict) or set(body)-{'enabled','endpoint','model','api_key','clear_key','revision','protocol'}:
+    from .pptagent_budget import DEFAULTS
+    if not isinstance(body,dict) or set(body)-({'enabled','endpoint','model','api_key','clear_key','revision','protocol'} | set(DEFAULTS)):
         raise ValueError('未知 PPTAgent 设置')
     if type(body.get('enabled')) is not bool or type(body.get('revision')) is not int:
         raise ValueError('无效 PPTAgent 配置')
@@ -66,6 +68,11 @@ def save_config(manager, body):
         previous = config(manager)
         if previous['revision'] != body['revision']:
             raise ValueError('设置已变化，请刷新后保存')
+        controls = {k: body.get(k, previous[k]) for k in DEFAULTS}
+        for key, value in controls.items():
+            lower, upper = (60, 86400) if key == 'summary_interval_seconds' else (1, 10000)
+            if type(value) is not int or not lower <= value <= upper:
+                raise ValueError('调用上限须为 1 至 10000 的整数，摘要间隔须为 60 至 86400 秒')
         keypath = manager.data/'pptagent/key.dpapi'
         if body.get('api_key'):
             key = body['api_key']
@@ -76,7 +83,7 @@ def save_config(manager, body):
             journal.atomic(keypath, base64.b64encode(encrypted).decode())
         elif body.get('clear_key'):
             keypath.unlink(missing_ok=True)
-        value = {'enabled': body['enabled'], 'endpoint':endpoint, 'model':model, 'protocol':protocol, 'revision': previous['revision']+1}
+        value = {'enabled': body['enabled'], 'endpoint':endpoint, 'model':model, 'protocol':protocol, 'revision': previous['revision']+1, **controls}
         manager.store.set('pptagent_config',value)
     return config(manager)
 
@@ -88,6 +95,8 @@ class NoRedirect(HTTPRedirectHandler):
 
 def request_json(manager, cfg, body, timeout=20):
     from . import pptagent_metrics as metrics
+    from .pptagent_budget import reserve_request
+    reserve_request(manager)
     ticket=metrics.start(manager,cfg)
     try:
         result=_request_json(manager,cfg,body,timeout)
@@ -156,6 +165,24 @@ def request_summary(manager, cfg, payload):
     return result
 
 
+def summary_signature(cfg, state):
+    """Only business changes trigger summaries, not file saves or observer timings."""
+    phase = state.get('phase') or {}
+    def unique(rows, fields):
+        return sorted({json.dumps({k: row[k] for k in fields if k in row}, sort_keys=True,
+                                  ensure_ascii=False) for row in rows})
+    business = {
+        'config': cfg['revision'], 'label': state.get('label'), 'run_id': state.get('run_id'),
+        'phase': {k: phase[k] for k in ('stage', 'status', 'result_summary', 'next_action', 'blocker', 'artifacts') if k in phase},
+        'calls': unique(state.get('activity', {}).get('calls', [])[-10:],
+                        ('tool', 'status', 'task_id', 'error_code', 'reason_code', 'message', 'recovery')),
+        'issues': unique([i for i in state.get('activity', {}).get('issues', []) if i.get('state') == 'open'][-10:],
+                         ('tool', 'status', 'task_id', 'error_code', 'message', 'state')),
+        'files': sorted({f['path'] for f in state.get('files', [])}),
+    }
+    return hashlib.sha256(json.dumps(business, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
 class Worker:
     def __init__(self,manager):
         self.manager=manager; self.pending={}; self.seen={}; self.lock=threading.Lock(); self.stop_event=threading.Event()
@@ -173,16 +200,29 @@ class Worker:
     def offer(self,key,state):
         cfg=config(self.manager)
         if not cfg['enabled']:return
-        signature=hashlib.sha256(json.dumps([cfg['revision'],state.get('phase'),state.get('activity'),state.get('files')],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        signature=summary_signature(cfg,state)
+        from .pptagent_budget import summary_gate
+        gate=summary_gate(self.manager,key,signature)
         with self.lock:
+            if gate.get('reason')=='already_attempted':
+                if key in self.pending and self.pending[key][1]==signature:
+                    self.pending.pop(key,None)
+                return
             if self.seen.get(key)==signature:return
-            if key in self.pending and self.pending[key][1]==signature:return
-            self.pending[key]=(state.get('sequence'),signature,time.monotonic()+2)
+            due=time.monotonic()+max(2,(gate.get('retry_at') or 0)-time.time())
+            if key in self.pending and self.pending[key][1]==signature:
+                # Refresh sequence without restarting the debounce for mtime-only updates.
+                due=self.pending[key][2]
+            self.pending[key]=(state.get('sequence'),signature,due)
 
     def process(self,key,sequence,signature):
         from .project_hub import entry,recommendations
         root,_,_=entry(self.manager,key); state=journal.load(root); cfg=config(self.manager)
-        if not cfg['enabled'] or state.get('sequence')!=sequence:return
+        if not cfg['enabled']:return
+        if state.get('sequence')!=sequence:
+            self.offer(key,state)
+            return
+        signature=summary_signature(cfg,state)
         calls=state.get('activity',{}).get('calls',[])[-10:]
         issues=[i for i in state.get('activity',{}).get('issues',[]) if i.get('state')=='open'][-10:]
         evidence=[i['evidence_id'] for i in issues]+[c['evidence_id'] for c in calls]+[c['checkpoint_id'] for c in state.get('checkpoints',[])[-5:]]
@@ -193,6 +233,14 @@ class Worker:
         payload={'project':state['label'],'phase':state.get('phase'),'calls':calls,'issues':issues,
                  'files':[f['path'] for f in state.get('files',[])[:20]],'evidence_ids':evidence,
                  'recommendations':[{'id':r['id'],'title':r['title'],'trigger':r['trigger']} for r in candidates]}
+        from .pptagent_budget import summary_gate, summary_outcome, RateLimited
+        gate=summary_gate(self.manager,key,signature,reserve=True)
+        if not gate['allowed']:
+            if gate.get('retry_at'):
+                with self.lock:
+                    self.pending[key]=(sequence,signature,time.monotonic()+max(2,gate['retry_at']-time.time()))
+            return
+        with self.lock:self.seen[key]=signature
         try:
             from . import pptagent_metrics as metrics
             with metrics.scope(project=key,kind='summary'):
@@ -202,12 +250,24 @@ class Worker:
             # Do not persist provider response bodies or credentials in project records.
             summary={**state.get('summary',{}),'status':'unavailable','error':type(exc).__name__,
                      'message':'PPTAgent 整理暂不可用，本地记录继续更新','at':journal.now()}
-        if self.stop_event.is_set() or config(self.manager)['revision']!=cfg['revision']:return
+            if isinstance(exc,RateLimited):
+                summary.update(status='rate_limited',message=str(exc))
+                summary_outcome(self.manager,key,signature,'rate_limited')
+                with self.lock:
+                    self.seen.pop(key,None)
+                    self.pending[key]=(sequence,signature,time.monotonic()+max(2,exc.retry_at-time.time()))
+        if self.stop_event.is_set() or config(self.manager)['revision']!=cfg['revision']:
+            summary_outcome(self.manager,key,signature,'discarded')
+            return
         self.manager.store.set('pptagent_health',{'revision':cfg['revision'],'status':summary['status'],'at':summary['at'],
                                                 'tools_verified':cfg.get('connection',{}).get('tools_verified',False)})
-        saved=journal.update(root,{'summary':summary},'pptagent.summary',expected_sequence=sequence)
+        latest=journal.load(root)
+        expected=latest['sequence'] if summary_signature(cfg,latest)==signature else sequence
+        saved=journal.update(root,{'summary':summary},'pptagent.summary',expected_sequence=expected)
+        summary_outcome(self.manager,key,signature,'discarded' if saved.get('discarded') else summary['status'])
         if not saved.get('discarded'):
-            self.seen[key]=signature
+            if summary['status']!='rate_limited':
+                self.seen[key]=signature
             if summary['status']=='ready':
                 metrics.effect(self.manager,key,'summaries_saved')
                 metrics.effect(self.manager,key,'evidence_reviewed',len(set(summary['evidence_ids'])))

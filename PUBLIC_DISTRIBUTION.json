@@ -1,4 +1,5 @@
 {
   "format": "ppttoolbox-public-source/1",
-  "private_experience_included": false
+  "private_experience_included": false,
+  "builtin_method_count": 29
 }

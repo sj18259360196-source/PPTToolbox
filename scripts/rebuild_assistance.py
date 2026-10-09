@@ -95,6 +95,7 @@ ICON_REUSE_GUIDANCE = {
 def production_guidance(kind):
     """Always-available advice, independent of permission to search experience."""
     result={}
+    result['visual_context']='按任务返回的 view_strategy 选择整页或局部。整页理解布局，原始像素局部核对文字、轮廓和连线。当前上下文中已查看的同任务同哈希图片无需重复打开；发现跨区问题可扩大范围。对话变长时保存发现，从项目状态和当前任务接续，只读取必要图片。'
     if kind in {'page_plan','region_objects','asset_material'}:
         result['editable_icons']=ICON_REUSE_GUIDANCE
         result['judgement']='先判断页面重点、必做分区、编辑深度与不确定处，自行安排制作顺序和工具组合。用现有 notes 或 source_notes 简记选择依据，不设固定权重，不为每个对象增加分析任务。'

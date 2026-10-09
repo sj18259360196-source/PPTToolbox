@@ -1,4 +1,3 @@
-import json
 import copy
 from pathlib import Path
 import pytest
@@ -6,32 +5,6 @@ from scripts.experience_library import load_library, audit, show
 from scripts.experience_management import call, export_library, revision
 
 ROOT = Path(__file__).resolve().parents[1]
-
-@pytest.fixture(scope='session', autouse=True)
-def synthetic_library(tmp_path_factory):
-    global ROOT
-    import shutil, hashlib
-    original = ROOT
-    ROOT = tmp_path_factory.mktemp('experience-source')/'library'
-    shutil.copytree(original, ROOT, ignore=shutil.ignore_patterns('.git', '.tmp', 'dist', '__pycache__', '.pytest_cache'))
-    raw = 'Synthetic source evidence.\nSecond source line.\n'.encode('utf-8')
-    source = ROOT/'assets/experience/sources/fixture.txt'
-    source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_bytes(raw)
-    metadata = {'source_id':'S01','topic':'Synthetic fixture','relative_path':'sources/fixture',
-                'sha256':hashlib.sha256(raw).hexdigest(),'byte_count':len(raw),'line_count':2}
-    evidence = [{'source_id':'S01','line_start':n,'line_end':n,'excerpt':text,'reported_state':'recorded_constraint'}
-                for n,text in enumerate(raw.decode().splitlines(),1)]
-    row = {'id':'EXP-001','title':'Synthetic method','trigger':'Synthetic input','category':'scope',
-           'kind':'general_rule','origin':'source_synthesis','actions':['Inspect input'],
-           'verification':['Check output'],'constraints':['Synthetic only'],'tags':[],
-           'tools':['manual.analysis'],'manual':'references/analysis-and-planning.md',
-           'evidence_level':'retrospective_only','runtime_retested_in_this_delivery':False,'evidence':evidence}
-    (ROOT/'assets/experience/knowledge/sources.json').write_text(json.dumps([metadata]),encoding='utf-8')
-    (ROOT/'assets/experience/knowledge/experience-ledger.jsonl').write_text(json.dumps(row)+'\n',encoding='utf-8')
-    yield
-    ROOT = original
-
 
 
 def token(external):

@@ -38,7 +38,7 @@
       "id": "native_illustration_plan",
       "title": "原生插画先拆物品与材质",
       "description": "复杂原生插画开始前使用，形成可核对的物品、材质层与遮挡方案。",
-      "body": "遇到复杂原生插画时，先用experience.search查询物品和材质，并用experience.show读取本机相关经验。看整页后固定插画区和文字位置。列出每个物品的识别轮廓、主要部件和前后关系，再给透明面、厚边、反光、阴影安排独立层。先看大形与实际页面尺寸的辨识度，再补重复细节。保持卡片、物品、部件分组，文字使用原生文本。记录可核查的判断依据与取舍。",
+      "body": "遇到复杂原生插画时，先用experience.search查询物品和材质，并用experience.show读取EXP-162、EXP-163。看整页后固定插画区和文字位置。列出每个物品的识别轮廓、主要部件和前后关系，再给透明面、厚边、反光、阴影安排独立层。先看大形与实际页面尺寸的辨识度，再补重复细节。保持卡片、物品、部件分组，文字使用原生文本。记录可核查的判断依据与取舍。",
       "tools": [
         "experience.search",
         "experience.show",
@@ -49,7 +49,7 @@
       "id": "native_illustration_tube",
       "title": "共用中心线绘制多层软管",
       "description": "弯管或连续带状高光使用，避免各层曲线走向漂移。",
-      "body": "绘制软管时先读取本机相关经验，再调用graphics_inspect检查capabilities和schema。返回surface_layers时，使用illustration_example作为结构示例，按参考修改隐藏中心线与各层width、offset、style。先graphics_preview，检查后再经graphics_compile写入当前已授权项目。检查零长段、紧弯、自交、正负法向和独立管口。未发现该能力时沿用当前支持的原生路径合同生成层，不提交新字段、不自动升级。返回的objects按当前区域局部坐标回装，Office导出后检查实际透明叠色。",
+      "body": "绘制软管时先读取EXP-164，再调用graphics_inspect检查capabilities和schema。返回surface_layers时，使用illustration_example作为结构示例，按参考修改隐藏中心线与各层width、offset、style。先graphics_preview，检查后再经graphics_compile写入当前已授权项目。检查零长段、紧弯、自交、正负法向和独立管口。未发现该能力时沿用当前支持的原生路径合同生成层，不提交新字段、不自动升级。返回的objects按当前区域局部坐标回装，Office导出后检查实际透明叠色。",
       "tools": [
         "experience.show",
         "manual.geometry"
@@ -59,7 +59,7 @@
       "id": "native_illustration_material",
       "title": "透明材质、透孔与金属反光",
       "description": "包装、泵瓶、把手与水珠使用，区分表面和几何结构。",
-      "body": "处理透明容器或金属零件时读取本机相关经验。透明面、真实孔洞和镜面反光分别建对象；alpha相乘后检查可见度。金属先建立相邻明暗带，再叠局部亮边，手工多色标必须符合当前schema。复合路径孔洞用相反绕向，在目标背景和移动后核对。缩回页面尺寸检查，保留原生层及所属部件分组。",
+      "body": "处理透明容器或金属零件时读取EXP-165至EXP-169中的相关条目。透明面、真实孔洞和镜面反光分别建对象；alpha相乘后检查可见度。金属先建立相邻明暗带，再叠局部亮边，手工多色标必须符合当前schema。复合路径孔洞用相反绕向，在目标背景和移动后核对。缩回页面尺寸检查，保留原生层及所属部件分组。",
       "tools": [
         "experience.show",
         "manual.geometry",
@@ -70,7 +70,7 @@
       "id": "native_illustration_submit",
       "title": "原生插画回装与字段核对",
       "description": "region_objects提交前使用，处理局部坐标和bbox合同。",
-      "body": "回装原生插画时读取本机相关经验和当前任务schema。配方与区域使用同一局部裁图坐标，shape/text使用xywh，路径直接使用命令坐标，font_size_pt和line_width_pt保持点值。只清理当前合同不支持的字段。调用当前rebuild_validate_response预检后，用新读取的context_id、task_id、token提交，return_next=true；accepted_task返回后不重放。整卡和物品分组分别保留，按后到前检查遮挡。",
+      "body": "回装原生插画时读取EXP-170和当前任务schema。配方与区域使用同一局部裁图坐标，shape/text使用xywh，路径直接使用命令坐标，font_size_pt和line_width_pt保持点值。只清理当前合同不支持的字段。调用当前rebuild_validate_response预检后，用新读取的context_id、task_id、token提交，return_next=true；accepted_task返回后不重放。整卡和物品分组分别保留，按后到前检查遮挡。",
       "tools": [
         "experience.show",
         "manual.workflow",
@@ -81,13 +81,109 @@
       "id": "native_illustration_verify",
       "title": "原生插画编辑与复现检查",
       "description": "候选完成后使用，形成同版本的视觉、编辑和复现证据。",
-      "body": "验证原生插画时读取本机相关经验。全页与局部对照分别检查；字体小样不代替插画审查。通过当前toolbox_describe取得office.edit-readback、office.group-roundtrip、pptx.build和office.render合同。在副本改长文字和材质部件颜色，保存关闭重开读回；整组平移和反向恢复独立记录。从持久scene重建并实际Office导出。分别报告原生结构、真实编辑、视觉和复现，未执行项写明；不自动提交视觉passed。",
+      "body": "验证原生插画时读取EXP-171至EXP-173。全页与局部对照分别检查；字体小样不代替插画审查。通过当前toolbox_describe取得office.edit-readback、office.group-roundtrip、pptx.build和office.render合同。在副本改长文字和材质部件颜色，保存关闭重开读回；整组平移和反向恢复独立记录。从持久scene重建并实际Office导出。分别报告原生结构、真实编辑、视觉和复现，未执行项写明；不自动提交视觉passed。",
       "tools": [
         "experience.show",
         "office.edit-readback",
         "office.group-roundtrip",
         "pptx.build",
         "office.render"
+      ]
+    },
+    {
+      "id": "native_illustration_complexity",
+      "title": "检查插画复杂度与表达选择",
+      "description": "原生插画生成后或节点编辑困难时使用。",
+      "body": "先读EXP-174与EXP-179，按参考判断等宽线、变宽面、中心线和共享边。调用graphics_analyze，输入当前原生objects；检查counts、most_complex及warnings。先核对实际页面尺寸中的主轮廓，再决定是否减少纹理。阈值只提示复查，不自动简化或提交视觉通过。",
+      "tools": [
+        "experience.show",
+        "graphics.analyze"
+      ]
+    },
+    {
+      "id": "native_illustration_material_recipe",
+      "title": "生成水珠与旋转端面草稿",
+      "description": "需要原生水珠、管口或椭圆端面时使用。",
+      "body": "先读EXP-175与EXP-176，调用graphics_inspect发现material_presets。使用graphics_material_recipe，提供preset、id、box与canvas，按当前坐标补points_per_unit及rotation。保留返回recipe与roles，按参考修改轮廓和光照侧，再graphics_preview与graphics_compile。此配方是新的参数化草稿，提交时将材质部件归入所属物品分组，并检查实际Office。",
+      "tools": [
+        "experience.show",
+        "graphics.material_recipe",
+        "graphics.analyze"
+      ]
+    },
+    {
+      "id": "native_illustration_sources",
+      "title": "核对绘图依赖与复现资产",
+      "description": "插画交付或准备清理临时目录前使用。",
+      "body": "先读EXP-178，列出当前项目相对路径的generator、helper、recipe、schema、reference，可附预期sha256。调用graphics_audit_sources并处理missing、hash_mismatch和temporary。工具仅读取清单文件，无法发现遗漏的全部依赖；检查生成器的导入和资源引用后补齐清单。持久资产保存后再验证，历史通过记录不能替代此次复现。",
+      "tools": [
+        "experience.show",
+        "graphics.audit_sources"
+      ]
+    },
+    {
+      "id": "native_illustration_transparency",
+      "title": "核对透明叠色与跨格式预览",
+      "description": "透明容器、孔洞、阴影或SVG预览不一致时使用。",
+      "body": "先读EXP-177与EXP-180，调用graphics_analyze定位compound_path、composed_alpha和preview_shadow_parity。复合路径可能是纹理或孔，不按数量自动判断。分别查看白底、深色底和目标背景，再核对实际Office导出。JSON与配方保持为绘图来源，预览SVG中的滤镜或引用不作为原生导入兼容性证明。",
+      "tools": [
+        "experience.show",
+        "graphics.analyze",
+        "office.render"
+      ]
+    },
+    {
+      "id": "shape_representation",
+      "title": "异形先定表达与重复关系",
+      "description": "关键轮廓开始绘制时使用",
+      "body": "先读 EXP-181 至 EXP-185 和 references/shape-tools.md。查看整页及关键局部，在 page_plan.notes 简记轮廓、孔、重复与分组。调用 graphics_construct，以 rounded_polygon 的 points 和 corner_inset 或 radial_repeat 的母形 commands、center、count 生成现有配方。退让距离不等于精确圆弧半径。共边复用 edges/faces。graphics_preview 后在授权项目 graphics_compile，按任务回装，再看真实 Office。",
+      "tools": [
+        "experience.show",
+        "manual.geometry"
+      ]
+    },
+    {
+      "id": "shape_overlap_boolean",
+      "title": "透明叠层与布尔操作分别验证",
+      "description": "遇到重叠或布尔示例时使用",
+      "body": "先读 EXP-186、EXP-188 和 references/shape-tools.md。透明重叠保留独立对象、层序及色标 alpha。布尔练习建立合适的纯色不透明顶层操作数，graphics_boolean_trials 提供有序 inputs、slide、region、prefix、reason。返回请求补当前 context_id，通过 rebuild_patch 执行独立副本。反向差集核对次序，交集核对透镜，fragment 核对分片及并集覆盖。rebuild_compare 后看图再决定 adopt，不自动改材质或增加预算。",
+      "tools": [
+        "experience.show",
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "shape_coordinate_contract",
+      "title": "异形回装核对坐标单位",
+      "description": "区域对象准备提交时使用",
+      "body": "读取EXP-187。明确页面参考像素、区域局部坐标、归一化mask与pt参数。普通路径端点与控制点共同变换，照片归一化mask不减区域偏移。保持当前schema支持的字段，先rebuild_validate_response，再携带当前context_id、task_id、token提交，return_next=true。accepted_task返回后不重放。",
+      "tools": [
+        "experience.show",
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "shape_overlay_revision",
+      "title": "重叠图定位轮廓差异",
+      "description": "异形局部返修时使用",
+      "body": "先读 EXP-183、EXP-189 和 references/shape-tools.md。同尺度局部提供明确的二值对象掩膜与排除区域，graphics_compare_contours 返回叠图、原始轮廓距离、质心位移和未匹配区域。先核对掩膜归属，保留原始误差；指标不能代替看图。受限点修改用 rebuild_patch 的 native.nodes，提供 expected、delta、max_displacement；保护已匹配端点、孔洞、组归属及范围外对象。随后 rebuild_compare 并查看新 Office 渲染。",
+      "tools": [
+        "experience.show",
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "shape_operation_evidence",
+      "title": "图形训练按操作留下证据",
+      "description": "组合、节点、渐变或布尔训练收尾时使用",
+      "body": "先读 EXP-190 和 references/shape-tools.md。graphics_read_properties 输入候选路径、哈希及 slide/id，在独立副本保存重开，核对填充、色标 alpha、分组及节点。unknown 不填通过，源哈希不变。节点修改另走 native.nodes，布尔另走 native.topology。属性读回不能代替实际修改测试；COM 读回、结构、视觉和 scene 复现分别记录。",
+      "tools": [
+        "experience.show",
+        "office.edit-readback",
+        "office.group-roundtrip",
+        "pptx.build",
+        "office.render",
+        "pptx.rebuild-diff"
       ]
     }
   ]

@@ -3,13 +3,13 @@ name: ppt-reference-rebuild
 description: 将PPT设计图片稿或页面截图重建为可编辑PPTX。通过统一工具箱领取局部任务、构建、PowerPoint渲染、左右对照、审查及续作；适用于单页、多页、素材替换和局部返修，不用于无参考图的自由设计。
 metadata:
   compatibility: 可执行本地脚本并查看图像的Agent；Python 3.10+。目标软件验证需要Windows桌面PowerPoint及PowerShell；视觉、生图和参考图编辑由宿主提供。
-  version: "1.22.0"
+  version: "1.23.0"
   language: "zh-CN"
   source-records: "31"
   guidance-revision: "2026-10-02-call-recovery"
 ---
 # 设计稿复刻工具箱
-保留原文、页序、布局与关系。可重绘的图标、标志和插画保持原生可编辑；轮廓失真时返修路径和组合。照片、纹理及连续色调画作按[唯一素材决策](references/asset-policy.md)使用独立图片，不能把正文、数值与关系一起图片化。
+保留原文、页序、布局与关系。可重绘的图标、标志和插画保持原生可编辑；轮廓失真时返修路径和组合。照片、纹理及连续色调画作按[唯一素材决策](references/asset-policy.md)使用独立图片，不能把正文、数值与关系一起图片化。按 view_strategy 选择范围，整页理解布局，高清局部制作和找错。同任务同哈希已在当前上下文中查看时直接继续，提交优先 return_next=true。对话变长时保存发现，从项目状态接续。具体见[多页制作与修订](references/multipage-efficiency.md)。
 开始制作前先看整页，自行判断视觉重点、必做分区、编辑深度与不确定处，再安排制作顺序和工具组合。在现有 page_plan.notes 中简记重点及取舍，分区 summary 写目标；不增加固定评分、逐对象分析表或新的审批步骤。regions 的顺序仍表示背景到前景。每轮对照后重新判断剩余问题，具体见[分析与制作判断](references/analysis-and-planning.md)。
 
 先完成整体布局及关键图标、形状、组件、背景。图标、标志、图表与可分解插画使用原生形状、路径和语义组合，不得直接截图替代。照片、纹理或必须保留连续色调的画作需要声明 raster_content、raster_reason 及逐项 asset_decisions，再接受实际视觉检查。工具箱约束输出并提供绘制工具，具体重绘仍由 Agent 完成。字体默认选择风格和字重相近的可用字体，保留可编辑文本，重点检查原文完整、重叠、溢出、异常换行、间距和对齐。用户明确要求原字体或特定字形时再做专项匹配。
@@ -88,3 +88,5 @@ metadata:
 Before redrawing, call `icons_search` and `icons_inspect`; check meaning and appearance. Never replace scientific symbols merely because silhouettes match. Use `icons_fragment` in region_objects or `icons_place` for authorized project copies.
 For missing icons, author semantic groups of native shapes and paths in the current `region_objects` result. For a small detailed contour, segment one semantic part into an opaque black/white mask and use `icons_trace_fragment`; inspect its paths, holes and actual Office rendering. This route does not write to the global library. `icons_redraw_submit`, `icons_trace` and `icons_model_generate` write to the global library and are owner-only; do not start a global-library redraw job for project-local reconstruction. Drafts, library review and real Office render/edit/readback are separate gates; never invent approval. Read [icon contracts](references/icon-library.md).
 Repeated curves, shared boundaries, fitted gradients and linked copies use `graphics_inspect`, `graphics_preview`, `graphics_compile` and `graphics_regenerate`. Regeneration requires the prior version and refuses native edits. Relations live in the recipe, not PowerPoint. Read [graphics contracts](references/graphics-construction.md) and retain real Office/visual verification.
+
+For editable illustrations, read [material construction and diagnostics](references/native-illustration.md). Use `graphics_analyze` for command/subpath complexity and transparency warnings, `graphics_material_recipe` for editable droplet or rotated-end drafts, and `graphics_audit_sources` for explicit project dependencies before delivery. Inspect current capabilities first; drafts and structural diagnostics never certify visual quality. Search EXP-174 through EXP-180 for representation choice, lighting direction, and persistence guidance.

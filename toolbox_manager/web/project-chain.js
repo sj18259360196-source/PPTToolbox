@@ -70,7 +70,8 @@ export async function mountWorkbench(main){
   const sync=fetchError||s.observer_error||s.manifest_warning;
   const time=s.updated_at?new Date(s.updated_at).toLocaleString():'尚未成功读取';
   $('chain-alerts').innerHTML=(sync?`<div class="chain-incident error" role="alert"><strong>项目状态暂未更新</strong><p>${esc(sync)}</p><small>最近可用记录 ${esc(time)} · 当前显示保留内容，恢复后自动更新</small></div>`:'')+
-   (previewError?`<div class="chain-incident warning"><strong>当前 PPT 预览待更新</strong><p>${esc(previewError)}</p></div>`:'')+
+     (previewError?`<div class="chain-incident warning"><strong>当前 PPT 预览待更新</strong><p>${esc(previewError)}</p></div>`:'')+
+     (s.activity?.visual?.diagnostic_count?`<div class="chain-incident error" role="alert"><strong>图片统计或当前看图文件存在异常</strong><p>${esc(s.activity.visual.diagnostic_count)} 项需要核对，详情见运行路径中的图片使用统计。</p><button data-flow-jump="flow">查看图片异常</button></div>`:'')+
    issues.map((i,index)=>`<details class="chain-incident ${esc(i.severity)}" ${index===0?'open':''}><summary>${esc(i.title)}<span>${esc(i.tool)}</span></summary><p>${esc(i.message)}</p><p>${esc(i.next_action)}</p><div class="actions"><small>${esc(new Date(i.at).toLocaleString())} · ${esc(i.evidence_id)}</small><button data-show-call="${esc(i.id)}">查看调用</button><button data-ack-issue="${esc(i.id)}" title="仅收起提示，保留异常记录，不代表任务已成功">已核对，收起提示</button></div></details>`).join('')+
    (s.phase?.artifacts?.some(f=>!f.exists)?'<div class="chain-incident error"><strong>交付记录中的文件缺失</strong><p>请核对项目文件夹。交付完成状态暂不确认。</p><button data-flow-jump="files">查看项目文件</button></div>':'')+
    (s.activity?.file_scan_limited?'<div class="chain-incident warning">文件数量超过本次扫描范围，未列出的文件需要到项目文件夹核对。</div>':'');
@@ -80,11 +81,12 @@ export async function mountWorkbench(main){
   const rows=new Map((current?.activity?.calls||[]).map(c=>[c.id,c]));
   for(const issue of current?.activity?.issues||[])rows.set(issue.id,{...rows.get(issue.id),...issue});
   const calls=[...rows.values()].filter(c=>!callFilter||callFilter.includes(c.id)).reverse();
-  $('chain-calls').innerHTML=(callFilter?'<button data-all-calls>显示全部调用</button>':'')+(calls.length?calls.map(c=>`<details class="chain-call ${/failed|unknown|invalid|denied/.test(c.status)?'attention':''}"><summary><strong>${esc(c.tool)}</strong><span>${esc(callLabels[c.status]||c.status)}</span></summary><p>${esc(c.message||'没有补充错误信息')}</p><p>${esc(c.next_action||'')}</p><small>${esc(c.task_id||'')} · ${esc(new Date(c.at).toLocaleString())} · ${esc(c.evidence_id)}</small>${c.state==='acknowledged'?'<p class="small muted">已由用户收起提示，原始异常记录保留。</p>':''}<p class="small muted">调用编号 ${esc(c.id)}</p></details>`).join(''):'<p class="muted">尚无可关联的调用记录。阶段登记不代表工具已经运行。</p>');
+  $('chain-calls').innerHTML=(callFilter?'<button data-all-calls>显示全部调用</button>':'')+(calls.length?calls.map(c=>`<details class="chain-call ${c.state!=='resolved'&&/failed|unknown|invalid|denied/.test(c.status)?'attention':''}"><summary><strong>${esc(c.tool)}</strong><span>${esc(c.state==='resolved'?'已恢复 · 历史记录':(callLabels[c.status]||c.status))}</span></summary><p>${esc(c.message||'没有补充错误信息')}</p><p>${esc(c.state==='resolved'?`${c.resolution_reason||'成功重试已确认'} · ${c.resolved_evidence_id||c.resolved_by} · ${new Date(c.resolved_at).toLocaleString()}`:(c.next_action||''))}</p><small>${esc(c.task_id||'')} · ${esc(new Date(c.at).toLocaleString())} · ${esc(c.evidence_id)}</small>${c.state==='acknowledged'?'<p class="small muted">已由用户收起提示，原始异常记录保留。</p>':''}<p class="small muted">调用编号 ${esc(c.id)}</p></details>`).join(''):'<p class="muted">尚无可关联的调用记录。阶段登记不代表工具已经运行。</p>');
  }
  function flowAction(action,node){
   if(action==='notes'){editNotes();return;}
   if(action==='icons'||action==='graphics'){location.hash=`#/${action}?project=${encodeURIComponent(key)}`;return;}
+  if(action==='flow'){selectTab('flow');$('project-flow').scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(action==='calls')selectTab('records');else if(action==='files')selectTab('files');
   const target=$(action==='calls'?'chain-calls':action==='preview'?'chain-preview':'chain-files');
   if(action==='calls'){callFilter=node?.call_ids||null;renderCalls();target.closest('details').open=true;}

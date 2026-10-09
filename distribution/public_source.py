@@ -7,9 +7,11 @@ import json
 from pathlib import Path
 import re
 import shutil
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-TREES = ['scripts','toolbox','toolbox_manager','distribution','references','manager_docs','examples',
+sys.path[:0]=[str(ROOT),str(ROOT/'scripts')]
+TREES = ['scripts','skills','toolbox','toolbox_manager','distribution','references','manager_docs','examples',
          'assets/schemas','assets/templates','assets/graphics','assets/icon-packs','tests','.codex-plugin','.github']
 ROOT_FILES = ['README.md','LICENSE','THIRD_PARTY_NOTICES.md','SECURITY.md','CONTRIBUTING.md',
               '.gitignore','.gitattributes','release.json','MANAGER.json','SKILL.md',
@@ -30,6 +32,14 @@ PUBLIC_TESTS = {'test_software_updates.py','test_version_release.py','test_relea
                 'test_project_flow.py','test_illustration_fallback.py','test_workflow.py',
                 'test_project_chain.py','test_installed_upgrade.py','test_manager.py','test_tools.py',
                 'project_flow.test.mjs','projects_model.test.mjs','test_public_release.py'}
+PUBLIC_TESTS.update({'test_shape_tools.py','test_shape_parameters.py','test_native_capabilities.py',
+    'test_illustration_tools.py','test_native_illustration.py','test_graphics_construction.py',
+    'test_payload_transport.py','test_pptagent_budget.py','test_visual_context_efficiency.py',
+    'test_flow_relations.py','test_review_region_retention.py','test_element_scope.py',
+    'test_managed_rebuild.py','test_phase1.py','test_local_workflow.py','phase01_driver.py',
+    'test_pptagent_responses.py','pptagent_budget.test.mjs','test_stability_recovery.py',
+    'test_experience_management.py','test_pptagent_metrics.py','test_project_list_preferences.py',
+    'test_project_thumbnails.py','test_setup_wizard.py','test_update_process_detection.py'})
 SECRET = re.compile(r'(?:sk-[A-Za-z0-9_-]{24,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
 
 
@@ -81,7 +91,15 @@ def audit(root):
         files[relative]=hashlib.sha256(raw).hexdigest()
     sources=root/'assets/experience/knowledge/sources.json'
     if sources.exists() and json.loads(sources.read_text('utf-8')):
-        issues.append({'file':sources.relative_to(root).as_posix(),'reason':'private experience sources'})
+        rows=json.loads(sources.read_text('utf-8'))
+        # Only the explicitly curated method source may be publicly bundled.
+        if any(row.get('source_id')!='S38' or row.get('document_type')!='bundled_method_guidance' for row in rows):
+            issues.append({'file':sources.relative_to(root).as_posix(),'reason':'private experience sources'})
+        else:
+            from scripts.experience_library import audit as knowledge_audit
+            checked=knowledge_audit(root=root)
+            if checked['status']!='passed':
+                issues.append({'file':sources.relative_to(root).as_posix(),'reason':'invalid default experience library','details':checked['issues']})
     return {'status':'passed' if not issues else 'failed','file_count':len(files),'issues':issues,'files':files}
 
 
@@ -108,6 +126,8 @@ def export(root,output):
     knowledge=output/'assets/experience/knowledge';knowledge.mkdir(parents=True)
     (knowledge/'sources.json').write_text('[]\n',encoding='utf-8')
     (knowledge/'experience-ledger.jsonl').write_text('',encoding='utf-8')
+    from distribution.builtin_experience import install_defaults
+    default_count=install_defaults(root,output)
     recipes=json.loads((root/'assets/experience/knowledge/command-recipes.json').read_text('utf-8'))
     (knowledge/'command-recipes.json').write_text(json.dumps(recipes,ensure_ascii=False,indent=2),encoding='utf-8')
     # A public source tree has no access to the author's historical field notes.
@@ -116,13 +136,13 @@ def export(root,output):
         if path.suffix=='.json':path.write_text('{}\n',encoding='utf-8')
         else:path.write_text('# 本地历史记录\n\n公开发行版不附带作者的项目反馈和历史验收记录。请参阅 [使用说明](../manager_docs/USER_GUIDE.md) 与 [发行说明](../manager_docs/CHANGELOG.md)。\n',encoding='utf-8')
     public_docs={
-        'references/experience-library.md':'# 经验检索\n\n公开发行版不带个人项目原文。用 experience.search 查找本机已导入或积累的经验，用 experience.show 查看具体方法，必要时通过 experience.source 核对原文。每次只读取与当前问题有关的少量条目。经验建议不授予项目权限，也不能替代当前 PPT 的验收。\n\n导入方式见 [来源经验库](../manager_docs/EXPERIENCE_LIBRARY.md)。\n',
+        'references/experience-library.md':'# 经验检索\n\n公开发行版随包提供 29 条通用绘图方法和 17 个指令模板，不带个人项目原文。用户已有修改与禁用设置优先。用 experience.search 查找本机已导入或积累的经验，用 experience.show 查看具体方法，必要时通过 experience.source 核对原文。每次只读取与当前问题有关的少量条目。经验建议不授予项目权限，也不能替代当前 PPT 的验收。\n\n导入方式见 [来源经验库](../manager_docs/EXPERIENCE_LIBRARY.md)。\n',
         'references/current-desktop.md':'# 当前桌面入口\n\n正式使用从开始菜单启动 PPT Toolbox。程序、管理数据和 PPT 项目分别保存，具体位置以当前 toolbox_context 返回的 instance 与 storage 为准。新电脑需要自行配置 Agent 和 API，不使用开发机的路径。\n\n软件更新和安装位置见 [桌面安装](../manager_docs/DESKTOP_INSTALLATION.md)。\n',
         'manager_docs/INSTALLATION_CONTRACT.md':'# 安装与升级约定\n\n升级沿用已有安装、管理数据与用户选定的项目目录。不能把源码预览或便携启动当作正式安装升级。安装先检查活动调用和写入锁，保留恢复备份；项目与授权不能随程序更新重建。\n\n完成后分别验证 UI、CLI 与 MCP 的程序和数据身份，保留已有项目、API 配置和用户指令。回滚先核对数据库兼容性。\n',
         'manager_docs/AGENT_INTEGRATION.md':'# Agent 接入\n\n在设置中配置制作 Agent 的 stdio MCP，核对程序与数据身份，再在实际客户端完成连接验证。已有同名服务先核对来源，其他配置保持原样。\n\n可选的驻留 PPTAgent 使用 Responses API，配置与制作 Agent 分开，参阅 [PPTAgent](PPTAGENT.md) 和 [桌面安装](DESKTOP_INSTALLATION.md)。\n',
     }
     for name,text in public_docs.items():(output/name).write_text(text,encoding='utf-8')
-    (output/'PUBLIC_DISTRIBUTION.json').write_text(json.dumps({'format':'ppttoolbox-public-source/1','private_experience_included':False},indent=2),encoding='utf-8')
+    (output/'PUBLIC_DISTRIBUTION.json').write_text(json.dumps({'format':'ppttoolbox-public-source/1','private_experience_included':False,'builtin_method_count':default_count},indent=2),encoding='utf-8')
     result=audit(output)
     result['normalized_files']=changes
     if result['issues']:

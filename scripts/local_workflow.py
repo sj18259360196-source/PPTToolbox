@@ -171,7 +171,7 @@ def patch(project, state, args, folder, record, policy):
         return topology_patch(scene_path, source, page, region, allowed, args, folder, record)
     prs, updated, index, touched = prepare(scene_path, source, args["slide"], allowed, args["changes"],
                                          calibration=bool(record.get("calibration_id")))
-    constrain([o for o in updated["slides"][index]["objects"] if o["id"] in touched], page, region)
+    constrain([o for o in walk_objects(updated["slides"][index]["objects"]) if o["id"] in touched], page, region)
     native_edit = any(c["op"] == "native.format" for c in args["changes"])
     if native_edit:
         from native_format import effect_margin
@@ -204,11 +204,22 @@ def patch(project, state, args, folder, record, policy):
     if raw_outside:
         raise ValueError("Surgical edit modified outside objects")
     range_edit=any(c["op"]=="text.range" for c in args["changes"])
-    native_options = {"native": True} if native_edit or range_edit else {}
+    node_edit=any(c['op']=='native.nodes' for c in args['changes'])
+    native_options = {"native": True} if native_edit or range_edit or node_edit else {}
     actual = office_roundtrip(folder/"patched-xml.pptx", folder/"candidate.pptx", folder/"readback.json", **native_options)
     office_roundtrip(folder/"baseline.pptx", folder/"baseline-office.pptx", folder/"baseline-readback.json", **native_options)
     build(new_scene, folder/"rebuild.pptx")
     expected = office_roundtrip(folder/"rebuild.pptx", folder/"rebuild-office.pptx", folder/"rebuild-readback.json", **native_options)
+    if node_edit:
+        from native_nodes import summary
+        a,b=summary(folder/'candidate.pptx'),summary(folder/'rebuild-office.pptx')
+        selected={f'{index+1}/{oid}' for oid in touched}
+        actual_nodes={k:v for k,v in a.items() if k in selected}
+        expected_nodes={k:v for k,v in b.items() if k in selected}
+        write_json(folder/'node-readback.json',{'actual':actual_nodes,'rebuild':expected_nodes,
+                   'equal':actual_nodes==expected_nodes,'operation':'OOXML node/control-point edit then actual Office save/reopen',
+                   'com_receipt':'readback.json','visual_review':'pending'})
+        if actual_nodes!=expected_nodes:raise ValueError('Saved node coordinates differ from independent rebuild')
     if range_edit:
         from native_text_range import validate_readback
         checked=validate_readback(args["changes"],read_json(folder/"baseline-readback.json"),

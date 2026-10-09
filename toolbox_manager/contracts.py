@@ -140,6 +140,13 @@ def schemas(root):
                   "result": {"anyOf": list(results.values())}}, ("project", "task_id", "token", "result"))
     submit["$defs"] = defs
     submit['properties']['return_next'] = BOOL
+    submit['properties']['result_file'] = STRING
+    submit['properties']['result_sha256'] = {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}
+    submit['required'].remove('result')
+    submit['oneOf'] = [
+        {'required': ['result'], 'not': {'anyOf': [{'required': ['result_file']}, {'required': ['result_sha256']}]}},
+        {'required': ['result_file', 'result_sha256'], 'not': {'required': ['result']}},
+    ]
     preflight = copy.deepcopy(submit)
     preflight['properties']['result'] = {'type': 'object'}
     contracts = {
@@ -188,6 +195,8 @@ def schemas(root):
     ops.append(TOPOLOGY)
     from scripts.native_capabilities import TEXT_RANGE
     ops.append(TEXT_RANGE)
+    from scripts.native_nodes import NODES
+    ops.append(NODES)
     common = {**project, "operation_id": opid}
     probe = obj({**common, "task_id": STRING, "base_revision": {"type": "integer", "minimum": 0},
                  "result": results["region_objects"], "office": BOOL},

@@ -85,6 +85,8 @@ def load(root:Path):
                 rec=run['preview'][key]
                 if sha256(under(root,rec['file']))!=rec['sha256']:
                     raise WorkflowError('artifact_changed','Current preview '+key+' changed outside the controller')
+    from source_review_reuse import verify
+    verify(root,s)
     return s
 
 
@@ -100,6 +102,8 @@ def save(root:Path, state:dict, event:str, detail=None):
            f'- 完整页数 {summary["pages_ready"]}/{summary["pages_total"]}',
            f'- 当前任务 {s.get("active_task",{}).get("id") if s.get("active_task") else "无"}', '',
            '接手后从 Skill 的 toolbox.py 执行 status 和 next，不从旧聊天重建状态。',
+           '按当前任务 view_strategy 取图。重复领取同一任务无需反复看同图；上下文丢失后补看必要图片。',
+           '整页理解布局，原始像素局部用于制作和找错；保存发现与修改范围后可换短对话接续。',
            '等待看图/素材/Office均不是构建失败；不修改状态文件，不批量填通过。']
     try:(root/'HANDOFF.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     except OSError:pass  # State already committed; a missing convenience summary is not lost state.

@@ -1,0 +1,114 @@
+{
+  "format": "graphics-recipe/1",
+  "id": "shape-alpha-overlap",
+  "canvas": [
+    120,
+    100
+  ],
+  "paths": [
+    {
+      "id": "rear",
+      "closed": true,
+      "style": {
+        "fill": "439BF5",
+        "line": null,
+        "fill_alpha": 0.8,
+        "gradient": {
+          "type": "linear",
+          "angle_deg": 90,
+          "stops": [
+            {
+              "position": 0,
+              "color": "439BF5",
+              "alpha": 1
+            },
+            {
+              "position": 1,
+              "color": "439BF5",
+              "alpha": 0.7
+            }
+          ]
+        }
+      },
+      "commands": [
+        [
+          "M",
+          15,
+          15
+        ],
+        [
+          "L",
+          65,
+          15
+        ],
+        [
+          "L",
+          65,
+          65
+        ],
+        [
+          "L",
+          15,
+          65
+        ],
+        [
+          "Z"
+        ]
+      ]
+    },
+    {
+      "id": "front",
+      "closed": true,
+      "style": {
+        "fill": "BF65E8",
+        "line": null,
+        "fill_alpha": 0.65,
+        "gradient": {
+          "type": "linear",
+          "angle_deg": 90,
+          "stops": [
+            {
+              "position": 0,
+              "color": "BF65E8",
+              "alpha": 1
+            },
+            {
+              "position": 1,
+              "color": "BF65E8",
+              "alpha": 0.7
+            }
+          ]
+        }
+      },
+      "commands": [
+        [
+          "M",
+          45,
+          35
+        ],
+        [
+          "L",
+          95,
+          35
+        ],
+        [
+          "L",
+          95,
+          85
+        ],
+        [
+          "L",
+          45,
+          85
+        ],
+        [
+          "Z"
+        ]
+      ]
+    }
+  ],
+  "order": [
+    "rear",
+    "front"
+  ]
+}
