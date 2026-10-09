@@ -1,4 +1,4 @@
-PPT Toolbox 1.21.1
+PPT Toolbox 1.26.7
 
 首次使用请运行 Setup.exe，选择程序、管理数据和项目目录。
 已有安装继续使用原位置，日常从开始菜单中的 PPT Toolbox 打开。
@@ -21,3 +21,6 @@ Office 制作与验收需要本机 PowerPoint。LibreOffice 预览不代替 Offi
 
 ZIP 用于明确选择的便携运行或开发验证，便携运行使用 --portable。
 扩展工具包单独管理，切换扩展不回退整套软件。
+
+1.26.7 少色插画入口
+在图形构造页读取并复制调用指南，或让 Agent 调用 graphics_illustration_guide。先看图判断，再按部件选择钢笔节点或选区转路径；参数与步骤由当前工具契约返回。升级后重连 MCP。

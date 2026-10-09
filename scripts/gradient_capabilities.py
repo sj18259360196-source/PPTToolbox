@@ -9,21 +9,9 @@ def preflight(project,args):
     from validate_scene import validate
     path=plain_path(project/args['scene'])
     if not path.is_relative_to(project): raise ValueError('Scene must be inside authorized project')
-    scene=read_json(path)
-    errors=validate(scene,path.parent)
-    references=[]
-    def scan(value):
-        if isinstance(value,dict):
-            for k,v in value.items():
-                if k in {'source_image','image','file','path','reference','source'} and isinstance(v,str):
-                    references.append({'field':k,'value':v,'base':str(path.parent),'resolved':str((path.parent/v).resolve())})
-                else: scan(v)
-        elif isinstance(value,list):
-            for v in value: scan(v)
-    scan(scene)
-    return {'status':'valid' if not errors else 'invalid','scene_sha256':sha256(path),
-            'base':str(path.parent),'errors':errors,'references':references,'mutated':False,
-            'next':'Submit through current managed scene import; this check is not authorization or visual approval'}
+    from scene_preflight import inspect
+    return inspect(path)
+
 
 def select_versions(project,args):
     from toolbox_manager.policy import plain_path

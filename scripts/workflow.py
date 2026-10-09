@@ -354,8 +354,8 @@ def _template(kind,context):
     return {**assertion,'files':[],'actions':[]}
 
 TASK_HELP={
- 'page_plan':('先看整页，判断视觉重点、必须完成的分区、编辑需求与难点，再选择制作顺序和素材方法。在 notes 简要说明重点及取舍，summary 写各区目标；无需固定权重或新增任务。重点区设 local_review，正文内容必须完整。bbox 为原图像素 xyxy；regions 仍按背景到前景排列，避免改变叠放顺序。',['references/analysis-and-planning.md','references/asset-policy.md'],[]),
- 'region_objects':('只重建当前区域。bbox为局部裁图像素xywh，路径/端点同样用局部像素；字号和线宽已经是pt。ID只写局部短名；程序补页/区前缀、编辑类型和单位换算。没有原始数据不得虚构。复杂插画先按物品与材质拆层，弯管可查 graphics.inspect 的 surface_layers 合同。',['references/direct-operations.md','references/analysis-and-planning.md','references/asset-policy.md','references/native-illustration.md'],['ops.components','ops.component','pptx.validate','asset.request','office.native','graphics.inspect']),
+ 'page_plan':('先看整页，判断视觉重点、必须完成的分区、编辑需求与难点，再选择制作顺序和素材方法。在 notes 简要说明重点及取舍，summary 写各区目标；无需固定权重或新增任务。少色分层插画先调用 graphics_illustration_guide 读取当前方法与参数，再调用 graphics_route_illustration，保留钢笔节点与选区路径两路线，在 notes 记录按部件选择的理由。重点区设 local_review，正文内容必须完整。bbox 为原图像素 xyxy；regions 仍按背景到前景排列，避免改变叠放顺序。',['references/analysis-and-planning.md','references/asset-policy.md','references/layered-illustration.md','references/illustration-agent-guide.md'],['graphics.illustration_guide']),
+ 'region_objects':('只重建当前区域。bbox为局部裁图像素xywh，路径/端点同样用局部像素；字号和线宽已经是pt。ID只写局部短名；程序补页/区前缀、编辑类型和单位换算。没有原始数据不得虚构。复杂插画先按物品与材质拆层，少色曲线先调用 graphics_illustration_guide，按实际观察选择钢笔或选区路径，孔洞变化和评价口径排名反转需复查，弯管可查 graphics.inspect 的 surface_layers 合同。',['references/direct-operations.md','references/analysis-and-planning.md','references/asset-policy.md','references/native-illustration.md'],['ops.components','ops.component','pptx.validate','asset.request','office.native','graphics.inspect','graphics.illustration_guide']),
  'source_review':('重新查看原图，逐项核对文字、数字、关系与分区遗漏。文件与转录一致不能替代此检查。此任务不是视觉成片验收。',['references/rendering-and-review.md'],[]),
  'asset_material':('调用宿主实际拥有的生图或授权素材工具，登记真实产物。需要透明时检查PNG的真实Alpha；纯色底可使用色键工具。不会由此Python控制器偷偷调用模型。',['references/asset-policy.md','references/assets-and-generation.md'],['host.image-generation','assets.chroma','assets.trim','assets.matte','ops.generation-prepare','ops.generation-ingest','ops.asset-layout']),
  'candidate':('用已给出的冻结scene与原图构建外部PPTX。必须保留对象ID及编辑深度；提交实际文件，控制器只导入/审查，不重新运行Python构建覆盖它。',['references/native-powerpoint.md','references/tool-runtime.md'],['office.native','pptx.inspect']),
@@ -1063,6 +1063,8 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
     with locked(project):
         s=load(project);text(reason,'reason')
         # References must remain byte-identical; changes are a new task/project, not a hidden edit.
+        from scene_preflight import require
+        require(scene_path)
         incoming=read_json(scene_path);old_refs=[p['sha256'] for p in s['pages']]
         if len(incoming.get('slides',[]))!=len(old_refs):raise ValueError('Replacement must keep page count and reference identity')
         for index,slide in enumerate(incoming['slides']):

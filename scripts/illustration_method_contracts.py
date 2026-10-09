@@ -1,0 +1,37 @@
+"""Project-file contracts for repeatable selection and evaluation experiments."""
+from graphics_recipe import obj,array
+S={'type':'string','minLength':1,'maxLength':2000}
+SHA={'type':'string','pattern':'^[a-f0-9]{64}$'}
+BASE={'project':S}
+N={'type':'number','minimum':-100000,'maximum':100000}
+RULE=obj({'weights':array({'type':'number','minimum':-1,'maximum':1},3,3),'min':N,'max':N},('weights',))
+RULES=array(RULE,8,1)
+SCALE={'type':'integer','minimum':1,'maximum':8}
+IMAGE={**BASE,'reference':S,'reference_sha256':SHA}
+FILE={**BASE,'input_file':S,'input_sha256':SHA}
+TOPO=obj({'components':{'type':'integer','minimum':1,'maximum':100000},'holes':{'type':'integer','minimum':0,'maximum':100000}},('components','holes'))
+SPECS={
+ 'selection_masks':('生成颜色、边缘辅助或覆盖率选区候选，记录孔洞与连通变化，不自动采用。',obj({
+   **IMAGE,'method':{'enum':['color','edge_assisted','coverage']},'rules':RULES,'scale':SCALE,
+   'sampling':{'enum':['nearest','bilinear']},'sigma':{'type':'number','minimum':.1,'maximum':3},
+   'amount':{'type':'number','minimum':0,'maximum':1},'foreground_rules':RULES,'background_rules':RULES,
+   'coverage_weights':array({'type':'number','minimum':-1,'maximum':1},3,3),
+   'minimum_contrast':{'type':'number','minimum':1,'maximum':255},
+   'coverage_threshold':{'type':'number','exclusiveMinimum':0,'exclusiveMaximum':1},'clip_rules':RULES,
+   'support_mask':S,'support_sha256':SHA,'seeds':array(array(N,2,2),64,1),'expected_topology':TOPO},
+   ('project','reference','reference_sha256','method','rules'))),
+ 'freeze_evaluation':('仅根据原图冻结独立评价掩膜及采样口径，保存新文件和哈希。',obj({
+   **IMAGE,'scale':SCALE,'policies':array(obj({'name':S,'sampling':{'enum':['nearest_binary','bilinear_field']},
+   'rules':RULES},('name','sampling','rules')),8,1)},('project','reference','reference_sha256','policies'))),
+ 'evaluate_stages':('按冻结参考与明确阶段对测量误差，记录口径排名反转，不自动挑选赢家。',obj({
+   **BASE,'contract_file':S,'contract_sha256':SHA,
+   'stages':array(obj({'id':S,'mask':S,'sha256':SHA},('id','mask','sha256')),16,1),
+   'pairs':array(obj({'from':S,'to':S},('from','to')),32)},('project','contract_file','contract_sha256','stages'))),
+ 'share_rings':('在同一坐标系复用闭合轮廓，检查位移、绕向与环嵌套，输出独立候选。',obj({
+   **FILE,'coordinate_units':{'const':'source_pixels'},
+   'max_displacement':{'type':'number','minimum':0,'maximum':10},
+   'relations':array(obj({'source':S,'target':S,'source_ring':{'type':'integer','minimum':0,'maximum':127},
+    'target_ring':{'type':'integer','minimum':0,'maximum':127},'reverse':{'type':'boolean'}},
+    ('source','target','source_ring','target_ring')),64,1)},
+    ('project','input_file','input_sha256','coordinate_units','max_displacement','relations')))
+}

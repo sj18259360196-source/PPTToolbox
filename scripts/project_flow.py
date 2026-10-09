@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import re
 
-STATUSES = ('planned', 'running', 'done', 'blocked', 'paused', 'skipped', 'replaced', 'failed', 'outcome_unknown')
+STATUSES = ('planned', 'running', 'done', 'observed', 'blocked', 'paused', 'skipped', 'replaced', 'failed', 'outcome_unknown')
 STAGES = ('intake', 'plan', 'production', 'revision', 'delivery')
 STEP_TYPES = [
     {'id':'intake','title':'任务接入','stage':'intake','actions':['notes','calls']},
@@ -37,7 +37,7 @@ STEP_TYPES = [
         ('reproducibility','重建与复现验证','revision'), ('acceptance','等待用户确认','delivery'),
     ]],
 ]
-RELATIONS = ('dependency', 'sequence', 'decision', 'merge', 'revision', 'suggested', 'grouping')
+RELATIONS = ('dependency', 'sequence', 'decision', 'merge', 'revision', 'suggested', 'grouping', 'fork')
 LINK_SCHEMA = {
     'type':'object', 'additionalProperties':False, 'required':['from','relation'],
     'properties': {
@@ -62,6 +62,8 @@ NODE_SCHEMA = {
         'result': {'type':'string','maxLength':600},
         'next_action': {'type':'string','maxLength':600},
         'round': {'type':'integer','minimum':1,'maximum':999},
+        'join_policy': {'enum':['all','any','unspecified']},
+        'exit_reason': {'enum':['accepted','awaiting_feedback','running','failed','unknown','skipped','replaced','relation_pending','merged','cancelled']},
         'links': {'type':'array','maxItems':12,'items':LINK_SCHEMA},
         'task_ids': {'type':'array','maxItems':12,'uniqueItems':True,
                      'items':{'type':'string','minLength':1,'maxLength':160}},
@@ -109,6 +111,9 @@ def merge(previous, patches, *, source, at):
         parents = [link['from'] for link in node.get('links', [])]
         if len(parents)!=len(set(parents)) or any(p not in node['after'] for p in parents):
             raise ValueError('连线说明必须唯一且对应 after 中的前置步骤')
+        if node.get('join_policy') in {'all','any'} and (len(node['after'])<2 or
+                any(link.get('relation')!='merge' for link in node.get('links',[])) or len(parents)!=len(node['after'])):
+            raise ValueError('汇合条件需要至少两个明确标为 merge 的前置分支')
     pending = {identifier: set(node['after']) for identifier, node in nodes.items()}
     visited = set()
     while pending:
@@ -124,7 +129,7 @@ def merge(previous, patches, *, source, at):
 def diagnostics(nodes):
     """Non-blocking display advice; never turns missing metadata into a failed task."""
     parents = {p for n in nodes for p in n.get('after', [])}
-    return [{'node_id':n['id'], 'message':'后续关系尚未登记，可连接到预览、复查或交付；如已结束，请补充结果。'}
+    return [{'node_id':n['id'], 'message':'后续关系待确认；请核对归属、分支汇合或等待反馈。此提示不表示执行失败。'}
             for n in nodes if n['id'] not in parents and n.get('stage')!='delivery'
             and n.get('source')!='visual_telemetry' and n.get('status') not in {'skipped','replaced'}
-            and not n.get('result')]
+            and (n.get('exit_reason')=='relation_pending' or not n.get('result') and not n.get('exit_reason'))]

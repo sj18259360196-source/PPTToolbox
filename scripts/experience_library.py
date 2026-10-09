@@ -14,6 +14,10 @@ import shutil
 import sys
 from pathlib import Path
 
+# Embedded runtimes do not prepend the script directory to sys.path.
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 if __package__:
     from .common import staged_directory
 else:

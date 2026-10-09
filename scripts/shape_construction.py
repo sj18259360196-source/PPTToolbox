@@ -5,10 +5,10 @@ import copy
 import io
 import math
 
-from graphics_geometry import check_commands, flatten
-from graphics_recipe import compile_recipe
 
 def construct(a):
+    from graphics_geometry import check_commands, flatten
+    from graphics_recipe import compile_recipe
     from shapely.geometry import Polygon
     mode=a['mode']; oid=a['id']
     recipe={'format':'graphics-recipe/1','id':oid,'canvas':a['canvas'],

@@ -145,3 +145,11 @@ defined in `manager_docs/INSTALLATION_CONTRACT.md`.
 # 参数构建与操作读回
 
 圆角多边形、布尔学习试制、显式掩膜轮廓比较、独立原生属性读回和受限节点修改见 [异形工具](shape-tools.md)。这些入口复用 graphics 配方与 rebuild_patch/compare/adopt，保持现有权限及审查。
+
+
+少色插画先判断类型，再进行路径拟合与局部比较，见 [少色分层曲线受管工具](layered-illustration.md)。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

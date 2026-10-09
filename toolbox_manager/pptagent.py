@@ -188,6 +188,9 @@ class Worker:
         self.manager=manager; self.pending={}; self.seen={}; self.lock=threading.Lock(); self.stop_event=threading.Event()
         self.processing=set(); self.task_event=threading.Event()
         self.thread=threading.Thread(target=self.run,name='pptagent-summary',daemon=True)
+        self.task_thread=threading.Thread(target=self.run_tasks,name='pptagent-tasks',daemon=True)
+        from .assistant_scheduler import Recorder
+        self.recorder=Recorder(manager,self.stop_event)
 
     def start(self):
         from .pptagent_runtime import recover
@@ -195,11 +198,18 @@ class Worker:
         from .pptagent_metrics import recover as recover_metrics
         recover_metrics(self.manager)
         self.thread.start()
-    def close(self): self.stop_event.set(); self.thread.join(timeout=1)
+        self.task_thread.start()
+    def close(self):
+        self.stop_event.set()
+        self.thread.join(timeout=1)
+        self.task_thread.join(timeout=1)
 
     def offer(self,key,state):
         cfg=config(self.manager)
         if not cfg['enabled']:return
+        if cfg['protocol']=='responses':
+            self.recorder.offer(key)
+            return
         signature=summary_signature(cfg,state)
         from .pptagent_budget import summary_gate
         gate=summary_gate(self.manager,key,signature)
@@ -223,6 +233,10 @@ class Worker:
             self.offer(key,state)
             return
         signature=summary_signature(cfg,state)
+        from .pptagent_assistance import save
+        from .issue_assessment import handoff
+        save(root,state,'prepare_handoff',handoff(state))
+        state=journal.load(root);sequence=state['sequence']
         calls=state.get('activity',{}).get('calls',[])[-10:]
         issues=[i for i in state.get('activity',{}).get('issues',[]) if i.get('state')=='open'][-10:]
         evidence=[i['evidence_id'] for i in issues]+[c['evidence_id'] for c in calls]+[c['checkpoint_id'] for c in state.get('checkpoints',[])[-5:]]
@@ -231,6 +245,7 @@ class Worker:
             return
         candidates=recommendations(self.manager,root,state)
         payload={'project':state['label'],'phase':state.get('phase'),'calls':calls,'issues':issues,
+                 'assistance_packet':handoff(state),
                  'files':[f['path'] for f in state.get('files',[])[:20]],'evidence_ids':evidence,
                  'recommendations':[{'id':r['id'],'title':r['title'],'trigger':r['trigger']} for r in candidates]}
         from .pptagent_budget import summary_gate, summary_outcome, RateLimited
@@ -273,7 +288,7 @@ class Worker:
                 metrics.effect(self.manager,key,'evidence_reviewed',len(set(summary['evidence_ids'])))
                 if summary['recommended_ids']: metrics.effect(self.manager,key,'recommendations_selected',len(summary['recommended_ids']))
 
-    def run(self):
+    def run_tasks(self):
         while not self.stop_event.wait(.5):
             from .pptagent_runtime import tasks,run_task
             task=None
@@ -282,7 +297,10 @@ class Worker:
                 task=next((r for r in tasks(self.manager) if r['status']=='queued'),None)
             if task:
                 run_task(self.manager,task,self.stop_event)
-                continue
+
+    def run(self):
+        while not self.stop_event.wait(.5):
+            self.recorder.tick()
             with self.lock:
                 ready=next(((k,v) for k,v in self.pending.items() if v[2]<=time.monotonic()),None)
                 if ready:self.pending.pop(ready[0],None)

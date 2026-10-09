@@ -4,7 +4,7 @@
 
 制作时按[看图与修订流程](references/multipage-efficiency.md)选择整页和局部，保留未变范围的有效审查。原生对象与图片的选择遵循[素材规则](references/asset-policy.md)。
 
-项目默认提供完整的 202 条经验、21 条指令模板及 70 个 MCP 工具。后续维护者要求更新的工具、指令和经验均纳入默认版本。新安装无需导入开发机历史即可使用这些方法；已有用户覆盖和停用设置仍优先。经验用于指导操作，当前项目仍需独立验证。
+项目默认提供完整的 203 条经验、23 条指令模板及 70 个 MCP 工具。后续维护者要求更新的工具、指令和经验均纳入默认版本。新安装无需导入开发机历史即可使用这些方法；已有用户覆盖和停用设置仍优先。经验用于指导操作，当前项目仍需独立验证。
 
 ## 下载与安装
 
@@ -45,3 +45,8 @@ python -m venv .venv
 [使用说明](manager_docs/USER_GUIDE.md) · [Agent 接入](manager_docs/PPTAGENT.md) · [项目管理](manager_docs/PROJECT_MANAGEMENT.md) · [版本与更新](manager_docs/VERSIONS.md) · [更新记录](manager_docs/CHANGELOG.md)
 
 原创程序代码采用 MIT 许可证。第三方依赖、图标和医学素材保留各自许可与署名要求，见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

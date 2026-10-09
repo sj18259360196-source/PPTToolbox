@@ -16,6 +16,7 @@ export async function mountGraphics(main){
  main.innerHTML=`<nav class="section-nav" aria-label="素材分类"><a href="#/icons">素材库</a><a href="#/graphics">图形构造</a></nav><section class="graphics-page">
  <div class="page-head"><h1>图形构造</h1><div class="graphics-actions">
  <button id="graphics-preview">预览</button><button id="graphics-save" class="primary">生成草稿</button></div></div>
+ <section class="panel" aria-label="插画重绘调用指南"><div class="panel-body"><h2>少色分层插画重绘</h2><p>先判断语义分层和边界，再选择钢笔节点或选区转路径。可复制当前工具参数与调用步骤交给 Agent。</p><label>方法<select id="illustration-route"><option value="overview">判断与两条路线</option><option value="pen">钢笔与节点</option><option value="selection">选区转路径</option></select></label><button id="illustration-guide">读取调用指南</button><button id="illustration-copy" disabled>复制给 Agent</button><a href="#/docs?path=references/illustration-agent-guide.md">阅读完整说明</a><p id="illustration-state" role="status"></p><details><summary>当前参数与步骤</summary><pre id="illustration-content"></pre></details></div></section>
  <div class="graphics-project"><label>项目目录<input id="graphics-project" type="text"></label>
  <label>草稿版本<input id="graphics-version" type="text" spellcheck="false"></label><button id="graphics-load">载入</button></div>
  <div class="graphics-workspace"><div class="graphics-view">
@@ -32,6 +33,17 @@ export async function mountGraphics(main){
  <label>最多色标<input id="graphics-stops" type="number" min="2" max="5" value="3"></label>
  <button id="graphics-fit">拟合</button><div id="graphics-fit-result"></div></details></aside></div></section>`;
  const $=s=>main.querySelector(s);
+ let guideText='';
+ $('#illustration-guide').onclick=async()=>{
+  $('#illustration-copy').disabled=true;$('#illustration-state').textContent='正在读取';
+  try{const result=await api('graphics.illustration_guide',{route:$('#illustration-route').value});
+   if(generation!==epoch)return;guideText=JSON.stringify(result,null,2);
+   $('#illustration-content').textContent=guideText;$('#illustration-copy').disabled=false;
+   $('#illustration-state').textContent='已读取当前调用步骤。补齐真实输入后由 Agent 受管执行。';
+  }catch(e){if(generation===epoch)$('#illustration-state').textContent=e.message;}
+ };
+ $('#illustration-route').onchange=()=>{guideText='';$('#illustration-copy').disabled=true;$('#illustration-content').textContent='';$('#illustration-state').textContent='方法已变更，请重新读取';};
+ $('#illustration-copy').onclick=async()=>{try{await copy(guideText);$('#illustration-state').textContent='调用指南已复制';}catch(e){$('#illustration-state').textContent=e.message;}};
  if(trackingProject){const rows=(await projectIndex()).rows;if(generation!==epoch)return;$('#graphics-project').value=rows.find(r=>r.id===trackingProject)?.path||'';}
  const state=(text,error=false)=>{if(generation===epoch){$('#graphics-state').textContent=text;$('#graphics-state').classList.toggle('error',error);}};
  const rows=()=>['paths','edges','faces','curve_groups','instances'].flatMap(kind=>(recipe[kind]||[]).map(value=>({kind,value})));

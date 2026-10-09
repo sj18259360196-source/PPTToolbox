@@ -54,3 +54,11 @@ start 的目标目录必须尚不存在。先保存图片时用工作目录下�
 独立包使用随包Python和data目录，不从旧安装目录读取依赖。接入后核对
 context.active.path及distribution，不能凭同名Skill或版本号推断运行身份。
 接入与产品形态见[本机接入状态](../../manager_docs/AGENT_INTEGRATION.md)。
+
+
+少色分层插画保留钢笔节点与选区转路径两条方法。实际观察后调用 graphics_route_illustration，在 page_plan.notes 记录部件、路线及理由；孔洞变化和评价口径排名反转必须复查。使用 [双路线插画方法](../../references/layered-illustration.md) 与默认指令 illustration-method-choice，分开测量几何、颜色和实际编辑行为。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

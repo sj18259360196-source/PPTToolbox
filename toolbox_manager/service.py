@@ -157,7 +157,13 @@ class Manager:
         p=self.package();py=sys.executable
         args=[py,str(self.root/'manager.py'),'--data-dir',str(self.data),'execute','--tool',tid,'--']
         # JSON argv is canonical; platform-specific shell string is informational only.
-        return {**r,'managed_argv_prefix':args,'powershell_example':'& '+ ' '.join("'"+a.replace("'","''")+"'" for a in args)+' <参数>',
+        contract={}
+        if tid.startswith(('graphics.','icons.')):
+            from .graphics import SPECS as graphics_specs
+            from .icons.contracts import SPECS as icon_specs
+            import copy
+            contract={'input_schema':copy.deepcopy((graphics_specs if tid.startswith('graphics.') else icon_specs)[tid.split('.',1)[1]][1])}
+        return {**r,**contract,'managed_argv_prefix':args,'powershell_example':'& '+ ' '.join("'"+a.replace("'","''")+"'" for a in args)+' <参数>',
             'note':'指令示例仅供复制；浏览器不执行任意工具参数。运行须开启受管执行，且工具包已信任。'}
     def native_card(self, cid):
         from scripts.native_capabilities import card
@@ -419,7 +425,8 @@ class Manager:
             root,_=authorize(self,project)
             current=ProjectContext(self,root).snapshot()
         from .material_policy import effective
-        return {'material_policy':effective(self,project),'active':p,'settings':self.settings(),'distribution':self.distribution(),'instance':self.instance(),'skill':self.document('SKILL.md')['content'] if (Path(p['path'])/'SKILL.md').is_file() else '',
+        from .illustration_guide import entry as illustration_entry
+        return {'agent_capabilities':{'illustration':illustration_entry(self)},'material_policy':effective(self,project),'active':p,'settings':self.settings(),'distribution':self.distribution(),'instance':self.instance(),'skill':self.document('SKILL.md')['content'] if (Path(p['path'])/'SKILL.md').is_file() else '',
             'storage':locations(self),'project_context':current,'startup_prompt':startup_prompt(self)['text'],
             'learning':{'entry':'toolbox_learning','preferences':learning_preferences(self),
                         'task_experience_entry':'toolbox_retrospective',
@@ -450,8 +457,17 @@ class Manager:
     def execute(self,tid,args):
         if tid.startswith('graphics.'):
             if args==['--help']:return {'usage':'--json <request.json>; see references/graphics-construction.md'}
-            if len(args)!=2 or args[0]!='--json':raise ValueError('Use --json <request.json>')
-            return self.graphics(tid.split('.',1)[1],json.loads(Path(args[1]).read_text(encoding='utf-8-sig')),source='cli')
+            graphics_project=None
+            if args[:1]==['--project']:
+                if len(args)<2:raise ValueError('Missing --project path')
+                graphics_project=args[1];args=args[2:]
+                if args[:1]==['--']:args=args[1:]
+            if len(args)!=2 or args[0]!='--json':raise ValueError('Use [--project <full path>] --json <request.json>')
+            body=json.loads(Path(args[1]).read_text(encoding='utf-8-sig'))
+            if graphics_project:
+                if body.get('project') and Path(body['project']).resolve()!=Path(graphics_project).resolve():raise ValueError('Conflicting project arguments')
+                body['project']=graphics_project
+            return self.graphics(tid.split('.',1)[1],body,source='cli')
         if tid.startswith('icons.'):
             if args==['--help']:return {'usage':'--json <request.json>; see references/icon-library.md'}
             if len(args)!=2 or args[0]!='--json':raise ValueError('Use --json <request.json>')

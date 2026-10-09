@@ -99,6 +99,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == '/api/pptagent.tasks':
                 from .pptagent_runtime import tasks
                 self.reply({'ok':True,'result':tasks(self.server.manager)});return
+            if u.path == '/api/project.graph-history':
+                from .assistant_recording import history
+                self.reply({'ok':True,'result':history(self.server.manager,a.get('project'),int(a.get('before',0)))});return
             if u.path == '/api/projects.storage':
                 from .project_inventory import overview
                 self.reply({'ok':True,'result':overview(self.server.manager,a.get('refresh')=='1')});return
@@ -223,6 +226,16 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path == '/api/project.issue.acknowledge':
                     from .project_hub import acknowledge_issue
                     self.reply({'ok':True,'result':acknowledge_issue(self.server.manager,json.loads(raw))});return
+                if u.path == '/api/project.graph-restore':
+                    from .assistant_recording import restore
+                    body=json.loads(raw)
+                    if set(body)!={'project','history_id','graph_revision'}:raise ValueError('图恢复参数无效')
+                    self.reply({'ok':True,'result':restore(self.server.manager,body['project'],body['history_id'],body['graph_revision'])});return
+                if u.path == '/api/project.recording-retry':
+                    from .assistant_scheduler import retry
+                    body=json.loads(raw)
+                    if set(body)!={'project'}:raise ValueError('整理参数无效')
+                    self.reply({'ok':True,'result':retry(self.server.manager,body['project'])});return
                 if u.path == '/api/project.notes.save':
                     from .project_hub import entry
                     from scripts.project_journal import save_notes

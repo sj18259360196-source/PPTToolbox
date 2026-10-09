@@ -27,7 +27,7 @@ PRIVATE_DOCS = {'manager_docs/INSTALLATION_CONTRACT.md','manager_docs/AGENT_INTE
 ALLOWED_SUFFIXES = {'.py','.ps1','.psm1','.cs','.json','.jsonl','.js','.mjs','.css','.html',
                     '.md','.txt','.svg','.png','.gz','.isl','.yml','.yaml','.in','.lock','.cmd'}
 TEXT_SUFFIXES = ALLOWED_SUFFIXES - {'.png','.gz'}
-PUBLIC_TESTS = {'test_software_updates.py','test_version_release.py','test_release_readiness.py',
+PUBLIC_TESTS = {'test_illustration_guide.py','test_software_updates.py','test_version_release.py','test_release_readiness.py',
                 'test_bridge_upgrade.py','test_project_management.py','test_request_archive.py',
                 'test_project_flow.py','test_illustration_fallback.py','test_workflow.py',
                 'test_project_chain.py','test_installed_upgrade.py','test_manager.py','test_tools.py',
@@ -40,7 +40,7 @@ PUBLIC_TESTS.update({'test_shape_tools.py','test_shape_parameters.py','test_nati
     'test_pptagent_responses.py','pptagent_budget.test.mjs','test_stability_recovery.py',
     'test_experience_management.py','test_pptagent_metrics.py','test_project_list_preferences.py',
     'test_project_thumbnails.py','test_setup_wizard.py','test_update_process_detection.py'})
-PUBLIC_TESTS.update({'test_gradient_capabilities.py','test_default_capabilities.py'})
+PUBLIC_TESTS.update({'test_gradient_capabilities.py','test_default_capabilities.py','test_agent_cooperation.py','test_assistant_recording.py','test_flow_semantics.py'})
 SECRET = re.compile(r'(?:sk-[A-Za-z0-9_-]{24,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
 
 

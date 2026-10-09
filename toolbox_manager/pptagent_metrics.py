@@ -123,10 +123,17 @@ def project_status(manager, key, state):
         with worker.lock:
             pending=key in worker.pending
             processing=key in getattr(worker,'processing',set())
+        recorder=getattr(worker,'recorder',None)
+        if recorder:
+            with recorder.lock:pending=pending or key in recorder.queue
+    dispatch=state.get('assistant_dispatch',{})
+    processing=processing or dispatch.get('status')=='working' and dispatch.get('lease_until',0)>time.time()
     scoped=[r for r in tasks(manager) if r.get('project')==key]
     task=next((r for r in scoped if r['status'] in {'queued','running'}),None)
     summary=state.get('summary',{})
     status='disabled' if not cfg['enabled'] else 'unconfigured' if not cfg['endpoint'] or not cfg['model'] else 'working' if processing or metrics['active'] or (task and task['status']=='running') else 'queued' if pending or task else 'unavailable' if summary.get('status')=='unavailable' else 'ready' if summary.get('status')=='ready' else 'waiting'
+    if status not in {'disabled','unconfigured','working'} and dispatch.get('status') in {'error','attention'}:
+        status='unavailable'
     budget=metrics['budget']
     if status not in {'disabled','unconfigured','working'} and (budget['blocked'] or (pending and budget['summary_retry_at'])):
         status='rate_limited'

@@ -224,6 +224,73 @@
         "graphics.select_versions",
         "graphics.scene_preflight"
       ]
+    },
+    {
+      "id": "assistant_evidence_handoff",
+      "title": "先用交接包减少重复查询",
+      "description": "阶段推进与异常核对时使用",
+      "body": "先读取 stage_context.assistance_packet，核对项目版本、当前任务和证据编号。历史提示不覆盖交付；unknown 先查回执与产物，不重放。内置 Agent 可准备交接和检查索引，制作 Agent 继续负责视觉判断与候选采用。参阅 references/agent-cooperation.md。",
+      "tools": [
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "scene_contract_preflight",
+      "title": "导入前一次核对路径与证据",
+      "description": "替换场景前使用",
+      "body": "使用 graphics_scene_preflight，reference 和 asset 按场景文件目录解析。一次修正路径与结构错误，evidence 只填真实来源。预检通过后沿用受管导入；调用成功不等于视觉通过。",
+      "tools": [
+        "graphics.scene_preflight"
+      ]
+    },
+    {
+      "id": "assistant_batch_recording",
+      "title": "助手批量记录与补图",
+      "description": "PPTAgent 后台或管理任务整理项目时使用",
+      "body": "制作 Agent 无需逐工具报图。内置助手用 prepare_project_batch 获取增量，preview_work_graph_update 校验，再 commit_project_update 一次保存。制作版本变化不覆盖图版本冲突；unknown 保留，inferred 连线保留标记。沿用保存的频率、配额和失败退避。历史恢复只恢复图。见 references/assistant-recording.md。",
+      "tools": [
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "assistant_task_relations",
+      "title": "助手整理任务关系与交付反馈",
+      "description": "集中补齐任务归属、分支及返修轮次时使用",
+      "body": "用 prepare_project_batch 读取任务归属与 lifecycle，保留软件提供的轮次。调用记录先后使用 sequence，不冒充依赖。并行用 fork，汇合用 merge 与 join_policy；无法判断时保留待确认。交付后等对应版本反馈，返修追加新轮次。通过 preview_work_graph_update 和 commit_project_update 一次提交。用 read_work_graph 核对展示节点与关系诊断。",
+      "tools": [
+        "manual.workflow"
+      ]
+    },
+    {
+      "id": "limited-palette-layered-curves-v1",
+      "title": "少色分层曲线插画重绘",
+      "description": "保留钢笔节点与选区路径，按原图结构和编辑要求选择。",
+      "body": "先读 EXP-207 至 EXP-209 和 references/layered-illustration.md。实际看图后 graphics_route_illustration，记录部件与选择理由。保留两路线，可按部件混用。先 graphics_freeze_evaluation，再 graphics_selection_masks、icons_trace_fragment、graphics_fit_paths；整环共享用 graphics_share_rings，部分共边用配方 edges/faces。graphics_evaluate_stages 分阶段与多口径测量，孔洞变化拒绝采用，排名反转要求复查。颜色、Office 渲染、指定编辑与保存重开分别验证。",
+      "tools": [
+        "graphics.route_illustration",
+        "graphics.freeze_evaluation",
+        "graphics.selection_masks",
+        "graphics.fit_paths",
+        "graphics.share_rings",
+        "graphics.evaluate_stages",
+        "graphics.compare_regions"
+      ]
+    },
+    {
+      "id": "illustration-method-choice",
+      "title": "插画先选方法再比较",
+      "description": "少色插画制作时按部件选择两条保留路线。",
+      "body": "先调用 graphics_illustration_guide 获取当前参数与步骤，无需先检索经验。EXP-207 至 EXP-209 为补充。实际看图后 graphics_route_illustration，记录部件与选择理由。保留两路线，可按部件混用。先 graphics_freeze_evaluation，再 graphics_selection_masks、icons_trace_fragment、graphics_fit_paths；整环共享用 graphics_share_rings，部分共边用配方 edges/faces。graphics_evaluate_stages 分阶段与多口径测量，孔洞变化拒绝采用，排名反转要求复查。颜色、Office 渲染、指定编辑与保存重开分别验证。",
+      "tools": [
+        "graphics.illustration_guide",
+        "graphics.route_illustration",
+        "graphics.freeze_evaluation",
+        "graphics.selection_masks",
+        "graphics.fit_paths",
+        "graphics.share_rings",
+        "graphics.evaluate_stages",
+        "graphics.compare_regions"
+      ]
     }
   ]
 }

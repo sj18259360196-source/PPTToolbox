@@ -2,7 +2,8 @@ const stages=[['intake','接单与确认'],['plan','确定方案'],['production'
 const labels={planned:'待执行',running:'进行中',done:'已完成',observed:'调用已完成',blocked:'等待处理',paused:'已暂停',skipped:'已跳过',replaced:'已调整路径',failed:'执行失败',outcome_unknown:'结果待确认'};
 const stateLabel=node=>node.status_label||labels[node.status];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const relationLabels={dependency:'依赖',sequence:'顺序',decision:'决策',merge:'汇合',revision:'返修',suggested:'建议',grouping:'归属'};
+const relationLabels={dependency:'依赖',sequence:'先后',decision:'决策',merge:'汇合',revision:'返修',suggested:'建议',grouping:'归属',fork:'并行'};
+const exitLabels={accepted:'本版本已认可',awaiting_feedback:'等待用户反馈',running:'执行中',failed:'失败待处理',unknown:'结果待核对',skipped:'已跳过',replaced:'已替换',relation_pending:'后续关系待确认',merged:'已汇合',cancelled:'已取消'};
 const basisLabels={recorded:'记录依据',agent:'Agent 登记',inferred:'Agent 推断',suggested:'预设建议'};
 export function edgeInfo(node,parent){
  const link=(node.links||[]).find(l=>l.from===parent)||{};
@@ -61,8 +62,41 @@ export function projectGraph(state){
  return nodes;
 }
 
+// Condense consecutive status polling only. Never condense across a work step or
+// a branch boundary, and keep every original record available on expansion.
+export function compactQueries(nodes,expanded=false){
+ if(expanded)return nodes;
+ const groups=new Map(),aliases=new Map(),replacements=new Map();
+ const query=n=>n.tools?.length&&n.tools.every(t=>['workflow.status','toolbox.call_status','rebuild.status'].includes(t))&&n.source==='pptagent'&&['observed','done'].includes(n.status)&&Number.isFinite(audit(n));
+ const audit=n=>Math.min(...(n.evidence_ids||[]).filter(e=>/^audit-\d+$/.test(e)).map(e=>Number(e.slice(6))));
+ for(const n of nodes){const key=n.group_id;if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(n);}
+ for(const group of groups.values()){
+  const ordered=[...group].sort((a,b)=>audit(a)-audit(b));let run=[];
+  const flush=()=>{
+   if(run.length<2){run=[];return;}
+   const set=new Set(run.map(n=>n.id)),first=run[0],last=run.at(-1);
+   const invalid=run.some((n,i)=>i>0&&n.after.some(p=>!set.has(p)))||nodes.some(n=>!set.has(n.id)&&n.after.some(p=>set.has(p)&&p!==last.id));
+   if(!invalid){
+    for(const n of run)aliases.set(n.id,first.id);
+    replacements.set(first.id,{...first,title:`状态查询 · ${run.length} 次`,status:last.status,status_label:last.status_label,
+      query_count:run.length,query_records:run.map(n=>({id:n.id,title:n.title,status:stateLabel(n),detail:n.detail})),
+      detail:run.map(n=>`${n.title} · ${stateLabel(n)}${n.detail?'\n'+n.detail:''}`).join('\n\n'),
+      evidence_ids:[...new Set(run.flatMap(n=>n.evidence_ids||[]))],call_ids:[...new Set(run.flatMap(n=>n.call_ids||[]))]});
+   }
+   run=[];
+  };
+  for(const n of ordered){if(query(n))run.push(n);else flush();}flush();
+ }
+ return nodes.filter(n=>!aliases.has(n.id)||aliases.get(n.id)===n.id).map(original=>{
+  const n={...(replacements.get(original.id)||original)};
+  n.after=[...new Set(n.after.map(p=>aliases.get(p)||p))].filter(p=>p!==n.id);
+  const links=new Map();for(const l of n.links||[]){const from=aliases.get(l.from)||l.from;if(from!==n.id&&n.after.includes(from))links.set(from,{...l,from});}
+  n.links=[...links.values()];return n;
+ });
+}
+
 export function layoutGraph(nodes,available=600){
- if(nodes.length>64)throw Error('工作图步骤超过显示上限');
+ if(nodes.length>128)throw Error('工作图步骤超过显示上限');
  const byId=new Map(nodes.map(n=>[n.id,{...n,after:[...(n.after||[])]}]));
  if(byId.size!==nodes.length)throw Error('工作图步骤编号重复');
  for(const n of byId.values())if(n.after.some(id=>!byId.has(id)||id===n.id))throw Error('工作图连接需要核对');
@@ -72,19 +106,27 @@ export function layoutGraph(nodes,available=600){
   if(!ready.length)throw Error('工作图存在循环，返工应另建步骤');
   for(const n of ready){ranked.set(n.id,n.after.length?1+Math.max(...n.after.map(id=>ranked.get(id))):0);pending.splice(pending.indexOf(n),1);}
  }
- const ranks=[];
- for(const n of byId.values()){const rank=ranked.get(n.id);(ranks[rank]??=[]).push(n);}
+ const owners=new Map();
+ for(const n of byId.values()){
+  const key=n.group_id||'',owner=owners.get(key)||{id:key,label:n.group_label||'',ranks:[],round:n.round||0};
+  const rank=ranked.get(n.id);(owner.ranks[rank]??=[]).push(n);owners.set(key,owner);
+ }
  if(!nodes.length)return {nodes:[],edges:[],routes:[],width:Math.max(240,available),height:0,bands:0,columns:0};
  const padding=24,gapX=48,gapY=24,nodeHeight=80,bandGap=52;
  const columns=[];
  // Bound both dimensions: long sequences wrap and wide forks use groups of three.
- for(const rank of ranks)for(let i=0;i<rank.length;i+=3)columns.push(rank.slice(i,i+3));
+ for(const owner of [...owners.values()].sort((a,b)=>a.round-b.round))for(const rank of owner.ranks.filter(Boolean))for(let i=0;i<rank.length;i+=3){
+  const column=rank.slice(i,i+3);column.owner=owner;columns.push(column);
+ }
  const capacity=Math.max(1,Math.min(6,columns.length,Math.floor((available-padding*2+gapX)/(152+gapX))));
  const nodeWidth=Math.min(186,Math.max(152,(available-padding*2-gapX*(capacity-1))/capacity));
  const width=padding*2+capacity*nodeWidth+(capacity-1)*gapX;
- let top=padding,step=0;
- for(let start=0;start<columns.length;start+=capacity){
-  const band=columns.slice(start,start+capacity),lanes=Math.max(...band.map(c=>c.length));
+ let top=padding,step=0,bandIndex=0;const groups=[];
+ for(let start=0;start<columns.length;){
+  const owner=columns[start].owner,band=[];
+  while(start<columns.length&&band.length<capacity&&columns[start].owner.id===owner.id)band.push(columns[start++]);
+  if(owner.id&&groups.at(-1)?.id!==owner.id){groups.push({id:owner.id,label:owner.label,y:top-10,height:0});top+=30;}
+  const lanes=Math.max(...band.map(c=>c.length));
   band.forEach((column,col)=>{
    const weight=n=>n.after.length?n.after.reduce((s,id)=>s+(byId.get(id).lane||0),0)/n.after.length:0;
    column.sort((a,b)=>weight(a)-weight(b));
@@ -95,10 +137,12 @@ export function layoutGraph(nodes,available=600){
    column.forEach((n,i)=>{
     const lane=positions[i];
     Object.assign(n,{x:padding+col*(nodeWidth+gapX),y:top+lane*(nodeHeight+gapY),width:nodeWidth,height:nodeHeight,
-     rank:ranked.get(n.id),band:Math.floor(start/capacity),column:col,lane,step:++step});
+     rank:ranked.get(n.id),band:bandIndex,column:col,lane,step:++step});
    });
   });
   top+=lanes*nodeHeight+(lanes-1)*gapY+bandGap;
+  if(owner.id)groups.at(-1).height=top-groups.at(-1).y-24;
+  bandIndex++;
  }
  const height=top-bandGap+padding;
  const children=new Map([...byId.keys()].map(id=>[id,[]]));
@@ -125,7 +169,7 @@ export function layoutGraph(nodes,available=600){
   edges.push({from:id,to:n.id,points,path:roundedPath(points),tone:route.tone,...edgeInfo(n,id),
    muted:[parent.status,n.status].some(status=>['skipped','replaced'].includes(status))});
  }
- return {nodes:[...byId.values()],edges,routes:[...routes.values()],width,height,bands:Math.ceil(columns.length/capacity),columns:capacity};
+ return {nodes:[...byId.values()],edges,routes:[...routes.values()],groups,width,height,bands:bandIndex,columns:capacity};
 }
 
 export function edgeBadges(graph){
@@ -202,10 +246,18 @@ function orthogonalRouter(nodes,width,height,padding,gapX,gapY,columns){
  };
 }
 
+export function renderStageTimeline(state,nodes){
+ const stages=[['intake','接单与确认'],['plan','确定方案'],['production','制作 PPT'],['revision','整理与修订'],['delivery','交付']];
+ return stages.map(([id,title])=>{
+  const stage=nodes.find(n=>n.id===id),items=nodes.filter(n=>n.stage===id&&n.id!==id&&!['visual_overview','visual_detail'].includes(n.kind));
+  return `<details class="flow-stage-group" data-flow-stage="${id}" ${stage?.status==='running'?'open':''}><summary><strong>${esc(title)}</strong><span>${esc(stage?stateLabel(stage):'待执行')}</span><small>${items.length} 组记录</small></summary><div class="flow-stage-items">${items.map(n=>`<button class="flow-timeline-step" data-flow-node="${esc(n.id)}"><strong>${esc(n.title)}</strong><small>${esc((n.task_ids||[]).join('、')||n.evidence||'阶段记录')}${n.round?' · 第 '+esc(n.round)+' 轮':''}</small><span>${esc(stateLabel(n))}</span></button>`).join('')||'<p class="muted">暂无步骤记录</p>'}</div></details>`;
+ }).join('');
+}
+
 export function mountProjectFlow(root,options={}){
- let state={},selected=null,zoom=1,fit=true,last='',disposed=false,whole=false,lastWidth=0,resizeFrame;
+ let state={},selected=null,zoom=1,fit=true,last='',disposed=false,lastWidth=0,resizeFrame,queriesExpanded=true;
  const marker='flow-arrow-'+Math.random().toString(36).slice(2);
- root.innerHTML=`<div class="flow-toolbar"><p class="small muted">从左到右，满行后接下一行</p><div class="actions"><button data-flow-zoom="out" aria-label="缩小工作图">−</button><button data-flow-zoom="fit">适应宽度</button><button data-flow-zoom="all">全图</button><button data-flow-zoom="in" aria-label="放大工作图">＋</button></div></div><div class="flow-legend" aria-label="路径颜色"></div><div class="flow-viewport" tabindex="0" aria-label="项目运行流程图"><div class="flow-space"><div class="flow-canvas"></div></div></div><div class="flow-detail" role="status"></div>`;
+ root.innerHTML=`<div class="flow-toolbar"><p class="small muted">按轮次与任务分组；箭头标签说明关系，同列不代表并行</p><div class="actions"><button data-flow-queries>折叠查询记录</button><button data-flow-zoom="out" aria-label="缩小工作图">−</button><button data-flow-zoom="fit">适应宽度</button><button data-flow-zoom="in" aria-label="放大工作图">＋</button></div></div><div class="flow-legend" aria-label="路径颜色"></div><div class="flow-viewport" tabindex="0" aria-label="项目运行流程图"><div class="flow-space"><div class="flow-canvas"></div></div></div><div class="flow-detail" role="status"></div>`;
  const viewport=root.querySelector('.flow-viewport'),space=root.querySelector('.flow-space'),canvas=root.querySelector('.flow-canvas'),detail=root.querySelector('.flow-detail');
  const visualPanel=document.createElement('div');visualPanel.className='flow-visual-container';root.prepend(visualPanel);
  const legend=root.querySelector('.flow-legend');
@@ -213,8 +265,9 @@ export function mountProjectFlow(root,options={}){
  function describe(){
   const node=graph?.nodes.find(n=>n.id===selected);
   const names=ids=>ids.map(id=>graph.nodes.find(n=>n.id===id)?.title||id).map(esc).join('、');
+  const grouped=state.flow_view==='stages';
   const next=node?graph.edges.filter(e=>e.from===node.id).map(e=>e.to):[];
-  detail.innerHTML=node?`<strong>${esc(node.title)} · ${esc(stateLabel(node))}${node.round?' · 第 '+esc(node.round)+' 轮':''}</strong><p>${esc(node.detail||'暂无补充说明')}</p>${node.result?`<p>结果　${esc(node.result)}</p>`:''}${node.next_action?`<p>下一步　${esc(node.next_action)}</p>`:''}<p class="flow-dependencies">前置　${names(node.after)||'起始步骤'}<br>后续　${names(next)||(node.stage==='delivery'?'交付阶段末端':'后续关系尚未登记')}</p><ul class="flow-relations">${renderRelations(node,graph)}</ul><small>${esc(node.observedTool||node.evidence)}${node.updated_at?' · '+esc(new Date(node.updated_at).toLocaleString()):''}</small>`:'<p class="muted small">选择步骤可查看前后关系、决策条件、结果和下一步。实线依赖、顺序或返修的依据见详情；虚线为建议，点线为阶段归属。</p>';
+  detail.innerHTML=node?`<strong>${esc(node.title)} · ${esc(stateLabel(node))}${node.round?' · 第 '+esc(node.round)+' 轮':''}</strong><p>${esc(node.detail||'暂无补充说明')}</p>${node.result?`<p>结果　${esc(node.result)}</p>`:''}${node.next_action?`<p>下一步　${esc(node.next_action)}</p>`:''}${node.group_label?`<p>归属　${esc(node.group_label)}</p>`:''}${node.join_policy?`<p>汇合条件　${esc({all:'全部分支完成',any:'任一分支完成',unspecified:'待确认'}[node.join_policy])}</p>`:''}${node.exit_reason?`<p>当前出口　${esc(exitLabels[node.exit_reason]||node.exit_reason)}</p>`:''}${grouped?'':`<p class="flow-dependencies">前置　${names(node.after)||'当前未登记前置关系'}<br>后续　${names(next)||(node.stage==='delivery'?'交付阶段末端':'后续关系尚未登记')}</p><ul class="flow-relations">${renderRelations(node,graph)}</ul>`}<small>${esc(node.observedTool||node.evidence)}${node.updated_at?' · '+esc(new Date(node.updated_at).toLocaleString()):''}</small>`:grouped?'<p class="muted small">展开阶段并选择记录，可查看结果和下一步。</p>':'<p class="muted small">选择步骤可查看前后关系、决策条件、结果和下一步。实线为记录或明确登记，虚线为推断或建议。分组表示归属，同列不代表并行。</p>';
   if(node){
    const actions={notes:'项目说明',files:'项目文件',calls:'查看调用',preview:'当前 PPT',icons:'素材检索',graphics:'图形构造'};
    detail.insertAdjacentHTML('beforeend',`<p class="small muted">${esc(node.evidence||'')}${node.observed_at?' · '+esc(new Date(node.observed_at).toLocaleString()):''}</p><div class="flow-actions">${(node.actions||['calls']).filter(a=>actions[a]).map(a=>`<button data-flow-action="${a}">${actions[a]}</button>`).join('')}</div>`);
@@ -224,31 +277,48 @@ export function mountProjectFlow(root,options={}){
   canvas.querySelectorAll('[data-flow-from]').forEach(el=>el.classList.toggle('selected',el.dataset.flowFrom===selected||el.dataset.flowTo===selected));
  }
  function resize(){
-  if(disposed||!graph)return;
-  const scale=whole?Math.min(1,(viewport.clientWidth-12)/graph.width,600/Math.max(1,graph.height)):fit?Math.min(1,(viewport.clientWidth-12)/graph.width):zoom;
+  if(disposed||!graph||state.flow_view==='stages')return;
+  const widthScale=Math.max(.01,(viewport.clientWidth-12)/graph.width);
+  const scale=Math.min(widthScale,fit?1:zoom);
   canvas.style.transform=`scale(${scale})`;space.style.width=graph.width*scale+'px';space.style.height=graph.height*scale+'px';
  }
  function paint(){
   if(disposed)return;
   visualPanel.innerHTML=renderVisualActivity(state.activity?.visual);
+  const grouped=state.flow_view==='stages';
+  root.querySelector('.flow-toolbar').hidden=grouped;
+  if(grouped){
+   lastWidth=viewport.clientWidth;
+   const expanded=new Map([...canvas.querySelectorAll('[data-flow-stage]')].map(e=>[e.dataset.flowStage,e.open]));
+   graph={nodes:projectGraph(state),edges:[]};
+   canvas.style.cssText='position:relative;width:100%;height:auto;transform:none';
+   space.style.cssText='width:100%;height:auto';
+   canvas.innerHTML=renderStageTimeline(state,graph.nodes);
+   canvas.querySelectorAll('[data-flow-stage]').forEach(e=>{if(expanded.has(e.dataset.flowStage))e.open=expanded.get(e.dataset.flowStage);});
+   legend.innerHTML='<p class="muted">按阶段与任务分组，展开查看尝试记录。看图统计单独展示。</p>';
+   describe();return;
+  }
+
   const focusId=canvas.contains(document.activeElement)?document.activeElement?.dataset.flowNode:null;
   lastWidth=viewport.clientWidth;
-  try{graph=layoutGraph(projectGraph(state),Math.max(240,lastWidth-12));}
+  try{graph=layoutGraph(compactQueries(projectGraph(state),queriesExpanded),Math.max(240,lastWidth-12));}
   catch(e){canvas.innerHTML='';space.style.height='0';detail.textContent=e.message;graph=null;return;}
+  canvas.style.position='';
   canvas.style.width=graph.width+'px';canvas.style.height=graph.height+'px';
-  legend.innerHTML=`<p class="flow-relationship-note">${esc(state.display_graph?.relationship_note||'实线关系见详情 · 虚线为建议 · 点线为归属')}${state.display_graph?.diagnostics?.length?' 有 '+state.display_graph.diagnostics.length+' 个末端步骤尚未登记后续关系。':''}</p>`+graph.routes.slice(0,5).map(r=>`<span class="flow-tone-${r.tone}" title="${esc(r.label)}"><i></i>${esc(r.label)}</span>`).join('')+
+  legend.innerHTML=`<p class="flow-relationship-note">${esc(state.display_graph?.relationship_note||'实线关系见详情 · 虚线为推断或建议 · 分组表示归属')}${state.display_graph?.diagnostics?.length?' 有 '+state.display_graph.diagnostics.length+' 项关系待确认，可查看节点详情。':''}</p>`+graph.routes.slice(0,5).map(r=>`<span class="flow-tone-${r.tone}" title="${esc(r.label)}"><i></i>${esc(r.label)}</span>`).join('')+
    (graph.routes.length>5?`<span class="muted">另有 ${graph.routes.length-5} 条分支</span>`:'')+`<small>${graph.nodes.length} 个步骤${graph.bands>1?' · '+graph.bands+' 行':''}</small>`;
-  canvas.innerHTML=`<svg class="flow-connections" width="${graph.width}" height="${graph.height}" aria-hidden="true"><defs>${[0,1,2,3,4,5].map(tone=>`<marker id="${marker}-${tone}" class="flow-tone-${tone}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10"/></marker>`).join('')}</defs>${graph.edges.map(e=>`<path d="${e.path}" class="flow-edge flow-tone-${e.tone} relation-${e.relation} basis-${e.basis} ${e.muted?'muted':''}" data-flow-from="${esc(e.from)}" data-flow-to="${esc(e.to)}" marker-end="url(#${marker}-${e.tone})"><title>${esc(e.label+' · '+e.basisLabel)}</title></path>`).join('')}${edgeBadges(graph).map(({x,y,edge:e})=>`<g class="flow-edge-badge" data-flow-from="${esc(e.from)}" data-flow-to="${esc(e.to)}"><title>${esc(e.label+' · '+e.basisLabel)}</title><rect x="${x}" y="${y}" width="28" height="16" rx="3"/><text x="${x+14}" y="${y+11}" text-anchor="middle">${esc(e.shortLabel)}</text></g>`).join('')}</svg>`+
+  canvas.innerHTML=(graph.groups||[]).map(g=>`<div class="flow-task-group" style="left:8px;top:${g.y}px;width:${graph.width-16}px;height:${g.height}px"><strong>${esc(g.label)}</strong></div>`).join('')+`<svg class="flow-connections" width="${graph.width}" height="${graph.height}" aria-hidden="true"><defs>${[0,1,2,3,4,5].map(tone=>`<marker id="${marker}-${tone}" class="flow-tone-${tone}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10"/></marker>`).join('')}</defs>${graph.edges.map(e=>`<path d="${e.path}" class="flow-edge flow-tone-${e.tone} relation-${e.relation} basis-${e.basis} ${e.muted?'muted':''}" data-flow-from="${esc(e.from)}" data-flow-to="${esc(e.to)}" marker-end="url(#${marker}-${e.tone})"><title>${esc(e.label+' · '+e.basisLabel)}</title></path>`).join('')}${edgeBadges(graph).map(({x,y,edge:e})=>`<g class="flow-edge-badge" data-flow-from="${esc(e.from)}" data-flow-to="${esc(e.to)}"><title>${esc(e.label+' · '+e.basisLabel)}</title><rect x="${x}" y="${y}" width="28" height="16" rx="3"/><text x="${x+14}" y="${y+11}" text-anchor="middle">${esc(e.shortLabel)}</text></g>`).join('')}</svg>`+
    graph.nodes.map(n=>`<button class="flow-node flow-tone-${n.route.tone} ${n.status}" style="left:${n.x}px;top:${n.y}px;width:${n.width}px;height:${n.height}px" data-flow-node="${esc(n.id)}" aria-pressed="false" title="${esc(n.title)}"><span class="flow-node-meta"><small>${String(n.step).padStart(2,'0')}</small><span class="flow-state"><i></i>${esc(stateLabel(n))}</span></span><strong>${esc(n.title)}</strong></button>`).join('');
   describe();resize();
   if(focusId)[...canvas.querySelectorAll('[data-flow-node]')].find(el=>el.dataset.flowNode===focusId)?.focus({preventScroll:true});
  }
  root.addEventListener('click',event=>{
+  const queries=event.target.closest('[data-flow-queries]');if(queries){queriesExpanded=!queriesExpanded;queries.textContent=queriesExpanded?'折叠查询记录':'展开查询记录';paint();return;}
   const destination=event.target.closest('[data-flow-action]')?.dataset.flowAction;
   if(destination){options.onAction?.(destination,graph?.nodes.find(n=>n.id===selected));return;}
   const button=event.target.closest('[data-flow-node]');if(button){selected=selected===button.dataset.flowNode?null:button.dataset.flowNode;describe();return;}
   const action=event.target.closest('[data-flow-zoom]')?.dataset.flowZoom;if(!action)return;
-  if(action==='fit'){fit=true;whole=false;}else if(action==='all'){whole=true;fit=false;viewport.scrollTop=0;viewport.scrollLeft=0;}else{const currentScale=whole?Math.min(1,(viewport.clientWidth-12)/(graph?.width||1),600/(graph?.height||1)):fit?Math.min(1,(viewport.clientWidth-12)/(graph?.width||1)):zoom;zoom=Math.min(1.6,Math.max(.25,currentScale+(action==='in'?.15:-.15)));fit=false;whole=false;}
+  if(action==='fit'){fit=true;}else{const widthScale=Math.max(.01,(viewport.clientWidth-12)/(graph?.width||1)),currentScale=Math.min(widthScale,fit?1:zoom);zoom=Math.min(widthScale,1.6,Math.max(.25,currentScale+(action==='in'?.15:-.15)));fit=false;}
   resize();
  });
  const observer=new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>{if(disposed)return;if(Math.abs(viewport.clientWidth-lastWidth)>2)paint();else resize();});});observer.observe(viewport);

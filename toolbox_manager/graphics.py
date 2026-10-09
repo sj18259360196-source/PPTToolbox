@@ -41,7 +41,7 @@ CONSTRUCT_INPUT={'type':'object','oneOf':[
          'count':{'type':'integer','minimum':2,'maximum':64},'step_deg':{'type':'number','exclusiveMinimum':0,'maximum':360}},
         ('id','canvas','style','mode','commands','center','count'))]}
 IMAGE={'type':'string','minLength':1,'maxLength':8_000_000}
-CONTOUR_INPUT=obj({k:IMAGE for k in ['reference','candidate','reference_mask','candidate_mask','exclude_mask']},
+CONTOUR_INPUT=obj({**PROJECT,**{k:IMAGE for k in ['reference','candidate','reference_mask','candidate_mask','exclude_mask']}},
                   ('reference','candidate','reference_mask','candidate_mask'))
 READBACK_INPUT=obj({**PROJECT,'pptx':S,'pptx_sha256':VERSION,
     'targets':array(obj({'slide':{'type':'integer','minimum':1},'id':S},('slide','id')),50,1)},
@@ -52,6 +52,7 @@ BOOLEAN_INPUT=obj({**PROJECT,'slide':S,'region':S,'inputs':array(S,8,2),'primary
                'items':{'enum':['union','combine','intersect','subtract','fragment']}}},
     ('project','slide','region','inputs','prefix','reason'))
 SPECS = {
+    "illustration_guide":("少色分层插画直接调用指南。无需经验检索，返回钢笔/选区两路线、当前 schema、受管调用参数与复查条件；只读。", obj({**PROJECT, "route":{"enum":["overview","pen","selection"]}})),
     'construct':('构建有界圆角多边形或放射实例，输出现有配方。',CONSTRUCT_INPUT),
     'compare_contours':('依据显式二值掩膜测量轮廓偏差并返回叠图，不判定视觉通过。',CONTOUR_INPUT),
     'read_properties':('在独立副本保存重开，读取原生填充、分组与节点，源文件不变。',READBACK_INPUT),
@@ -77,6 +78,8 @@ SPECS = {
 }
 
 
+from illustration_contracts import SPECS as ILLUSTRATION_SPECS
+SPECS.update(ILLUSTRATION_SPECS)
 from gradient_contracts import SPECS as GRADIENT_SPECS, LAYERED, TIME
 SPECS.update(GRADIENT_SPECS)
 READBACK_INPUT['properties']['timeout_seconds']=TIME
@@ -132,20 +135,25 @@ def call(manager, op, args=None, source="mcp"):
         raise PolicyDenied("Graphics package is disabled or untrusted")
     if not manager.override(p["id"], "tool", "graphics."+op, True):
         raise PolicyDenied("Graphics tool disabled")
-    if op not in {"inspect", "validate", "analyze", "audit_sources",'compare_contours','boolean_trials'} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
+    if op not in {"illustration_guide", "inspect", "validate", "analyze", "audit_sources",'compare_contours','boolean_trials'} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
         raise PolicyDenied("Agent execution is disabled")
-    with manager.lock:
+    from contextlib import nullcontext
+    with nullcontext():
         from .storage import stamp
         started_at=stamp()
         import uuid
-        call_id=uuid.uuid4().hex
+        from .project_activity import CALL_ID
+        call_id=CALL_ID.get() or uuid.uuid4().hex
         manager.store.event('graphics.started','Graphics operation started',source=source,status='running',
-                            details={'call_id':call_id,'operation':op,'project':a.get('project'),'started_at':started_at})
+                            details={'call_id':call_id,'operation':op,'tool_id':'graphics.'+op,'command_status':'running','project':a.get('project'),'started_at':started_at})
         status = "ok"
         try:
             project = None
             if "project" in a:
                 project, _ = authorize(manager, a["project"])
+            if op == 'illustration_guide':
+                from .illustration_guide import guide
+                return guide(manager,a)
             if op in {'scene_preflight','select_versions','probe_gradient'}:
                 import gradient_capabilities
                 if op=='probe_gradient':
@@ -157,13 +165,24 @@ def call(manager, op, args=None, source="mcp"):
                 if not manager.override(p['id'],'tool','office.edit-readback',True): raise PolicyDenied('office.edit-readback disabled')
                 from gradient_jobs import run_job
                 return run_job(project,op,{**a,'_office_lock':str(manager.data/'office-writer.lock')})
+            if op in ILLUSTRATION_SPECS:
+                from illustration_workflow import run
+                return run(project,op,a)
             if op=='construct':
                 from shape_construction import construct
                 return construct(a)
             if op=='compare_contours':
-                from shape_construction import compare_contours
-                return compare_contours(*[decode_image(a[k]) for k in ['reference','candidate','reference_mask','candidate_mask']],
-                                        decode_image(a['exclude_mask']) if a.get('exclude_mask') else None)
+                import subprocess
+                payload=json.dumps(a,ensure_ascii=False,allow_nan=False).encode('utf-8')
+                if len(payload)>32*1024*1024:raise ValueError('Contour request exceeds budget')
+                try:
+                    result=subprocess.run([sys.executable,'-B','-I',str(ROOT/'scripts/contour_worker.py')],
+                        input=payload,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=120,
+                        creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+                except subprocess.TimeoutExpired:
+                    raise ValueError('Contour measurement timed out; no PPT or project candidate was modified')
+                if result.returncode:raise ValueError('Contour worker failed: '+result.stderr.decode('utf-8',errors='replace')[-1200:])
+                return json.loads(result.stdout.decode('utf-8'))
             if op=='read_properties':
                 for required in ['office.edit-readback','pptx.inspect']:
                     if not manager.override(p['id'],'tool',required,True):raise PolicyDenied(required+' disabled')
@@ -283,4 +302,4 @@ def call(manager, op, args=None, source="mcp"):
         finally:
             manager.store.event("graphics."+op, "Graphics operation", source=source, status=status,
                                 details={"project": str(project) if "project" in locals() and project else None,
-                                         "call_id":call_id,"version": a.get("version"), "started_at": started_at, "ended_at": stamp()})
+                                         "call_id":call_id,"tool_id":"graphics."+op,"command_status":"completed" if status=="ok" else "failed","version": a.get("version"), "started_at": started_at, "ended_at": stamp()})

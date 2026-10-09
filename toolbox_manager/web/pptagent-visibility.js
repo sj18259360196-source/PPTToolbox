@@ -1,12 +1,12 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=v=>Number(v||0).toLocaleString('zh-CN');
 const time=v=>v?new Date(v).toLocaleString():'尚无记录';
-const kinds={summary:'项目摘要',task:'管理任务',probe:'连接测试',api:'API 请求'};
+const kinds={summary:'项目摘要',recording:'批量记录与补图',task:'管理任务',probe:'连接测试',api:'API 请求'};
 const statuses={running:'请求中',succeeded:'请求成功',failed:'请求失败',interrupted:'请求中断'};
 export function renderAgentBudget(b={}){
  if(!Number.isFinite(b.hourly_request_limit))return '';
  const retry=Math.max(b.retry_at||0,b.summary_retry_at||0);
- return `<div class="panel-body agent-budget" role="status"><strong>${b.blocked?'API 调用已暂停':b.summary_retry_at?'自动摘要等待间隔':'API 调用配额'}</strong><p>近 1 小时 ${number(b.last_hour)} / ${number(b.hourly_request_limit)} 次 · 近 24 小时 ${number(b.last_24_hours)} / ${number(b.daily_request_limit)} 次</p><p class="small muted">同项目自动摘要至少间隔 ${number(b.summary_interval_seconds)} 秒。失败尝试计入配额，重启不清零。${retry?'最早恢复时间 '+esc(time(retry*1000))+'。':''}本地记录与 PPT 制作继续运行。</p>${b.summary_outcome==='discarded'?'<p class="small muted">上次摘要因项目已变化而弃用，已记住该次尝试，不重复请求旧内容。</p>':''}</div>`;
+ return `<div class="panel-body agent-budget" role="status"><strong>${b.blocked?'API 调用已暂停':b.summary_retry_at?'自动整理等待间隔':'API 调用配额'}</strong><p>近 1 小时 ${number(b.last_hour)} / ${number(b.hourly_request_limit)} 次 · 近 24 小时 ${number(b.last_24_hours)} / ${number(b.daily_request_limit)} 次</p><p class="small muted">同项目自动整理至少间隔 ${number(b.summary_interval_seconds)} 秒。失败尝试计入配额，重启不清零。${retry?'最早恢复时间 '+esc(time(retry*1000))+'。':''}本地记录与 PPT 制作继续运行。</p>${b.summary_outcome==='discarded'?'<p class="small muted">上次摘要因项目已变化而弃用，已记住该次尝试，不重复请求旧内容。</p>':''}</div>`;
 }
 export function renderAgentMetrics(m={}){
  return renderAgentBudget(m.budget)+renderMetrics(m);
@@ -21,10 +21,15 @@ function renderMetrics(m={}){
 const assistanceStates={disabled:'助手未启用',unconfigured:'等待配置',working:'正在辅助处理',queued:'等待助手处理',unavailable:'最近整理失败',task_failed:'最近管理任务未完成',ready:'摘要已更新',waiting:'等待新的项目记录'};
 assistanceStates.rate_limited='调用已限流';
 export function renderProjectAssistance(data,project){
- return renderAgentBudget(data.assistant?.metrics?.budget)+renderAssistance(data,project);
+ const r=data.assistant_recording||{},d=data.assistant_dispatch||{};
+ const labels={working:'正在整理调用并补图',ready:'本批记录已保存',queued:'等待整理',error:'本批整理稍后重试',attention:'整理暂停，等待检查',rate_limited:'等待调用配额'};
+ const status=data.assistant?.status==='disabled'?'助手已停用':labels[d.status];
+ const detail=status?`<div class="recording-status" role="status"><strong>${esc(status)}</strong><p>累计整理 ${number(r.total_events)} 条事件 · 当前图版本 ${number(data.graph_revision)}${r.has_more?' · 还有记录等待下一批':''}</p><p class="small muted">${r.last_update?'最近保存 '+esc(time(r.last_update))+' · ':''}${esc(d.message||'按已保存间隔集中处理，不要求制作 Agent 额外汇报')}${d.retry_at&&['error','rate_limited'].includes(d.status)?' · 最早重试 '+esc(time(d.retry_at*1000)):''}</p>${['error','attention'].includes(d.status)?'<button data-recording-retry>重新整理本批</button>':''}</div>`:'';
+ return renderAgentBudget(data.assistant?.metrics?.budget)+renderAssistance(data,project)+detail;
 }
 function renderAssistance(data,project){
  const a=data.assistant||{},m=a.metrics||{},summary=data.summary||{},state=a.status||'waiting';
+ const prepared=Object.values(data.assistance||{}).filter(x=>['prepare_handoff','prepare_review_bundle'].includes(x.kind));
  const activity=state==='task_failed'?(a.last_task_result||'管理任务未完成，可进入助手查看处理记录'):state==='working'?(a.task?`正在处理管理任务，已记录 ${a.task.steps} 次工具调用`:'正在读取项目记录并生成摘要'):state==='queued'?'项目记录已有变化，等待助手处理':state==='unavailable'?'本地记录继续更新，可查看上次摘要或进入助手检查连接':state==='ready'?`上次摘要引用 ${a.evidence_count||0} 条记录，选出 ${a.recommendation_count||0} 条相关经验`:state==='disabled'?'启用后可整理项目记录、查询经验和执行管理任务':state==='unconfigured'?'配置 API 和模型后可开始辅助处理':'有新的调用或阶段记录后，助手会整理项目进展';
- return `<div class="assistance-head"><div><strong>PPTAgent</strong><span class="agent-activity-badge ${esc(state)}">${esc(assistanceStates[state])}</span></div><div class="actions"><button data-assistant-details>查看辅助结果</button><a href="#/pptagent?project=${encodeURIComponent(project)}">管理助手 ↗</a></div></div><p class="assistance-activity" role="status">${esc(activity)}</p><div class="assistance-counts"><span>本项目已记录 <b>${m.reported?number(m.total_tokens):m.requests?'—':'0'}</b> Token</span><span>已保存摘要 <b>${number(m.summaries_saved)}</b> 次</span><span>工具完成 <b>${number(m.tools_completed)}</b> 次</span><span>工作图更新 <b>${number(m.graphs_updated)}</b> 次</span><span>管理备注 <b>${number(m.notes_saved)}</b> 次</span></div><p class="small muted">${summary.at?'最近整理 '+esc(time(summary.at))+' · ':''}${m.since?'以上计数自 '+esc(time(m.since))+' 起累计':'历史摘要仍保留，累计计数从本次更新后开始'}</p>`;
+ return `<div class="assistance-head"><div><strong>PPTAgent</strong><span class="agent-activity-badge ${esc(state)}">${esc(assistanceStates[state])}</span></div><div class="actions"><button data-assistant-details>查看辅助结果</button><a href="#/pptagent?project=${encodeURIComponent(project)}">管理助手 ↗</a></div></div><p class="assistance-activity" role="status">${esc(activity)}</p><div class="assistance-counts"><span>本项目已记录 <b>${m.reported?number(m.total_tokens):m.requests?'—':'0'}</b> Token</span><span>已保存摘要 <b>${number(m.summaries_saved)}</b> 次</span><span>工具完成 <b>${number(m.tools_completed)}</b> 次</span><span>工作图更新 <b>${number(m.graphs_updated)}</b> 次</span><span>管理备注 <b>${number(m.notes_saved)}</b> 次</span><span>当前交接与检查包 <b>${prepared.length}</b> 份</span></div><p class="small muted">${prepared.length?'已准备辅助材料，制作与验收结果仍由实际任务确认。':''}</p><p class="small muted">${summary.at?'最近整理 '+esc(time(summary.at))+' · ':''}${m.since?'以上计数自 '+esc(time(m.since))+' 起累计':'历史摘要仍保留，累计计数从本次更新后开始'}</p>`;
 }

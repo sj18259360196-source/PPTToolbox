@@ -2,7 +2,10 @@
 from __future__ import annotations
 import argparse, json, math, sys
 from pathlib import Path
-from common import read_json, resolve_asset, walk_objects, bbox_to_points
+if __package__:
+    from .common import read_json, resolve_asset, walk_objects, bbox_to_points
+else:
+    from common import read_json, resolve_asset, walk_objects, bbox_to_points
 
 KINDS = {"text", "shape", "line", "connector", "path", "image", "table", "chart", "group"}
 ADJUSTMENT_COUNTS = {"rect":0, "round_rect":1, "ellipse":0, "triangle":1,

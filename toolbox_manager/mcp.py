@@ -30,7 +30,7 @@ TOOLS=[
  ('toolbox_status','读取管理器和当前启用版本；不要把注册来源当作宿主已安装。',schema()),
  ('toolbox_search','检索当前包中已启用工具，返回实际入口及条件。',schema({'query':S})),
  ('toolbox_describe','读取一个已启用工具的参数、手册和受管调用 argv。',schema({'id':S},['id'])),
- ('toolbox_context','读取当前 Skill 用户覆盖、自定义指令、执行开关和禁用工具；按需加载。',schema()),
+ ('toolbox_context','读取当前 Skill、指令、权限及 agent_capabilities；少色插画可直接调用 graphics_illustration_guide 获取步骤和 schema，无需先检索经验。',schema()),
  ('toolbox_project_bind','为本 Agent 会话绑定项目。project 使用用户明确指定的目录；name 在默认根目录下新建任务。返回 context_id，不创建文件或授予权限。',
   {**schema({'project':S,'name':S}),'oneOf':[{'required':['project'],'not':{'required':['name']}},{'required':['name'],'not':{'required':['project']}}]}),
  ('toolbox_manual','读取当前版本的指定手册及用户覆盖；不提供path则列出手册。',schema({'path':S})),

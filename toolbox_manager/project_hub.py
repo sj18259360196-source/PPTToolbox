@@ -161,7 +161,7 @@ def observe(manager, key):
         # Revisit evidence around old unbound failures, even outside the recent window.
         extra=[]
         for issue in state.get('activity',{}).get('issues',[]):
-            if issue.get('state')!='open' or issue.get('task_id') or issue.get('tool') not in {'workflow.start','workflow.submit'}:
+            if issue.get('state')!='open' or issue.get('task_id') or issue.get('tool') not in {'workflow.start','workflow.submit','workflow.replace-scene'}:
                 continue
             evidence=issue.get('evidence_id','').removeprefix('audit-')
             if not evidence.isdigit():continue
@@ -192,6 +192,18 @@ def observe(manager, key):
         if event['action'] in {'tool.started','tool.authorized','tool.launched','activity.started'}:
             alive = process_alive(detail.get('worker_pid') or detail.get('owner_pid'))
             status = 'running' if alive is True else 'outcome_unknown'
+            if status=='outcome_unknown' and event['action']=='activity.started':
+                import re
+                if re.fullmatch(r'[a-f0-9]{32}',cid):
+                    receipt=journal.safe(root,'logs/tool-calls/'+cid+'/activity.json')
+                    try:
+                        if receipt.stat().st_size <= 16*1024*1024:
+                            saved=json.loads(receipt.read_text('utf-8'))
+                            if saved.get('call_id')==cid and saved.get('command_status') not in {None,'started','running'}:
+                                detail={**detail,**{k:v for k,v in saved.items() if k!='result'}}
+                                status=saved['command_status']
+                    except (OSError,ValueError):pass
+
         from .project_status import safe_message
         calls[cid] = {'id': cid, 'tool': detail.get('tool_id',event['action'] if legacy else ''), 'status': status,
             'project':str(root), 'project_id':detail.get('project_id'),
@@ -213,6 +225,8 @@ def observe(manager, key):
                 'connection': {'state': connection['state'], 'connected_count': connection['connected_count']},
                 'task': {k:v for k,v in (workflow.get('active_task') or {}).items() if k in {'id','kind','target'}},
                 'file_scan_limited': limited}
+    from .issue_assessment import assess
+    activity['issues']=assess({**state,'activity':activity})['issues']
     from .visual_activity import project_visuals
     try:
         activity['visual']=project_visuals(manager,root,workflow,activity['calls'])
@@ -254,11 +268,16 @@ def snapshot(manager, key):
         preferred = summary.get('recommended_ids', [])
         suggested.sort(key=lambda r: preferred.index(r['id']) if r['id'] in preferred else len(preferred))
     from .project_status import graph
+    from .issue_assessment import assess, handoff
     from scripts.project_flow import STEP_TYPES
     from .pptagent_metrics import project_status as assistant_status
+    from .flow_semantics import lifecycle, hydrate
+    state={**state,'flow_lifecycle':lifecycle(manager,workflow),
+           'work_graph':{**state.get('work_graph',{}),'nodes':hydrate(manager,root,state.get('work_graph',{}).get('nodes',[]))}}
     return {**state, 'project': key, 'path': str(root), 'workflow_status': workflow.get('status'),
             'assistant':assistant_status(manager,key,state),
             'display_graph':graph(state), 'step_types':STEP_TYPES,
+            'issue_view':assess(state), 'assistance_packet':handoff(state),
             'notes': journal.notes(root),
             'recommendations': suggested, 'summary': summary,
             'stages': [{'id':i,'label':t} for i,t in journal.STAGES],
@@ -310,6 +329,7 @@ def checkpoint(manager, body):
 
 def stage_context(manager, project):
     from scripts.project_flow import STEP_TYPES
+    from .issue_assessment import handoff
     if not any(project in {key,row['project_id'],row['path']} for key,row in manager.store.get('workbench_projects',{}).items()):
         return None
     root, row, _ = entry(manager, project)
@@ -321,6 +341,7 @@ def stage_context(manager, project):
         if visual else {'coverage':'pending','measurement_note':'项目观察器尚未采集图片统计；未知值不能当作零。'})
     return {k:state.get(k) for k in ('project_id','run_id','phase_revision','phase','checkpoint_required')} | {
         'visual_context':visual_context,
+        'assistance_packet':handoff(state),
         'stages':[{'id':i,'label':t} for i,t in journal.STAGES], 'tool':'toolbox_checkpoint',
         'step_types':STEP_TYPES,
         'recommendations':recommendations(manager,root,state),
@@ -415,6 +436,10 @@ class Observer:
                         self.pending_checkpoints(key)
                         from .projects import cache_summary
                         cache_summary(self.manager,key)
+                        saved=journal.load(entry(self.manager,key)[0])
+                        helper=getattr(self.manager,'pptagent_worker',None)
+                        if helper and not rows[key].get('archived') and (saved.get('assistant_dispatch') or saved.get('assistant_recording',{}).get('has_more') or key==self.selected):
+                            helper.offer(key,saved)
                     except (OSError,ValueError) as exc:
                         self.errors[key]=str(exc)
                 for key in dict.fromkeys(targets):

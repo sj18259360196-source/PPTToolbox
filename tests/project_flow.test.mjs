@@ -2,7 +2,31 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../toolbox_manager/web/project-flow.js',import.meta.url),'utf8');
-const {projectGraph,layoutGraph,renderVisualActivity,edgeBadges,renderRelations}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const {projectGraph,compactQueries,layoutGraph,renderVisualActivity,edgeBadges,renderRelations,renderStageTimeline}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+
+test('consecutive successful status queries condense with complete records and expandable graph',()=>{
+ const rows=[{id:'q1',group_id:'t',source:'pptagent',title:'查询一',status:'observed',tools:['workflow.status'],evidence_ids:['audit-1'],after:[]},
+  {id:'q2',group_id:'t',source:'pptagent',title:'查询二',status:'observed',tools:['workflow.status'],evidence_ids:['audit-2'],after:['q1']},
+  {id:'work',group_id:'t',source:'pptagent',title:'修改',status:'observed',tools:['graphics.compile'],evidence_ids:['audit-3'],after:['q2']}];
+ const compact=compactQueries(rows);
+ assert.equal(compact.length,2);assert.equal(compact[0].query_count,2);
+ assert.equal(compact[0].query_records.length,2);assert.deepEqual(compact[1].after,['q1']);
+ assert.equal(rows.length,3);assert.equal(compactQueries(rows,true),rows);
+ assert.equal(compactQueries(rows.map(n=>n.id==='q2'?{...n,status:'outcome_unknown'}:n)).length,3);
+});
+test('queries separated by real work or outgoing branches never collapse into a cycle',()=>{
+ const base=(id,event,after)=>({id,source:'pptagent',group_id:'t',status:'observed',tools:['workflow.status'],evidence_ids:['audit-'+event],after});
+ const q1=base('q1',1,[]),work={...base('work',2,['q1']),tools:['graphics.compile']},q2=base('q2',3,['work']);
+ assert.equal(compactQueries([q1,work,q2]).length,3);
+ assert.equal(compactQueries([q1,{...q2,after:['q1']},{...work,evidence_ids:['audit-4']}]).length,3);
+});
+
+test('inferred history groups stages without fabricated dependency lines',()=>{
+ const html=renderStageTimeline({},[{id:'production',status:'running'},{id:'draw',stage:'production',title:'<draw>',task_ids:['task-7'],round:2},{id:'views',stage:'production',kind:'visual_detail'}]);
+ assert.equal((html.match(/flow-stage-group/g)||[]).length,5);
+ assert.ok(html.includes('task-7')&&html.includes('第 2 轮')&&html.includes('&lt;draw&gt;'));
+ assert.ok(!html.includes('data-flow-node="views"')&&!html.includes('<svg'));
+});
 
 test('decision labels and evidence are preserved and escaped in relationship details',()=>{
  const layout=layoutGraph([{id:'a',title:'路线判断',after:[]},{id:'b',title:'原生绘制',after:['a'],
@@ -31,6 +55,25 @@ test('visual counters distinguish evidence from unknown transport and escape fai
  assert.ok(source.includes('projectGraph(next),next.activity?.visual'),'counter-only changes trigger repaint');
 });
 const nodes=[{id:'plan',after:[]},{id:'text',after:['plan']},{id:'search',after:['plan']},{id:'draw',after:['search']},{id:'merge',after:['draw','text']}];
+
+test('round and task ownership draws bounded groups while retaining cross-round revision',()=>{
+ const grouped=[
+  {id:'plan',round:1,group_id:'task1',group_label:'第 1 轮 · 任务一',after:[]},
+  {id:'text',round:1,group_id:'task1',group_label:'第 1 轮 · 任务一',after:['plan']},
+  {id:'draw',round:1,group_id:'task1',group_label:'第 1 轮 · 任务一',after:['plan'],links:[{from:'plan',relation:'fork',basis:'agent'}]},
+  {id:'merge',round:1,group_id:'task1',group_label:'第 1 轮 · 任务一',after:['text','draw'],join_policy:'all'},
+  {id:'delivery',round:1,group_id:'feedback1',group_label:'第 1 轮 · 交付与反馈',after:['merge']},
+  {id:'revise',round:2,group_id:'task2',group_label:'第 2 轮 · 任务二',after:['delivery'],links:[{from:'delivery',relation:'revision',basis:'recorded'}]},
+ ];
+ for(const width of [720,1100,1440]){
+  const graph=layoutGraph(grouped,width);clearRoutes(graph);
+  assert.equal(graph.groups.length,3);assert.equal(graph.edges.length,6);
+  for(const g of graph.groups)for(const n of graph.nodes.filter(n=>n.group_id===g.id)){
+   assert.ok(n.y>g.y+20&&n.y+n.height<g.y+g.height);
+  }
+  assert.ok(graph.groups[2].y>graph.groups[1].y+graph.groups[1].height);
+ }
+});
 
 function clearRoutes(layout){
  for(const a of layout.nodes){
@@ -96,7 +139,7 @@ test('bounded mixed dependencies remain inside the canvas at desktop widths',()=
  for(const width of [720,1100,1440]){
   const layout=layoutGraph(mixed,width);clearRoutes(layout);assert.equal(layout.edges.length,mixed.reduce((n,x)=>n+x.after.length,0));
  }
- assert.throws(()=>layoutGraph([...mixed,{id:'extra',after:[]}]),/上限/);
+ assert.throws(()=>layoutGraph(Array.from({length:129},(_,i)=>({id:'limit'+i,after:[]}))),/上限/);
  assert.deepEqual(layoutGraph([]).edges,[]);
 });
 test('layout rejects cycles and missing nodes without hanging',()=>{

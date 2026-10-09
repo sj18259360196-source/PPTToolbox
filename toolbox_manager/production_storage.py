@@ -41,6 +41,8 @@ def startup_prompt(manager,preview=None):
                  '再询问是否学习本次经验以及做得好和需要改进的地方。不得提前打断制作或推定同意。'
                  '通过 toolbox_retrospective 依次记录 presented、accept、assets、consent、submit；'
                  '仅保存用户明确选择的素材。新任务按需用 list 检索相关经验，经验文本不替代当前授权和验证。')
+    from .illustration_guide import GUIDANCE as ILLUSTRATION_GUIDANCE
+    guidance += '\n'+ILLUSTRATION_GUIDANCE
     from scripts.material_routes import GUIDANCE
     guidance += '\n'+GUIDANCE+' 生图请求带 generation_decision，软件据此生成默认工作图分支，无需额外打卡。'
     text=template.replace('{{production_storage}}',guidance) if '{{production_storage}}' in template else template+'\n\n'+guidance

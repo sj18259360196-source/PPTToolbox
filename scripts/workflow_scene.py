@@ -109,8 +109,9 @@ def import_file(source:Path, project:Path, folder='assets'):
 
 
 def import_scene(scene_path:Path, project:Path):
-    scene=read_json(scene_path); errors=validate(scene,scene_path.parent)
-    if errors: raise ValueError('Scene import errors: '+'; '.join(errors[:12]))
+    from scene_preflight import require
+    require(scene_path)
+    scene=read_json(scene_path)
     scene=copy.deepcopy(scene); pages=[]
     for i,s in enumerate(scene['slides'],1):
         ref=resolve_asset(scene_path.parent,s.get('reference',''))

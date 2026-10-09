@@ -3,7 +3,7 @@ name: ppt-reference-rebuild
 description: 将PPT设计图片稿或页面截图重建为可编辑PPTX。通过统一工具箱领取局部任务、构建、PowerPoint渲染、左右对照、审查及续作；适用于单页、多页、素材替换和局部返修，不用于无参考图的自由设计。
 metadata:
   compatibility: 可执行本地脚本并查看图像的Agent；Python 3.10+。目标软件验证需要Windows桌面PowerPoint及PowerShell；视觉、生图和参考图编辑由宿主提供。
-  version: "1.24.1"
+  version: "1.26.7"
   language: "zh-CN"
   source-records: "31"
   guidance-revision: "2026-10-02-call-recovery"
@@ -91,3 +91,11 @@ For missing icons, author semantic groups of native shapes and paths in the curr
 Repeated curves, shared boundaries, fitted gradients and linked copies use `graphics_inspect`, `graphics_preview`, `graphics_compile` and `graphics_regenerate`. Regeneration requires the prior version and refuses native edits. Relations live in the recipe, not PowerPoint. Read [graphics contracts](references/graphics-construction.md) and retain real Office/visual verification.
 
 For editable illustrations, read [material construction and diagnostics](references/native-illustration.md). Use `graphics_analyze` for command/subpath complexity and transparency warnings, `graphics_material_recipe` for editable droplet or rotated-end drafts, and `graphics_audit_sources` for explicit project dependencies before delivery. Inspect current capabilities first; drafts and structural diagnostics never certify visual quality. Search EXP-174 through EXP-180 for representation choice, lighting direction, and persistence guidance.
+
+
+少色分层插画保留钢笔节点与选区转路径两条方法。实际观察后调用 graphics_route_illustration，在 page_plan.notes 记录部件、路线及理由；孔洞变化和评价口径排名反转必须复查。使用 [双路线插画方法](references/layered-illustration.md) 与默认指令 illustration-method-choice，分开测量几何、颜色和实际编辑行为。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

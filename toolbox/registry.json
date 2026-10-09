@@ -1780,6 +1780,114 @@
         "references/gradient-capabilities.md"
       ],
       "limitations": "Managed graphics API; no implicit adoption or visual approval"
+    },
+    {
+      "id": "graphics.route_illustration",
+      "title": "判断少色分层曲线插画路线",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_route_illustration or managed execute --project <full path> --json <request.json>",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.fit_paths",
+      "title": "按锚点约束拟合原生闭合路径",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_fit_paths or managed execute --project <full path> --json <request.json>",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.compare_regions",
+      "title": "测量同尺度局部轮廓与颜色误差",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_compare_regions or managed execute --project <full path> --json <request.json>",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.selection_masks",
+      "title": "生成分层选区候选",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_selection_masks or managed CLI with --project and --json",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.freeze_evaluation",
+      "title": "冻结原图评价口径",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_freeze_evaluation or managed CLI with --project and --json",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.evaluate_stages",
+      "title": "测量阶段与评价口径差异",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_evaluate_stages or managed CLI with --project and --json",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "id": "graphics.share_rings",
+      "title": "复用闭合共享边",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "Use MCP graphics_share_rings or managed CLI with --project and --json",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。"
+    },
+    {
+      "kind": "python",
+      "entry": "manager.py",
+      "title": "比较显式轮廓与误差叠图",
+      "limitations": "经受管 graphics 入口核对执行开关和项目授权；观察、Office 与编辑验收仍由当前任务完成。",
+      "outputs": "项目内候选或测量结果，不自动采用",
+      "inputs": "Use MCP graphics_compare_contours or managed CLI with --project and --json",
+      "manuals": [
+        "references/layered-illustration.md"
+      ],
+      "id": "graphics.compare_contours"
+    },
+    {
+      "id": "graphics.illustration_guide",
+      "title": "少色分层插画直接调用指南",
+      "kind": "python",
+      "entry": "manager.py",
+      "inputs": "MCP graphics_illustration_guide {} 或 --json <request.json>",
+      "outputs": "方法判断、步骤、当前 schema 与受管 argv",
+      "manuals": [
+        "references/illustration-agent-guide.md"
+      ],
+      "limitations": "只读发现；模板需补真实输入；工具开关有效；不自动制作或验收"
     }
   ],
   "internal_modules": [
@@ -1794,7 +1902,6 @@
     "scripts/graphics_gradient.py",
     "scripts/graphics_paint.py",
     "scripts/graphics_preview.py",
-    "scripts/graphics_paint.py",
     "scripts/native_text_range.py",
     "scripts/native_topology.py",
     "scripts/native_capabilities.py",
@@ -1847,7 +1954,16 @@
     "scripts/gradient_contracts.py",
     "scripts/native_nodes.py",
     "scripts/shape_construction.py",
-    "scripts/shape_evidence.py"
+    "scripts/shape_evidence.py",
+    "scripts/scene_preflight.py",
+    "scripts/pen_path_fit.py",
+    "scripts/illustration_contracts.py",
+    "scripts/illustration_workflow.py",
+    "scripts/illustration_worker.py",
+    "scripts/illustration_methods.py",
+    "scripts/illustration_method_contracts.py",
+    "scripts/contour_worker.py",
+    "toolbox_manager/illustration_guide.py"
   ],
   "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
 }

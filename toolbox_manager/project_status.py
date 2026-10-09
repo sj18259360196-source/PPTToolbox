@@ -23,6 +23,8 @@ def call_state(call):
         return 'failed'
     if status == 'outcome_unknown' or recovery.get('outcome') == 'outcome_unknown':
         return 'outcome_unknown'
+    if status == 'no_results':
+        return 'empty'
     if status in SUCCESS:
         return 'done'
     if status in {'running','started','authorized','launched'}:
@@ -125,7 +127,7 @@ def generation_nodes(routes):
 
 def incident(call):
     status = call_state(call)
-    if status not in {'blocked','failed','outcome_unknown'}: return None
+    if status not in {'blocked','failed','outcome_unknown','empty'}: return None
     code = call.get('error_code') or call.get('reason_code') or call.get('status')
     outcome = (call.get('recovery') or {}).get('outcome')
     title, action = '工具执行失败', '查看调用详情，修正原因后由制作 Agent 决定后续操作。'
@@ -140,7 +142,7 @@ def incident(call):
     if outcome == 'accepted_next_failed':
         title, action = '提交已保存，下一步获取失败', '先读取当前任务状态；不要重新提交已经接受的内容。'
     return {**call, 'id': call['id'], 'status':status, 'title':title,
-            'severity':'warning' if status=='blocked' else 'error',
+            'severity':'info' if status=='empty' else 'warning' if status=='blocked' else 'error',
             'message':safe_message(call.get('message') or code), 'next_action':action,
             'state':'open'}
 
@@ -247,6 +249,9 @@ def graph(state):
         node['actions']=template.get('actions',['calls','files'])
         node['evidence']={'stage':'阶段打卡','checkpoint':'制作 Agent 调整记录','observer':'软件自动采集','pptagent':'PPTAgent 整理','generation_route':'素材任务 · Agent 判断','suggested':'预设建议 · 尚无执行记录'}.get(node.get('source'),'制作 Agent 登记')
         def matches(c):
+            if node.get('source')=='pptagent' and node['id'].startswith('auto-'):
+                import hashlib
+                return node['id']=='auto-'+hashlib.sha256(str(c.get('id')).encode()).hexdigest()[:20]
             if node.get('source')=='suggested':return False
             if node.get('source')=='checkpoint':return False
             if node.get('task_ids'):
@@ -261,6 +266,7 @@ def graph(state):
         relevant=[c for c in calls if matches(c) and (not node.get('updated_at') or c.get('at','')>=node['updated_at'])]
         problems=[i for i in issues if matches(i)]
         node['call_ids']=list(dict.fromkeys(c['id'] for c in relevant+problems))
+        problems=[i for i in problems if i.get('status')!='empty' and i.get('message')!='no_results']
         if problems:
             problem=next((i for i in reversed(problems) if i['severity']=='error'),problems[-1])
             node.update(status=problem['status'], observedTool=problem.get('tool'),
@@ -271,7 +277,7 @@ def graph(state):
             call=relevant[-1]; observed=call_state(call)
             node.update(observedTool=call.get('tool'), observed_at=call.get('at'))
             if observed=='running': node.update(status='running',evidence='工具正在执行')
-            elif observed=='done':
+            elif observed in {'done','empty'}:
                 # A finished call never claims a phase or authored step has passed.
                 # Observations have no pending check-in; only real incidents block them.
                 if node.get('source')=='observer': node['status']='observed'
@@ -299,6 +305,8 @@ def graph(state):
                 node.update(status='failed',status_label='统计待核对',detail=node['detail']+'\n图片或记录存在异常，请查看上方图片统计。')
             if existing is None:nodes.append(node)
     from scripts.project_flow import diagnostics
+    from .flow_semantics import project
+    nodes=project(nodes,state.get('flow_lifecycle'))
     return {'nodes':nodes,'format':'ppttool-work-graph/1','diagnostics':diagnostics(nodes),
-            'relationship_note':('虚线为建议路径，点线为阶段归属；均不代表实际执行依赖。仅展开最近 16 组工具任务、6 条调整记录和 4 条素材路线，完整历史仍在调用与阶段记录中。'
-                                 if not custom else '连线依据由步骤记录提供；返修保留旧轮次。')}
+            'relationship_note':'按轮次与任务分组；同列不代表并行。实线为记录或明确登记，虚线为推断或建议。调用先后不等于依赖，交付后等待用户反馈。'+
+                (' 旧记录仅展开最近 16 组任务，完整记录可查看调用历史。' if not custom else '')}

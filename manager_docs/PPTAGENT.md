@@ -45,3 +45,12 @@
 ## 更新项目工作图
 
 驻留助手增加 update_work_graph 工具。先选择项目并读取记录，再提交步骤变化；软件自动排布方框与连接线。更新只影响展示记录，不能代替制作 Agent 打卡或批准交付。调用格式见[工作图说明](../references/project-work-graph.md)。
+
+## 项目辅助能力
+
+1.25.0 新增十个证据、交接、预检和更新候选接口，共十七个内置 Agent 工具。后台自动准备交接包，管理任务与摘要分别调度。具体范围与接口见 [协作说明](../references/agent-cooperation.md)。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

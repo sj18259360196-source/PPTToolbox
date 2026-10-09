@@ -117,3 +117,8 @@ python toolbox.py tools run experience.audit -- --details
 ```
 
 show返回相关工具的实际类型、输入与限制；source核对来源哈希后最多读取80行。audit检查引用与工具路径，不运行Office，也不判断语义提炼完整。完整说明见[经验与工具索引](../references/experience-library.md)。
+
+
+## 1.26.7 插画方法直接入口
+
+少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

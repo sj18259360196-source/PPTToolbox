@@ -148,6 +148,15 @@ def markdown(root, state):
 def _commit(root, old, changes, event_type, source, detail, event_id=None):
     sequence = old.get('sequence', 0) + 1
     changes = {**changes, 'updated_at': now()}
+    if 'work_graph' in changes:
+        changes['graph_revision'] = old.get('graph_revision', 0) + 1
+        if not detail.get('history_id'):
+            history_id=f"{changes['graph_revision']:010d}-{uuid.uuid4().hex[:16]}"
+            folder=safe(root,'.ppttool/graph-history');folder.mkdir(exist_ok=True)
+            atomic(safe(root,'.ppttool/graph-history/'+history_id+'.json'),
+                   {'id':history_id,'at':changes['updated_at'],'before':old.get('work_graph',{}),
+                    'after':changes['work_graph'],'summary':event_type,'warnings':[]})
+            detail={**detail,'history_id':history_id}
     event = {'id': event_id or uuid.uuid4().hex, 'sequence': sequence, 'at': changes['updated_at'],
              'type': event_type, 'source': source, 'detail': detail, 'changes': changes}
     folder = safe(root, '.ppttool/events'); folder.mkdir(exist_ok=True)
