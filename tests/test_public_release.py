@@ -27,3 +27,19 @@ def test_templates_include_current_managed_routes(tmp_path):
     manager.save_command({**row,'body':'Owner customized body','enabled':False})
     current=next(r for r in manager.commands() if r['id']==row['id'])
     assert current['body']=='Owner customized body' and not current['enabled']
+
+
+def test_prompt_guide_and_reviewed_production_context_ship_together(tmp_path):
+    from toolbox_manager.service import Manager
+    from toolbox_manager.prompt_modes import BRIEF_PATH
+    manager=Manager(tmp_path/'data',root=ROOT,home=tmp_path/'home')
+    context=manager.context(profile='production')
+    assert context['context_profile']=='production',context.get('profile_fallback')
+    prompt=manager.call('prompt.read',{})
+    assert prompt['concise']['guide_path']==BRIEF_PATH
+    assert prompt['concise']['chars']<=1500
+    guide=manager.document(BRIEF_PATH)
+    assert prompt['text'] in guide['content'] and not guide['editable']
+    if (ROOT/'PUBLIC_DISTRIBUTION.json').exists():
+        desktop=manager.document('references/current-desktop.md')['content']
+        assert 'context --profile full' in desktop and 'managed_argv_prefix' in desktop

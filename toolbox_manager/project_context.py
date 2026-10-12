@@ -63,7 +63,9 @@ class ProjectContext:
         if read_state:
             from scripts.project_directory import inspect_directory
             result['initialization']=inspect_directory(self.root)
-        result['material_policy'] = effective(self.manager, self.root)
+        result['material_policy'] = effective(self.manager, self.root, read_state=read_state)
+        from .production_settings import effective as production_effective
+        result['production_settings'] = production_effective(self.manager, self.root, read_state=read_state)
         result['workbench_key'] = next((k for k,v in self.manager.store.get('workbench_projects',{}).items()
                                       if plain_path(v['path']) == self.root), None)
         return result
@@ -85,6 +87,9 @@ def bind(manager, project=None, name=None):
         project=root/name
         if Path(project).exists():raise ValueError('Default task directory already exists; bind its explicit path to resume')
     context=ProjectContext(manager,project)
+    if not context.root.exists():
+        from .production_settings import ensure_project
+        ensure_project(manager, context.root)
     return {**context.snapshot(can_read(manager,context.root)),'context_id':uuid.uuid4().hex}
 
 

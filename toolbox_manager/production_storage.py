@@ -10,14 +10,15 @@ def locations(manager):
     return toolbox_locations(manager)
 
 
-def startup_prompt(manager,preview=None):
+def startup_prompt(manager,preview=None,package_id=None,template_document=None):
     from .material_policy import effective
     paths=locations(manager)
     if preview and 'projects_directory' in preview:
         from .project_context import DEFAULT_PROJECTS_ROOT
         paths['default_projects_root']=manager._projects_directory(preview['projects_directory']) or DEFAULT_PROJECTS_ROOT
-    source=Path(manager.package()['path'])/'给模型的启动指令.txt'
-    template=manager.document('给模型的启动指令.txt')['content'] if source.is_file() else '使用本机 PPT Toolbox 制作可编辑 PPT。\n\n{{production_storage}}'
+    source=Path(manager.package(package_id)['path'])/'给模型的启动指令.txt'
+    doc=template_document if template_document is not None else (manager.document('给模型的启动指令.txt',package_id) if source.is_file() else None)
+    template=doc['content'] if doc else '使用本机 PPT Toolbox 制作可编辑 PPT。\n\n{{production_storage}}'
     approval=('项目请求自动批准已开启。调用 rebuild_start 时，工具箱会按已保存的设置授权本次项目及输入目录，并在同一次调用中继续创建，无须逐项等待批准。'
               '已拒绝或已归档的申请保持原状态，执行开关和未决写入检查继续生效。\n'
               if manager.settings()['auto_approve_project_requests'] else
@@ -45,6 +46,20 @@ def startup_prompt(manager,preview=None):
     guidance += '\n'+ILLUSTRATION_GUIDANCE
     from scripts.material_routes import GUIDANCE
     guidance += '\n'+GUIDANCE+' 生图请求带 generation_decision，软件据此生成默认工作图分支，无需额外打卡。'
+    guidance += ('\n页面独立正文按要求改字。生成素材验证整体移动、缩放和替换；插画内部编辑按项目绘制偏好与具体对象要求执行。'
+                 '照片按用户保真要求决定保留或生成，原有文字随图保留；生成插画保留可辨识原文，装饰标题保存准确原文并逐字核对实际产物。'
+                 '多个风格相容的小素材可通过 request_asset 的 request.items 合成一次宿主生成请求，按实际图像裁切，保留源图哈希和逐项状态，仅补做未采用项。'
+                 '先恢复已完成的生成文件，再判断是否需要补生成。整页与重点局部按任务清单查看左右对比和叠加图，分别核对内容、位置、比例与遮挡。'
+                 'native_first 是保留来源与路线检查的兼容字段，组件仍按类别和编辑要求选路。')
     text=template.replace('{{production_storage}}',guidance) if '{{production_storage}}' in template else template+'\n\n'+guidance
-    return {**paths,'ready':True,'text':text,'creation_instruction':creation_instruction}
+    text += ('\n新建参考图项目按 references/material-quality.md 保存用户制作要求原文，'
+             '在 material_contract 引用文件、哈希与原文片段，在 material_requirement 记录素材来源、独立性、背景和选路约束。'
+             '截图清楚不能直接作为已有独立素材的依据。区域制作、源审查和整页审查分别提交 material_reviews，'
+             '核对主体完整、多底色边缘和参考保真，开放缺陷不得通过。保留合法照片裁切、白色标签和原图渐隐，'
+             '每个独立素材实际移动、缩放、换底色并保存重开，含图片的素材另测替换。旧合同通过正式范围修订启用新检查。')
+    from .production_settings import effective as production_effective
+    production = production_effective(manager)
+    text += '\n读取 toolbox_production_settings 或当前任务 production_settings，以实际有效值执行。'+' '.join(production['instructions'])
+    return {**paths,'ready':True,'text':text,'creation_instruction':creation_instruction,
+            'template_revision':doc['revision'] if doc else 0}
 

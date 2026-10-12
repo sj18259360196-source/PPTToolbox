@@ -26,10 +26,10 @@ bbox是**原图**xyxy。示例尺寸只解释格式，必须按当前真实图�
 
 ## 需要宿主生成素材
 
-在region_objects响应中使用以下替代格式。
+在 region_objects 响应中使用以下替代格式。示例原文与参考路径须换成当前已查看、实际存在的项目文件和内容；启用 element_scope 时填写当前 scope_unit_ids。照片保持源像素，页面独立标签保持原生，插画内部原有文字随素材约束。
 
 ```json
-{"action":"request_asset","request":{"id":"asset-01","purpose":"当前区域复杂全息设备图标，标签另行原生重建","prompt":"按当前参考局部保留主体数量、轮廓、视角和主色；只生成独立设备，不生成文字、数字、卡片或标识；需要真实透明背景","transparent":true,"allowed_approximation":true}}
+{"action":"request_asset","request":{"id":"asset-01","purpose":"当前区域复杂设备插画，页面外加标签另行原生制作","prompt":"参考当前局部生成独立设备，保留主体数量、轮廓、视角、主色与设备内部准确原文 MODEL A；不带入页面外加标签、卡片或邻近背景；使用真实透明背景","transparent":true,"allowed_approximation":true,"generation_decision":{"basis":"content_category","reference":"input/device-reference.png","content_type":"complex_illustration","required_edit":"image_replace","text_ownership":"embedded","embedded_text":[{"text":"MODEL A","legibility":"readable"}],"reason":"复杂设备插画采用参考生成，当前需求为整体替换"}}}
 ```
 
 按[素材唯一决策](asset-policy.md)确认范围与权限。控制器暂缓该区域，可继续其他就绪区域，然后发出asset_material任务。PNG生成本身由宿主真正调用。提交file、tool_used、provenance；model_reported没有工具证据时为null。任务要求透明时程序拒绝RGB棋盘格、全不透明或全透明空图。
@@ -43,6 +43,8 @@ bbox是**原图**xyxy。示例尺寸只解释格式，必须按当前真实图�
 ## source_review
 
 重新读原图；packet给出当前文字、表格、关系与区域备注。检查截图→转录这一层，不能以PPT与scene一致代替。
+
+生成标题与插画可读内嵌字在此任务提交 material_text_checks，绑定 object_id、实际图片 asset_sha256 和按原文顺序读到的 observed_text。原照片保留源像素，无需生成文字检查。以下只展示共同字段；使用当前任务的响应模板补齐 scope_review 和适用的文字检查，不把这些字段移到后续 review_full 响应。
 
 ```json
 {"status":"passed","note":"<实际逐项观察与依据>","reviewer":"<执行者标识>","viewed_files":["<next返回的实际图片路径>"]}
@@ -63,6 +65,8 @@ candidate提交真实PPTX文件。office_render提交真实收据路径，程序
 ```
 
 ## review_full与review_local
+
+新任务查看当前全页与关键局部的左右图和叠图，按 must_view_files 与 review_bundle.required_view_files 覆盖实际必看文件。继续核对生成标题、插画内字及照片裁切在页面中的实际效果；逐字核对记录按前述 source_review 契约提交。
 
 全页检查分别填写visual_full、raster_scope、text_geometry，避免一个总体通过掩盖其中未执行项。实际图像路径必须出现在viewed_files。局部任务需要填写该区域的观察，若涉及关系，逐个填写relationships中的object_id及note。没有适用局部或连接时由程序推导不适用，模型不能用不适用跳过已声明对象。
 

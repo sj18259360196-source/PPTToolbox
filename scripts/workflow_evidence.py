@@ -304,6 +304,10 @@ def build_review(project, state):
             idx=target_info['index'];rid=target_info['region_id'];view=comp['local_paths'][(idx,rid)]
             add('visual_local',r,[idx],target,[view['file']])
             review['checks']['visual_local']['regions'].append({'index':idx,'id':rid,'object_ids':view['object_ids'],'note':r['note']})
+            if r.get('object_checks'):
+                review['checks']['visual_local']['regions'][-1]['object_checks']=r['object_checks']
+            if r.get('findings'):
+                review['checks']['visual_local']['regions'][-1]['findings']=r['findings']
             if r.get('relationships'):
                 add('relationships',r,[idx],target,[view['file']])
                 for row in r['relationships']:

@@ -405,6 +405,9 @@ def fit_ink(reference, candidate, limit=6):
 
 
 def evaluate(plan_dir, office_dir, output):
+    if read_json(plan_dir/"plan.json").get("version") == "native-text-calibration/1":
+        from text_calibration import evaluate as calibrate_evaluate
+        return calibrate_evaluate(plan_dir, office_dir, output)
     if output.exists():
         raise FileExistsError(output)
     started = time.monotonic()
@@ -512,10 +515,13 @@ def evaluate(plan_dir, office_dir, output):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action", required=True)
-    a = sub.add_parser("plan")
+    a = sub.add_parser("plan", allow_abbrev=False)
     a.add_argument("--scene", type=Path, required=True)
-    a.add_argument("--references", type=Path, required=True)
+    a.add_argument("--references", type=Path)
     a.add_argument("--outdir", type=Path, required=True)
+    a.add_argument("--mode", choices=("fit", "calibration"), default="fit")
+    a.add_argument("--reuse", type=Path)
+    a.add_argument("--max-samples", type=int, default=8)
     a = sub.add_parser("refine-plan", allow_abbrev=False)
     a.add_argument("--scene", type=Path, required=True)
     a.add_argument("--request", type=Path, required=True)
@@ -526,7 +532,15 @@ def main():
     a.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
     if args.action == "plan":
-        result = plan(args.scene, read_json(args.references), args.outdir)
+        if args.mode == "calibration":
+            if args.references:
+                p.error("Calibration preserves original text; use fit mode for reference pixel matching")
+            from text_calibration import plan as calibration_plan
+            result = calibration_plan(args.scene, args.outdir, reuse=args.reuse, max_samples=args.max_samples)
+        else:
+            if not args.references or args.reuse or args.max_samples != 8:
+                p.error("Fit mode requires --references; --reuse/--max-samples belong to calibration mode")
+            result = plan(args.scene, read_json(args.references), args.outdir)
     elif args.action == "refine-plan":
         result = refined_plan(args.scene, args.request, args.outdir)
     else:

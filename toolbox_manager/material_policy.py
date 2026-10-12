@@ -6,9 +6,13 @@ FIELDS = {'material_search_allowed': '联网查找素材', 'host_generation_allo
           'reference_upload_allowed': '上传必要参考局部'}
 
 
-def effective(manager, project=None):
+def effective(manager, project=None, *, read_state=True):
     import hashlib,json
     from scripts.material_routes import GUIDANCE, THRESHOLD
+    from .production_settings import effective as production_effective
+    production = production_effective(manager, project, read_state=read_state)
+    drawing = (production.get('values') or {}).get('illustration_mode') == 'draw_first'
+    legacy = production['legacy']
     overrides = {}; revision = manager.settings()['revision']
     if project:
         root = str(ProjectContext(manager, project).root)
@@ -21,10 +25,16 @@ def effective(manager, project=None):
             'plan_update':{'tool':'rebuild_revise','required_when':'The user changes the editability or asset route of a page/object.',
                 'instruction':'Keep prior plans and the user reason. Use slide-level revise to update page planning, or region-level revise and a full region payload to update asset_decisions. Affected prior reviews must be renewed. Tool permission alone does not change object editability.'},
             'scope': 'project' if project else 'global',
-            'illustration_route':{'threshold_pct':THRESHOLD,'comparison':'strictly_below',
+            'production_settings': production,
+            'illustration_route':{'default_basis':'content_category_and_object_requirements', 'drawing_required':drawing,
+                'category_defaults':{'complex_illustration':'native' if drawing else 'reference_generate','decorative_title':'native' if drawing else 'reference_generate',
+                    'simple_illustration':'native' if drawing or legacy else 'reference_generate','simple_icon':'native','geometric_graphic':'native','photograph':'preserve_source' if legacy else 'inspect_photo_requirement',
+                    'existing_asset':'preserve_source' if legacy else 'inspect_existing_source','identity_asset':'preserve_source',
+                    'page_text':'native','standard_title':'native','background':'content_dependent'},
+                'legacy_fallback':{'basis':'low_similarity','threshold_pct':THRESHOLD,'comparison':'strictly_below'},
                 'assessor':'production_agent','scope':'individual_illustration_not_whole_page',
                 'instruction':GUIDANCE,'record':'request.generation_decision',
-                'work_graph':'accepted requests add drawing, assessment, generation, optional crop and placement nodes'},
+                'work_graph':'accepted requests add component routing, generation, optional crop and placement; drawing is shown only when actually recorded'},
             'services': '使用宿主当前已配置、可调用的服务；能力是否可用由宿主确认',
             'spending': '不自动购买额度或开通新的付费服务',
             'instruction': '这些值是用户持久授权。在允许范围内直接执行，不重复请求同意。当前用户的明确限制优先。'

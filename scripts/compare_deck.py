@@ -20,6 +20,8 @@ def compare_deck(scene_path: Path, render_receipt: Path, outdir: Path, regions_p
     scene_hash, receipt_hash, pptx_hash = sha256(scene_path), sha256(render_receipt), sha256(pptx_path)
     region_hash = sha256(regions_path) if regions_path else None
     scene, refs, manifest_hash = reference_snapshot(scene_path)
+    from scene_paths import base_for
+    scene_base=base_for(scene,scene_path.parent)
     receipt, rendered = validate_render(render_receipt, pptx_path, len(refs))
     region_spec = regions_by_index(read_json(regions_path) if regions_path else None, len(refs))
     plans = []
@@ -35,7 +37,7 @@ def compare_deck(scene_path: Path, render_receipt: Path, outdir: Path, regions_p
         rows = []
         for ref, slide, rendered_row, regions, required in plans:
             idx = ref['index']
-            reference = safe_file(scene_path.parent, ref['path'])
+            reference = safe_file(scene_base, ref['path'])
             render = safe_file(render_receipt.parent, rendered_row['file'])
             page_out = stage / f'slide-{idx:03}'
             result = compare(reference, render, page_out, regions, resize_render, region_scale,include_source_crops=include_source_crops)

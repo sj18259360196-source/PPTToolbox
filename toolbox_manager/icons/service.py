@@ -61,7 +61,7 @@ class IconService:
         if op not in READS|WRITES|{'review'}:raise ValueError('未知图标操作')
         if not p['enabled'] or not p['trusted']:raise PolicyDenied('当前工具包未启用或未信任')
         if not m.override(p['id'],'tool','icons.'+op,True):raise PolicyDenied('图标工具已停用')
-        if op in WRITES and source!='owner' and not m.settings()['agent_execution_enabled']:raise PolicyDenied('Agent 执行未启用')
+        if (op in WRITES or op=='trace_fragment' and 'items' in a) and source!='owner' and not m.settings()['agent_execution_enabled']:raise PolicyDenied('Agent 执行未启用')
         if op=='review' and source!='owner':raise PolicyDenied('图标晋级需要界面中的人工检查')
         validate(op,a,source=='owner')
         if source != 'owner' and (
@@ -87,7 +87,11 @@ class IconService:
                 raise
 
     def dispatch(self,op,a):
-        if op=='trace_fragment':return compute_fragment(a)
+        if op=='trace_fragment':
+            if 'items' in a:
+                from .trace_batch import trace_batch
+                return trace_batch(self.manager,a,compute_fragment)
+            return compute_fragment(a)
         lib=self.library
         if op=='search':return lib.search(a.get('query',''),a.get('collection',''),a.get('style',''),a.get('include_drafts',False),a.get('limit',30),image_bytes(a.get('reference')))
         if op=='inspect':return lib.inspect(a['version'],True)

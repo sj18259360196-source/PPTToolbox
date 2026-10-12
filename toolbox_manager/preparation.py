@@ -74,6 +74,8 @@ def create(manager, body):
         c.execute('INSERT INTO kv VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
                   (KEY, json.dumps(items, ensure_ascii=False)))
     manager.store.event('preparation.created', '新建制作材料工作区', source='owner', details={'id': key})
+    from .production_settings import ensure_project
+    ensure_project(manager, row['project'])
     return row
 
 
@@ -162,16 +164,20 @@ def prompt(manager, key):
     from .material_policy import effective
     material = effective(manager, row['project'])
     text = startup_prompt(manager)['text']
+    from .production_settings import effective as production_effective
+    production = production_effective(manager, row['project'])
+    text += '\n本项目制作设置\n' + json.dumps(production, ensure_ascii=False)
+    text += '\n' + '\n'.join(production['instructions'])
     text += '\n素材持久授权\n' + json.dumps(material, ensure_ascii=False)
     text += '\n\n本次制作\n项目名称 ' + row['name'] + '\n工作流 project 绝对路径 ' + row['project']
     text += '\n输入根目录 ' + str(Path(row['workspace']) / 'input')
     text += '\n参考图按以下顺序使用\n' + '\n'.join(f'{i+1}. {p}' for i, p in enumerate(inputs))
-    text += '\n制作要求\n' + (row['requirements'] or '按参考图重建为可编辑 PPT，保留文字与布局。')
+    text += '\n制作要求\n' + (row['requirements'] or '按参考图重建 PPT，先确认整页背景、分区和层级。页面独立文字可编辑，复杂插画与装饰标题可用独立素材，照片和素材自带文字保留。默认支持组件整体移动、缩放和替换。')
     text += ('\n这些文件是用户上传后保存的原始副本。不要改写输入图片。'
              '准备工作区已存在，但 project 子目录应由 rebuild_start 创建；不要提前创建它。'
              '若 project 已有 workflow/state.json，先读取状态并续作，禁止重新初始化。'
              '所有授权与执行开关仍按工具箱当前设置检查。')
-    return {'text': text, 'project': row['project'], 'inputs': inputs, 'revision': row['revision']}
+    return {'text': text, 'project': row['project'], 'inputs': inputs, 'revision': row['revision'], 'production_settings': production}
 
 
 def export(manager, key):

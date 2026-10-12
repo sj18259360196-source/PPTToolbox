@@ -30,6 +30,9 @@ def array(items, **kw):
 
 def result_contracts(root):
     from scripts.element_scope import SCOPE, BINDINGS, REVIEW
+    from scripts.material_routes import DECISION_SCHEMA
+    from scripts.asset_batch import BATCH_ITEM_SCHEMA, BATCH_RESULT_ITEM_SCHEMA
+    from scripts.material_text_review import CHECK_SCHEMA
     # Reuse native object/style definitions. Regional compilation supplies only
     # editability/evidence; do not relax the remaining scene contract.
     scene = json.loads((Path(root)/"assets/schemas/scene.schema.json").read_text(encoding="utf-8"))
@@ -55,6 +58,12 @@ def result_contracts(root):
     status = {"enum": list(TASK_REVIEW_STATUSES)}
     assertion = {"status": status, "note": STRING, "reviewer": STRING, "viewed_files": array(STRING)}
     base = list(assertion)
+    asset_request = obj({
+        'id': STRING, 'purpose': STRING, 'prompt': STRING, 'transparent': BOOL,
+        'allowed_approximation': {'const': True}, 'scope_unit_ids': array(STRING,minItems=1,uniqueItems=True),
+        'generation_decision': DECISION_SCHEMA, 'multi_icon_sheet': BOOL,
+        'items': array(BATCH_ITEM_SCHEMA,minItems=2,maxItems=8),
+    }, ('id','purpose','prompt','transparent','allowed_approximation'))
     contracts = {
         "page_plan": obj({
             "regions": array(obj({
@@ -83,25 +92,20 @@ def result_contracts(root):
                 "objects": array({"$ref": "#/$defs/object"}),
                 "components": array({"oneOf": components}),
             }, ("action", "base_fragment_sha256", "reason")),
-            obj({"action": {"const": "request_asset"}, "request": obj({
-                "id": STRING, "purpose": STRING, "prompt": STRING,
-                "transparent": BOOL, "allowed_approximation": {"const": True},
-                "scope_unit_ids": array(STRING, minItems=1, uniqueItems=True),
-            }, ("id", "purpose", "prompt", "transparent", "allowed_approximation"))}, ("action", "request")),
-            obj({"action": {"const": "request_assets"}, "requests": array(obj({
-                "id": STRING, "purpose": STRING, "prompt": STRING,
-                "transparent": BOOL, "allowed_approximation": {"const": True},
-                "scope_unit_ids": array(STRING, minItems=1, uniqueItems=True),
-            }, ("id", "purpose", "prompt", "transparent", "allowed_approximation")), minItems=1, maxItems=8)}, ("action", "requests")),
+            obj({"action": {"const": "request_asset"}, "request": asset_request}, ("action", "request")),
+            obj({"action": {"const": "request_assets"}, "requests": array(asset_request,minItems=1,maxItems=8)}, ("action", "requests")),
         ]},
         "source_review": obj({
             **assertion,
+            "material_text_checks": CHECK_SCHEMA,
             "scope_review": REVIEW,
             "text_checks": array(obj({"object_id": STRING, "source_text": TEXT},
                                      ("object_id", "source_text")), minItems=1),
         }, base),
         "asset_material": obj({"file": STRING, "tool_used": STRING, "provenance": STRING,
-                               "model_reported": {"type": ["string", "null"]}}, ("file", "tool_used", "provenance")),
+                               "model_reported": {"type": ["string", "null"]},
+                               "sheet_sha256": {"type":"string","pattern":"^[a-f0-9]{64}$"},
+                               "items":array(BATCH_RESULT_ITEM_SCHEMA,minItems=1,maxItems=8)}, ("file", "tool_used", "provenance")),
         "candidate": obj({"file": STRING}, ("file",)),
         "office_render": obj({"receipt": STRING}, ("receipt",)),
         "review_full": obj({
@@ -119,11 +123,27 @@ def result_contracts(root):
         }, ("kind", "note")))}, base + ["actions"]),
     }
     contracts["reproducibility"] = contracts["editable_behavior"]
+    contracts['editable_behavior']=copy.deepcopy(contracts['editable_behavior'])
+    from scripts.edit_summary import TEST_SCHEMA
+    contracts['editable_behavior']['properties']['edit_tests']=array(TEST_SCHEMA,maxItems=200)
+    from scripts.material_quality import REVIEWS
+    for variant in contracts['region_objects']['oneOf'][:2]:
+        variant['properties']['material_reviews'] = copy.deepcopy(REVIEWS)
+    contracts['source_review']['properties']['material_reviews'] = copy.deepcopy(REVIEWS)
+    contracts['review_full']['properties']['material_reviews'] = copy.deepcopy(REVIEWS)
+    from scripts.workflow_production import REVIEW_SCHEMA
+    contracts['source_review']['properties']['production_review'] = copy.deepcopy(REVIEW_SCHEMA)
+    contracts['review_full']['properties']['production_review'] = copy.deepcopy(REVIEW_SCHEMA)
     contracts["preview_full"] = copy.deepcopy(contracts["review_full"])
-    contracts["preview_local"] = contracts["review_local"]
+    from scripts.review_components import OBJECT_CHECK_SCHEMA
+    contracts["review_local"]["properties"]["object_checks"]=array(OBJECT_CHECK_SCHEMA)
+    contracts["preview_local"] = copy.deepcopy(contracts["review_local"])
+    local_result=copy.deepcopy(contracts["review_local"])
     contracts["review_full"]["properties"]["additional_reviews"] = array(
-        obj({"region_id": STRING, "result": contracts["review_local"]}, ("region_id", "result")),
+        obj({"region_id": STRING, "result": local_result}, ("region_id", "result")),
         minItems=1, maxItems=6)
+    contracts["review_local"]["properties"]["additional_reviews"]=copy.deepcopy(
+        contracts["review_full"]["properties"]["additional_reviews"])
     return contracts, defs
 
 
@@ -296,7 +316,8 @@ def schemas(root):
 def validation_hint(errors):
     """Select a useful nested failure without echoing submitted values or tokens."""
     from jsonschema.exceptions import best_match
-    error = best_match(errors)
+    from .validation_errors import relevant_errors
+    error = best_match([leaf for original in errors for leaf in relevant_errors(original)])
     path = "/".join(map(str, error.absolute_path)) or "/"
     hint = "at " + path + "; constraint=" + str(error.validator)
     if error.validator == "required" and isinstance(error.instance, dict):
@@ -318,13 +339,38 @@ def validate(command, arguments, root):
     errors = list(Draft202012Validator(schemas(root)[command]).iter_errors(arguments))
     if errors:
         # Do not echo the instance: errors can contain private text or task tokens.
-        raise ValueError("Invalid arguments " + validation_hint(errors))
+        from .validation_errors import ContractError
+        raise ContractError("Invalid arguments " + validation_hint(errors), errors)
 
 
-def validate_result(kind, result, root):
+def result_errors(kind, result, root):
     from jsonschema import Draft202012Validator
     results, defs = result_contracts(root)
     spec = {**results[kind], "$defs": defs}
-    errors = list(Draft202012Validator(spec).iter_errors(result))
+    return list(Draft202012Validator(spec).iter_errors(result))
+
+
+def validate_result(kind, result, root):
+    errors = result_errors(kind, result, root)
     if errors:
-        raise ValueError("Result does not match current task contract: " + kind + "; " + validation_hint(errors))
+        from .validation_errors import ContractError
+        raise ContractError("Result does not match current task contract: " + kind + "; " + validation_hint(errors), errors, '/result')
+
+
+def current_result_contract(kind, root):
+    """Only reachable definitions, directly derived from the validator contract."""
+    results, defs = result_contracts(root)
+    contract=copy.deepcopy(results[kind]); required={}
+    def visit(node):
+        if isinstance(node,dict):
+            ref=node.get('$ref','')
+            if ref.startswith('#/$defs/'):
+                name=ref[len('#/$defs/'):].split('/')[0]
+                if name not in required:
+                    required[name]=copy.deepcopy(defs[name]);visit(required[name])
+            for value in node.values():visit(value)
+        elif isinstance(node,list):
+            for value in node:visit(value)
+    visit(contract)
+    if required:contract['$defs']=required
+    return contract

@@ -2,7 +2,7 @@
 from __future__ import annotations
 import copy
 
-GUIDANCE = '遇到少色分层插画，先调用 graphics_illustration_guide 读取判断条件、步骤和当前参数，再根据实际看图填写 graphics_route_illustration。可按部件选择钢笔节点或选区转路径。读取指南不依赖经验检索；模板必须补齐真实观察、路径和哈希，生成候选仍遵循项目授权。'
+GUIDANCE = '先读取当前 production_settings，按组件类别与具体编辑要求选路。图片生成优先时，复杂插画可参考生成，无需先做原生试稿；可编辑绘制优先时，保留真实原生形状与路径。照片按保真要求处理，已有素材按资格复用。已选原生路线时按需读取 graphics_illustration_guide，根据实际看图选择钢笔节点或选区转路径，填充部件保持完整闭合面。读取指南不依赖经验检索；模板补齐真实观察、路径和哈希，执行继续遵循项目授权。'
 ROUTES = {
  'pen': [
   ('graphics.route_illustration','根据实际观察判断适用性，未知项保持未知'),
@@ -50,7 +50,9 @@ def guide(manager,args):
      'template_status':'requires_real_inputs_not_ready_to_execute'})
  return {'format':'illustration-agent-guide/1','entry':entry(manager),'route':route,
    'execution_enabled':manager.settings()['agent_execution_enabled'],
-   'classification':[{'when':'少色填充、语义层清楚、边界可分离','choose':'selection 或 pen，按部件试验'},
+   'classification':[{'when':'图片生成优先，复杂插画或装饰标题允许整体替换','choose':'按素材规则直接参考生成，无需原生试稿'},
+    {'when':'可编辑绘制优先或具体对象要求内部编辑','choose':'真实原生部件与路径；按实际轮廓选择 pen 或 selection，能力不足时说明差距'},
+    {'when':'简单填充、语义层清楚、边界可分离','choose':'selection 或 pen，按完整闭合部件制作，判断影响路线时才试样'},
     {'when':'尖角、细枝、孔洞多或颜色混合边','choose':'pen；必要时局部 selection 并复核拓扑'},
     {'when':'照片、纹理、明确折面','choose':'不套用本曲线方法，按素材约束另选表达'},
     {'when':'未看清或语义未知','choose':'补看必要原始像素局部后重新判断'}],

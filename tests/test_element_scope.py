@@ -35,6 +35,11 @@ def plan(contract):
 def begin(tmp_path, contract=None):
     p = tmp_path/'project'
     wf.start(p, [ref(tmp_path)])
+    # Frozen v1 scopes exercise historical compatibility. Fresh contract
+    # enforcement is covered by test_material_quality, not bypassed in runtime.
+    state = load(p)
+    state.pop('material_quality_policy')
+    write_json(p/'workflow/state.json', state)
     if contract is not None: respond(p, plan(contract))
     return p
 
@@ -103,7 +108,7 @@ def test_preserved_poster_cannot_be_destructively_rebuilt(tmp_path, change):
         data['scope_bindings'][0]['object_ids'].append('label')
     if change == 'crop': data['objects'][0]['source_crop'] = [0, 0, 100, 100]
     if change == 'generated': data['objects'][0]['source_kind'] = 'generated'
-    if change == 'mask': data['objects'][0]['mask'] = 'ellipse'
+    if change == 'mask': data['objects'][0]['mask'] = {'geometry':'ellipse'}
     if change == 'unassigned': data['objects'] += payload()['objects']
     if change == 'bytes':
         Image.new('RGB', (640, 360), 'red').save(p/'assets/changed.png')
@@ -312,6 +317,10 @@ def test_editable_unit_cannot_hide_screenshot_behind_one_native_label(tmp_path):
 def test_managed_dispatch_validates_scope_before_committing(runtime):
     from test_managed_rebuild import begin as managed_begin, response, invoke, declare
     manager, p, _ = managed_begin(runtime)
+    # Resume an older managed project whose accepted policy predates material quality.
+    state = load(p)
+    state.pop('material_quality_policy')
+    write_json(p/'workflow/state.json', state)
     assert response(manager, p, plan(scope(poster(p), unit())))['command_status'] == 'completed'
     declare(manager, p, 'production')
     data = image_payload(); data['objects'] += payload()['objects']; data['scope_bindings'] += payload()['scope_bindings']

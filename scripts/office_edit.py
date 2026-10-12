@@ -241,6 +241,13 @@ def execute(source, outdir, operations, application_factory=None):
         receipt['acceptance_status']=('needs_changes' if receipt['longer_text_layout']=='overflow_detected'
                                       else 'visual_review_required')
         receipt['acceptance_note']='Attribute readback, longer-text layout and visual review are separate. A passed status alone is not layout acceptance.'
+        receipt['edit_limits']=[{'object_id':c['operation']['name'],'slide':c['operation']['slide'],
+            'operation':c['operation']['op'],'tested_value':c['expected'],
+            'content_readback_status':'passed' if c['matches'] else 'failed',
+            'layout_status':c.get('longer_text_layout',{}).get('status','not_assessed'),
+            'required_adjustment':('Enlarge the text frame or explicitly revise typography, then render and check again.'
+                if c.get('longer_text_layout',{}).get('status')=='overflow_detected' else None)}
+            for c in receipt['checks']]
     except Exception as exc:
         receipt['error'] = str(exc)
     finally:

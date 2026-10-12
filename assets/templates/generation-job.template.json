@@ -4,7 +4,16 @@
   "slide_index": null,
   "reference_region": null,
   "reason_for_generation": "",
-  "trigger": "crop_failed | native_rebuild_failed | missing_asset | complex_texture | user_requested",
+  "template_usage": "准备记录；正式请求与提交使用当前任务及 generation-prepare 返回的契约",
+  "production_policy": "layered-material/2",
+  "trigger": "content_category | user_request | legacy_low_similarity",
+  "decision_guidance": "先判断分层、组件类别与编辑要求。复杂插画和装饰标题可直接参考生图，无需先试画；原照片和已有清晰素材优先保留。旧 low_similarity 才使用原有绘制稿和分数条件。",
+  "generation_decision": null,
+  "text_contract": {
+    "text_ownership": null,
+    "embedded_text": [],
+    "instruction": "装饰标题声明 decorative_title 与 asset_title，保存准确可辨原文。插画内文字声明 embedded，生成后的可读文字逐字核对。照片原有文字随原件保留。页面独立正文及外部标注保持原生。"
+  },
   "reference_files": [],
   "preserve": [
     "主体数量",
@@ -14,8 +23,8 @@
   ],
   "generate": [],
   "forbid": [
-    "文字与业务数字",
-    "图表轴标签",
+    "不属于当前素材的页面文字与业务数字",
+    "独立图表轴标签和外部关系线",
     "虚构品牌标志",
     "水印"
   ],
@@ -23,6 +32,7 @@
   "fallback_background": "FF00FF",
   "safe_margin_percent": 10,
   "variants_requested": 1,
+  "batch_guidance": "同页相容小素材可通过 request.items 一次合图生成，初次 2 至 8 项，每项独立参考及文字契约。按实际像素裁切，保留透明间隔与足够有效像素，仅重试失败项。",
   "transparency_requirement": "real_alpha_required",
   "tool_requested": "host image generation tool",
   "tool_actually_used": "",
@@ -35,7 +45,11 @@
     "trim_alpha": "not_run",
     "matte_preview": "not_run",
     "inserted_into_ppt": "not_run",
-    "local_side_by_side_review": "not_run"
+    "material_text_review": "not_run",
+    "local_side_by_side_review": "not_run",
+    "local_overlay_review": "not_run",
+    "full_page_side_by_side_review": "not_run",
+    "full_page_overlay_review": "not_run"
   },
   "limitations": []
 }

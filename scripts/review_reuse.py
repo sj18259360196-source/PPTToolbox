@@ -53,18 +53,23 @@ def signature(project, run, *, local=False):
 
 def eligible(project, old, new):
     from workflow_evidence import comparison_views
+    from layered_review import view_signature, review_policy
+    old_policy, new_policy = review_policy(old), review_policy(new)
+    if old_policy != new_policy:
+        return {}
     a=signature(project,old);b=signature(project,new)
     av=comparison_views(project,old);bv=comparison_views(project,new)
-    unchanged={i for i in a if a[i]==b.get(i) and sha256(av['full_paths'][i])==sha256(bv['full_paths'][i])}
+    unchanged={i for i in a if a[i]==b.get(i) and
+               view_signature(av,i,policy=old_policy)==view_signature(bv,i,policy=new_policy)}
     for i in list(unchanged):
         left={k:v for k,v in av['local_paths'].items() if k[0]==i}
         right={k:v for k,v in bv['local_paths'].items() if k[0]==i}
         if set(left)!=set(right) or any(left[k]['object_ids']!=right[k]['object_ids'] or
-                sha256(left[k]['file'])!=sha256(right[k]['file']) for k in left):unchanged.remove(i)
+                view_signature(av,k[0],k[1],old_policy)!=view_signature(bv,k[0],k[1],new_policy) for k in left):unchanged.remove(i)
     al=signature(project,old,local=True);bl=signature(project,new,local=True)
     unchanged_locals={key for key,value in al.items() if value==bl.get(key)
                       and key in av['local_paths'] and key in bv['local_paths']
-                      and sha256(av['local_paths'][key]['file'])==sha256(bv['local_paths'][key]['file'])}
+                      and view_signature(av,key[0],key[1],old_policy)==view_signature(bv,key[0],key[1],new_policy)}
     result={}
     for key,ref in old.get('reviews',{}).items():
         path=under(project,ref['file'])

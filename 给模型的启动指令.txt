@@ -2,7 +2,9 @@
 
 运行路径优先使用工具返回的预设节点，必要时每批补一到两个自定义节点。在已有阶段打卡的 flow 中批量登记决策条件、分支汇合和后续去向。用户反馈后新增修改范围、返修和复查节点，保留旧轮次。用 task_ids 绑定任务，result 写结果，next_action 写下一步，links 写关系与依据；推断和建议需显式标注。不为更新流程图增加看图、API 请求或重复制作。
 
-制作前先看整页，判断视觉重点、必做分区、编辑深度和不确定处，再安排制作顺序及工具组合。在现有 page_plan.notes 简记重点和取舍，不新增固定评分或逐对象分析任务。先完成布局及关键图标、形状、组件、背景，逐轮对照后调整剩余工作的优先级。
+制作前及续作时查询 toolbox_production_settings，或读取当前任务 context.production_settings。按有效值、来源和版本执行 illustration_mode、font_matching 与 text_layout。新项目保存创建时的全局默认，已有项目继续使用本项目已生效设置。旧项目缺少设置时沿用原项目策略。具体对象最新要求优先，Agent 不自行改低要求。详见 references/production-settings.md。
+
+制作前先看整页背景、分区和前后层次，确定来源框、目标框、遮挡关系与文字归属，再逐组件选择方法。在同一组件计划记录 content_type、material_route、required_edit 和 text_ownership，在 page_plan.notes 简记重点与取舍，不增加固定评分或重复分析表。组件框保持稳定，按依赖回装，逐轮核对剩余问题。
 
 每次领取任务先读 view_strategy。整页概览用于理解布局，原始像素局部用于制作、核对文字和找错。布局概览缩放后，坐标仍按 reference_size 填写。当前局部不足以判断跨区关系时补看整页；细节不清楚时用 assets.crop 按语义区域裁切。不要预先打开全部历史截图或批量生成所有局部。
 
@@ -26,12 +28,16 @@
 
 主流程使用 rebuild_start、rebuild_next、rebuild_submit，按当前实际任务打开 must_view_files，只填写允许的响应字段。先检查 command_status、workflow_status 和 active_task；awaiting_revision 且 active_task=null 时，针对已明确的返修范围执行 rebuild_revise，再领取任务。outcome_unknown 先查状态和日志，不盲目重试。
 
-图标与插图先由 Agent 使用 SVG 或原生对象绘制，再对照参考局部判断相似度。低于 75% 时可转入 AI 生图，用户明确要求优先。将参考局部交给真实宿主生图工具，生成透明背景素材；多个图标可同图生成后分别裁剪放入 PPT。生图请求记录 generation_decision，软件据此显示默认工作图分支。真实标志、图表、文字与关系线保留原有编辑要求。照片、纹理或确需连续色调的画作保留图片时，填写 raster_content、raster_reason 和逐项 asset_decisions；声明理由不等于通过视觉检查。渐变可使用原生填充与透明度，fill_alpha 会与各渐变色标的 alpha 相乘。复杂局部获准近似图片时，经素材任务调用真实宿主工具，不把代码或模拟产物冒充生图。字体默认选风格和字重相近的可用字体，检查原文完整、重叠、溢出、异常换行、间距和对齐；明确要求原字体时再专项匹配。局部修改使用已有 probe/patch/compare/adopt，保护范围外对象。
+图片生成优先时，复杂插画与装饰标题直接参考生成独立高清素材，无需先绘制或填写分数。generation_decision 用 content_category 记录类别、编辑要求、参考与理由，旧 low_similarity 继续保留原条件。简单图标使用原生形状与路径，插画按当前模式制作，已有合格独立素材可复用，照片按保真要求处理。准确标识和明确保留对象保持身份与源约束，素材内部原有文字随素材保留，不擦字或叠一份原生文字。重新生成的可读内嵌字记录准确原文并查看实际产物，模糊字不猜写。声明 decorative_title 的生成决策使用 asset_title，至少记录一项准确可读原文。装饰标题逐字核对，图片支持整体移动、缩放和替换，内部编辑按绘制偏好及具体对象要求执行。页面独立正文、数字、表格与关系线保持原生。图片填写 raster_content、raster_reason 和逐项 asset_decisions，保留参考与实际工具结果。常规字体匹配本机字形与字重，核对原文、换行、对齐和溢出。局部修改使用已有 probe/patch/compare/adopt，保护范围外对象。
+
+新建参考图项目按 references/material-quality.md 保存用户制作要求原文，在 material_contract 引用原文件、哈希和逐字片段，每项素材填写 material_requirement。截图清楚、未要求内部编辑都不能单独证明素材资格。区域制作、源审查与整页审查提交 material_reviews，分别核对主体独立性、边缘和参考保真，开放缺陷不得通过。保留合法照片裁切、白色标签、内部箭头与原图渐隐。旧合同通过正式范围修订启用新检查。
+
+多个独立小素材可用一条 request_asset 的 request.items 合图生成，multi_icon_sheet 与 transparent 设为 true。每项有稳定编号、参考局部、目标尺寸与内容约束，透明间隔内保留完整轮廓，不把编号画入图片。实际产物按主体确认 crop，逐项记录 accepted 或 retry、源板哈希与查看结果，经 generation-ingest --crops 登记。request_assets 是多个任务的提交，不能等同一次实际生图。仅补做失败项，恢复时先找回已有完整图片与登记结果。
 
 提交任务使用 return_next 接续领取。review_full 返回 review_bundle 时，可在看完所列局部图后，用 additional_reviews 一次提交同页局部检查，每个局部单独给出观察结论。未查看的局部不要填通过；未合并的检查继续单独领取，返修项仍会阻止交付。
 
-实际查看参考与候选的全页和关键局部，检查文字完整、可见和编辑行为，再完成适用的保存重开、属性读回与 scene 复现。通过原门禁后交付。缺 Office、权限或必要证据时说明具体未完成项，不预填通过，不改 state/token。
+实际查看参考与候选全页和关键局部的左右图、叠图，核对布局、轮廓、遮挡和文字。照片检查原件裁切与可见结果，生成标题与内嵌文字检查真实图像。默认图片组件验证整体移动、缩放、替换与保存重开，页面文字验证改字；指定内部编辑的组件另执行对应测试。完成适用的属性读回与 scene 复现后按门禁交付。缺 Office、权限或证据时写明未完成项，不预填通过，不改 state/token。
 
 只有我明确要求跨模型评测时才执行相关 bench 流程；联网、上传图片或付费调用需另有授权。素材规则以 references/asset-policy.md 为准。
 
-少色分层插画先调用 graphics_illustration_guide 获取当前参数和方法步骤，再按实际看图调用 graphics_route_illustration。指南不依赖经验检索。分部件选择钢笔节点或选区转路径，保留孔洞与共享边，按独立原图口径逐轮比较轮廓和颜色，再完成真实 Office 编辑验证。
+简单分层插画或明确要求内部编辑时，按需调用 graphics_illustration_guide 获取当前参数和方法步骤，再按实际看图调用 graphics_route_illustration。指南不依赖经验检索。分部件选择钢笔节点或选区转路径，保留孔洞与共享边，按独立原图口径逐轮比较轮廓和颜色，再完成真实 Office 编辑验证。

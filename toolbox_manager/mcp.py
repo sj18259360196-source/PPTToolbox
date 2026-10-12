@@ -8,6 +8,7 @@ from scripts.project_flow import PATCH_SCHEMA as FLOW_SCHEMA
 def schema(p=None,required=()):return {'type':'object','properties':p or {},'required':list(required),'additionalProperties':False}
 S={'type':'string'}
 TOOLS=[
+ ('toolbox_production_settings','Read saved production preferences, workflow-applied values and pending formal revision scope. This read-only tool never changes owner settings or permissions.',schema({'project':S})),
  ('toolbox_project_activity','Read registered project work chain, current stage revision, observed calls and stage recommendations. Read before a checkpoint retry after a version conflict.',schema({'project':S},['project'])),
  ('toolbox_checkpoint','Register an explicit major-stage declaration. Begin intake, transition through plan/production/revision/delivery, then finish with delivery files. Ordinary tool calls need no progress report. Reuse checkpoint_id for retries. used_experiences records actual adoption only. Optional flow contains node patches (id, title for new nodes, after predecessor IDs, status); software lays out the graph. No per-tool reporting.',
   schema({'project':S,'checkpoint_id':S,'run_id':S,'expected_revision':{'type':'integer','minimum':0},
@@ -16,7 +17,7 @@ TOOLS=[
     'artifact_refs':{'type':'array','items':S,'maxItems':30},'blocker':{'type':['string','null']},
     'used_experiences':{'type':'array','items':S,'maxItems':20},'declared_at':S,'flow':FLOW_SCHEMA},
     ['project','checkpoint_id','run_id','expected_revision','event','result_summary'])),
- ('toolbox_project_inspect','Read project identity, paginate current required views, or preflight a scene and explicit full-ID edits. Returns bounded crop/occlusion warnings; never modifies files or approves viewing.',schema({'project':S,'action':{'enum':['identity','views','scene']},'scene':S,'scan_crops':{'type':'boolean'},'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':20},'changes':{'type':'array','maxItems':100,'items':schema({'object_id':S,'set':{'type':'object'}},['object_id','set'])}},['project'])),
+ ('toolbox_project_inspect','Read identity, current-task contract, required views, scene preflight, call metrics (calls), edit limits (edits), or revision impact advice (impact). Impact compares before_scene/scene or the latest frozen runs. Never changes tasks or approves viewing.',schema({'project':S,'action':{'enum':['identity','views','scene','contract','calls','edits','impact']},'scene':S,'before_scene':S,'changed_assets':{'type':'array','maxItems':100,'items':S},'scan_crops':{'type':'boolean'},'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':20},'changes':{'type':'array','maxItems':100,'items':schema({'object_id':S,'set':{'type':'object'}},['object_id','set'])}},['project'])),
  ('toolbox_material_policy','读取全局或当前项目的素材持久授权。允许范围内无需重复询问；宿主能力和当前用户限制仍适用。',schema({'project':S})),
  ('toolbox_call_status','读取当前 MCP 连接正在处理的调用和耗时；不重试、不终止写入。',schema()),
  ('toolbox_runtime_check','检查指定 Python 工具的正式受管启动入口，只执行 --help，保留调用日志，不制作 PPT。',
@@ -30,7 +31,7 @@ TOOLS=[
  ('toolbox_status','读取管理器和当前启用版本；不要把注册来源当作宿主已安装。',schema()),
  ('toolbox_search','检索当前包中已启用工具，返回实际入口及条件。',schema({'query':S})),
  ('toolbox_describe','读取一个已启用工具的参数、手册和受管调用 argv。',schema({'id':S},['id'])),
- ('toolbox_context','读取当前 Skill、指令、权限及 agent_capabilities；少色插画可直接调用 graphics_illustration_guide 获取步骤和 schema，无需先检索经验。',schema()),
+ ('toolbox_context','Read current skill, policies and identity. Use profile=production for reviewed startup deduplication; full preserves legacy output. No quality constraints are removed.',schema({'profile':{'enum':['full','production']}})),
  ('toolbox_project_bind','为本 Agent 会话绑定项目。project 使用用户明确指定的目录；name 在默认根目录下新建任务。返回 context_id，不创建文件或授予权限。',
   {**schema({'project':S,'name':S}),'oneOf':[{'required':['project'],'not':{'required':['name']}},{'required':['name'],'not':{'required':['project']}}]}),
  ('toolbox_manual','读取当前版本的指定手册及用户覆盖；不提供path则列出手册。',schema({'path':S})),
@@ -54,7 +55,7 @@ DESCRIPTIONS={
  'start':'从已授权参考图或既有 scene 建立新项目，不覆盖已有项目。',
  'next':'推进已就绪的构建/导出步骤并返回当前任务，有写入及 Office 副作用。',
  'submit':'提交实际完成的 result，核对任务身份、revision 和哈希。复杂路径优先把 result 单独保存为项目内 UTF-8 JSON，用 result_file 与 result_sha256 替代 result，避免 1 MiB MCP 上限。文件上限 16 MiB。设置 return_next=true 接续任务；accepted_task 表明已提交，不得重放。',
- 'validate_response':'预检当前任务响应，返回字段错误，不消费任务、不写工作流状态、不启动 Office。大结果用 result_file 与 result_sha256 替代 result，文件只含 result 对象。调用审计仍保留。',
+ 'validate_response':'预检当前任务响应，一次返回可检查的字段与语义问题、对象位置和修正操作。返回版本及输入哈希；不消费任务、不自动记录看图通过。大结果用 result_file 与 result_sha256 替代 result，文件只含 result 对象。',
  'revision_candidate':'从当前交付版创建局部修订候选，保留旧交付并清空新候选的验收记录。',
  'status':'读取当前任务与工作流，不修复中断或自动重试。',
  'revise':'按明确 slide/region 和 reason 返修，保留历史证据。',
@@ -66,6 +67,12 @@ class MCP:
         from .retrospective import SPEC
         from .contracts import schemas
         contracts=copy.deepcopy(schemas(self.manager.root))
+        # Discovery describes the stable envelope. The managed service still validates
+        # the original full schemas AND the active task kind before any state commit.
+        for name in ('submit','validate_response'):
+            contracts[name]['properties']['result']={'type':'object',
+                'description':'Use current task response template and submission_constraints. For full current-kind schema read toolbox_project_inspect action=contract.'}
+            contracts[name].pop('$defs',None)
         for value in contracts.values():
             value['properties']['context_id']={'type':'string','minLength':1}
             value['required']=[k for k in value['required'] if k!='project']
@@ -133,25 +140,36 @@ class MCP:
         if name=='toolbox_verify_connection':
             from .agent_setup import verify_connection
             return verify_connection(m,args['challenge'],self.client_info,os.environ.get('PPT_TOOLBOX_CONNECTION_PROBE')=='1')
+        if name=='toolbox_production_settings':
+            from .production_settings import effective
+            from .project_context import can_read
+            project=args.get('project') or (self.current_project or {}).get('project_root')
+            return effective(m,project,read_state=not project or can_read(m,project))
         if name=='toolbox_material_policy':
             from .material_policy import effective
-            return effective(m,args.get('project') or (self.current_project or {}).get('project_root'))
+            from .project_context import can_read
+            project=args.get('project') or (self.current_project or {}).get('project_root')
+            return effective(m,project,read_state=not project or can_read(m,project))
         if name=='toolbox_project_bind':
             from .project_context import bind
             self.current_project=bind(m,**args)
             return self.current_project
         if name=='toolbox_context':
-            from .project_context import refresh
+            from .project_context import refresh,can_read
+            from .production_settings import effective as production_effective
             if self.current_project is not None:self.current_project=refresh(m,self.current_project)
             from .material_policy import effective
             from .recovery import connection_diagnostics
             from .project_hub import stage_context
             phase = stage_context(m,self.current_project['project_root']) if self.current_project else None
-            return {**m.context(),'project_context':self.current_project,
+            project = (self.current_project or {}).get('project_root')
+            read_state = not project or can_read(m,project)
+            return {**m.context(profile=args.get('profile','full')),'project_context':self.current_project,
                     'stage_context':phase,
                     'connection_diagnostics':connection_diagnostics(m,self.current_project,initialized=self.ready,
                         client=self.client_info,active_call=self.active_call),
-                    'material_policy':effective(m,(self.current_project or {}).get('project_root'))}
+                    'material_policy':effective(m,project,read_state=read_state),
+                    'production_settings':production_effective(m,project,read_state=read_state)}
         if name=='toolbox_describe':
             r=m.tool(args['id'])
             if not r['enabled'] and not args['id'].startswith('native.'):raise ValueError('此工具已停用')
@@ -160,7 +178,11 @@ class MCP:
             path = args.get('path', '')
             if path.startswith('native/'):
                 return m.native_card(path[len('native/'):])
-            return m.document(path) if path else m.docs()
+            if not path:return m.docs()
+            doc=m.document(path)
+            # Generated guides have no editable base or history. Return their
+            # content once instead of duplicating the full prompt as base text.
+            return {k:v for k,v in doc.items() if k not in {'base','diff','history'}} if doc.get('generated') else doc
         raise ValueError('Unknown tool')
     def handle(self,req):
         monitor=self.activity
@@ -197,7 +219,7 @@ class MCP:
         if rid is None:return None
         if not self.ready:return err(-32002,'Initialize first')
         if method=='ping':return ok({})
-        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','icons_trace_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_fit_gradient','graphics_analyze','graphics_material_recipe','graphics_audit_sources','graphics_scene_preflight','graphics_select_versions'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
+        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_fit_gradient','graphics_analyze','graphics_material_recipe','graphics_audit_sources','graphics_scene_preflight','graphics_select_versions'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
         if method=='tools/call':
             try:
                 params=req.get('params',{});name=params['name'];args=params.get('arguments',{})
@@ -208,7 +230,9 @@ class MCP:
                 # calls get the same audit lifecycle and status as CLI calls.
                 if not name.startswith('rebuild_'):
                     from jsonschema import Draft202012Validator
-                    if not Draft202012Validator(spec).is_valid(args):
+                    # Trace validates its envelope/items inside the shared service,
+                    # so partial failures and rejected envelopes both retain call metrics.
+                    if name!='icons_trace_fragment' and not Draft202012Validator(spec).is_valid(args):
                         def invalid(): raise ValueError('Invalid tool arguments')
                         if name.startswith(('icons_','graphics_')):
                             from .project_activity import observe_call

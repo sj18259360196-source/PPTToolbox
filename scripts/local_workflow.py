@@ -29,11 +29,12 @@ def fingerprint(value):
 
 
 def bundle(scene, source, destination):
+    from scene_paths import prepare as prepare_paths
+    scene,source,paths=prepare_paths(scene,source)
+    if any('error' in row for row in paths):raise ValueError('Cannot freeze unresolved scene paths')
+    scene['version']='1.0';scene.pop('path_base',None)
     destination.mkdir(parents=True, exist_ok=True)
-    deps = set(s["reference"] for s in scene["slides"])
-    for s in scene["slides"]:
-        deps.update(u['source']['asset'] for u in s.get('element_scope', {}).get('units', []) if 'source' in u)
-        deps.update(o["asset"] for o in walk_objects(s["objects"]) if o["kind"] == "image")
+    deps = {row['normalized'] for row in paths}
     for relative in deps:
         path = resolve_asset(source, relative)
         dest = destination/relative

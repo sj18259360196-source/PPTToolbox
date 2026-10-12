@@ -1,6 +1,7 @@
 import {projectIndex,watchProjectIndex} from './project-index.js';
 import {api,copy} from './api.js';
 import {mountFolderActions} from './project-folders.js';
+import {mountGlobalProductionSettings} from './production-settings.js';
 import {requestLabels,categoryLabel,stateLabel,projectItems,filterItems,localTime,formatBytes,groupedItems,managementRow} from './projects-model.js';
 import {projectDialog,globalStorageDialog,openProjectFile,storageSummary} from './project-management.js';
 import {batchDialog} from './project-batch.js';
@@ -14,12 +15,14 @@ export async function mountProjects(main,bootReady){
  const expandedGroups=new Set(),selectedProjects=new Set();let filteredIds=[];
  main.innerHTML=`<div class="projects-page"><div class="page-head"><h1>项目</h1><span id="project-connection" class="small muted" role="status">正在连接</span></div>
  <div id="project-instance" class="small muted" style="overflow-wrap:anywhere" role="status">正在读取管理实例</div>
+ <section id="projects-production-settings"></section>
  <div class="project-views" role="tablist" aria-label="项目视图">${[['active','项目'],['deliveries','成品'],['completed','已完结'],['pending','待授权'],['archived','已归档']].map(([v,label])=>`<button id="projects-${v}" role="tab" aria-controls="project-list" data-view="${v}" aria-selected="${v==='active'}" tabindex="${v==='active'?0:-1}">${label} <span></span></button>`).join('')}</div>
  <div class="project-toolbar"><input id="project-query" type="search" aria-label="搜索项目" placeholder="搜索项目或成品"><select id="project-category" aria-label="分类"><option value="">全部分类</option></select><select id="project-sort" aria-label="排序"><option value="updated">最近活动优先</option><option value="manual">手动顺序</option><option value="oldest">较早活动优先</option><option value="name">名称正序</option><option value="name-desc">名称倒序</option></select><label class="project-filter"><input id="project-only-delivery" type="checkbox">有成品</label><span id="project-count" class="small muted" role="status"></span></div>
  <div class="project-storage-summary"><span>点开项目查看文件与工作记录。手动顺序下，可用每行的排序菜单调整同级项目。</span><div><button data-global-storage>查看存储</button></div></div>
  <div class="project-batch-toolbar" aria-label="批量管理"><label><input id="project-select-all" type="checkbox">全选当前结果</label><button data-selection="invert">反选</button><button data-selection="clear">清空</button><span id="project-selected-count" role="status">已选 0 个</span><div class="batch-toolbar-actions"><button data-batch="archive">批量归档</button><button data-batch="restore">批量恢复</button><button class="primary" data-batch="deliver">批量交付</button></div><small>全选包含筛选结果中的子项目。单独勾选父项目不会连选子项目。</small></div>
  <p id="archive-status" role="status"></p><p id="request-error" role="alert" hidden></p><div id="project-list" role="tabpanel" aria-labelledby="projects-active">正在读取项目</div></div>`;
  const $=s=>main.querySelector(s);const thumbnails=projectThumbnails(main);
+ mountGlobalProductionSettings($('#projects-production-settings'));
  dispose=()=>{thumbnails.dispose();main.onclick=null;main.onchange=null;main.querySelectorAll('dialog').forEach(d=>{if(d.classList.contains('project-batch-dialog'))d.close();else d.onclose=null;d.remove();});};
  const statusText={...requestLabels,started:'已启动'};
  const signature=r=>JSON.stringify([r.id,r.revision,r.status,r.path,r.input_roots,r.label,r.archived]);

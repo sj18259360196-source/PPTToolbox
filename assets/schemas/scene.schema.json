@@ -8,9 +8,38 @@
     "slides"
   ],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "version": {
+            "const": "1.1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "path_base"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "path_base"
+          ]
+        }
+      }
+    }
+  ],
   "properties": {
     "version": {
-      "const": "1.0"
+      "enum": [
+        "1.0",
+        "1.1"
+      ]
+    },
+    "path_base": {
+      "const": "project_root"
     },
     "title": {
       "type": "string"
@@ -88,6 +117,32 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
+              "components": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "object_ids"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+                    },
+                    "object_ids": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                }
+              },
               "local_objects": {
                 "type": "array",
                 "uniqueItems": true,
@@ -233,6 +288,226 @@
                     "native_sha256": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "content_type": {
+                      "enum": [
+                        "background",
+                        "page_text",
+                        "standard_title",
+                        "decorative_title",
+                        "photograph",
+                        "simple_icon",
+                        "simple_illustration",
+                        "complex_illustration",
+                        "geometric_graphic",
+                        "existing_asset",
+                        "identity_asset"
+                      ]
+                    },
+                    "material_route": {
+                      "enum": [
+                        "native",
+                        "preserve_source",
+                        "reference_generate"
+                      ]
+                    },
+                    "text_ownership": {
+                      "enum": [
+                        "page",
+                        "asset_title",
+                        "embedded"
+                      ]
+                    },
+                    "embedded_text": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string",
+                            "maxLength": 5000
+                          },
+                          "legibility": {
+                            "enum": [
+                              "readable",
+                              "unreadable"
+                            ]
+                          },
+                          "owner_unit_id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "legibility"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "maxItems": 100
+                    },
+                    "layer": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "component_bbox": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "material_requirement": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "requirement_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "minItems": 1,
+                          "uniqueItems": true
+                        },
+                        "source_origin": {
+                          "enum": [
+                            "page_reference",
+                            "independent_asset",
+                            "extracted_asset",
+                            "native_source"
+                          ]
+                        },
+                        "independent": {
+                          "type": "boolean"
+                        },
+                        "background": {
+                          "enum": [
+                            "transparent",
+                            "source",
+                            "opaque"
+                          ]
+                        },
+                        "route_constraint": {
+                          "enum": [
+                            "auto",
+                            "native",
+                            "preserve_source",
+                            "reference_generate"
+                          ]
+                        },
+                        "preservation_basis": {
+                          "enum": [
+                            "qualified_asset",
+                            "user_required",
+                            "identity",
+                            "photograph"
+                          ]
+                        },
+                        "source_qualification": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "complete_subject": {
+                              "type": "boolean"
+                            },
+                            "page_artifacts": {
+                              "enum": [
+                                "none",
+                                "present",
+                                "unknown"
+                              ]
+                            },
+                            "note": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "complete_subject",
+                            "page_artifacts",
+                            "note"
+                          ]
+                        },
+                        "fidelity": {
+                          "enum": [
+                            "reference",
+                            "exact"
+                          ]
+                        },
+                        "display": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "crop": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "minItems": 4,
+                              "maxItems": 4
+                            },
+                            "mask": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "geometry"
+                              ],
+                              "properties": {
+                                "geometry": {
+                                  "enum": [
+                                    "ellipse",
+                                    "round_rect",
+                                    "custom"
+                                  ]
+                                },
+                                "commands": {
+                                  "type": "array",
+                                  "minItems": 2,
+                                  "items": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "maxItems": 7,
+                                    "prefixItems": [
+                                      {
+                                        "enum": [
+                                          "M",
+                                          "L",
+                                          "C",
+                                          "Z"
+                                        ]
+                                      }
+                                    ],
+                                    "items": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "fit": {
+                              "enum": [
+                                "contain",
+                                "cover",
+                                "stretch"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "fit"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "requirement_ids",
+                        "source_origin",
+                        "independent",
+                        "background",
+                        "route_constraint"
+                      ]
                     }
                   },
                   "required": [
@@ -249,6 +524,51 @@
                   "additionalProperties": false
                 },
                 "minItems": 1
+              },
+              "material_contract": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "version": {
+                    "const": 1
+                  },
+                  "requirement_sources": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "file": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "excerpt": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "file",
+                        "sha256",
+                        "excerpt"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "version",
+                  "requirement_sources"
+                ]
               },
               "bindings": {
                 "type": "array",
@@ -286,6 +606,127 @@
               "bindings"
             ],
             "additionalProperties": false
+          },
+          "production_settings": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "values",
+              "revision",
+              "source",
+              "effective_sha256",
+              "instructions"
+            ],
+            "properties": {
+              "values": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "illustration_mode",
+                  "font_matching",
+                  "text_layout"
+                ],
+                "properties": {
+                  "illustration_mode": {
+                    "enum": [
+                      "generate_first",
+                      "draw_first"
+                    ]
+                  },
+                  "font_matching": {
+                    "enum": [
+                      "similar",
+                      "precise"
+                    ]
+                  },
+                  "text_layout": {
+                    "enum": [
+                      "paragraph",
+                      "line"
+                    ]
+                  }
+                }
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "type": "string"
+              },
+              "effective_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "instructions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "region_production_settings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "values",
+                "revision",
+                "source",
+                "effective_sha256",
+                "instructions"
+              ],
+              "properties": {
+                "values": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "illustration_mode",
+                    "font_matching",
+                    "text_layout"
+                  ],
+                  "properties": {
+                    "illustration_mode": {
+                      "enum": [
+                        "generate_first",
+                        "draw_first"
+                      ]
+                    },
+                    "font_matching": {
+                      "enum": [
+                        "similar",
+                        "precise"
+                      ]
+                    },
+                    "text_layout": {
+                      "enum": [
+                        "paragraph",
+                        "line"
+                      ]
+                    }
+                  }
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "source": {
+                  "type": "string"
+                },
+                "effective_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "instructions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -621,7 +1062,204 @@
           ]
         },
         "generation_decision": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "basis": {
+              "enum": [
+                "low_similarity",
+                "user_request",
+                "content_category"
+              ]
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1500
+            },
+            "drawing": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "similarity_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "content_type": {
+              "enum": [
+                "background",
+                "page_text",
+                "standard_title",
+                "decorative_title",
+                "photograph",
+                "simple_icon",
+                "simple_illustration",
+                "complex_illustration",
+                "geometric_graphic",
+                "existing_asset",
+                "identity_asset"
+              ]
+            },
+            "required_edit": {
+              "enum": [
+                "preserve",
+                "text",
+                "geometry",
+                "data",
+                "group",
+                "image_replace",
+                "unresolved"
+              ]
+            },
+            "text_ownership": {
+              "enum": [
+                "page",
+                "asset_title",
+                "embedded"
+              ]
+            },
+            "embedded_text": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "legibility": {
+                    "enum": [
+                      "readable",
+                      "unreadable"
+                    ]
+                  },
+                  "owner_unit_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"
+                  }
+                },
+                "required": [
+                  "text",
+                  "legibility"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 100
+            },
+            "fidelity": {
+              "enum": [
+                "reference",
+                "exact"
+              ]
+            }
+          },
+          "required": [
+            "basis",
+            "reference",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "basis": {
+                    "const": "low_similarity"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "drawing",
+                  "similarity_pct"
+                ],
+                "properties": {
+                  "similarity_pct": {
+                    "exclusiveMaximum": 75
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "basis": {
+                    "const": "content_category"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "content_type",
+                  "required_edit"
+                ],
+                "properties": {
+                  "content_type": {
+                    "enum": [
+                      "simple_illustration",
+                      "complex_illustration",
+                      "decorative_title",
+                      "photograph",
+                      "existing_asset"
+                    ]
+                  },
+                  "required_edit": {
+                    "enum": [
+                      "image_replace",
+                      "group"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "content_type": {
+                    "const": "decorative_title"
+                  }
+                },
+                "required": [
+                  "content_type"
+                ]
+              },
+              "then": {
+                "required": [
+                  "text_ownership",
+                  "embedded_text"
+                ],
+                "properties": {
+                  "text_ownership": {
+                    "const": "asset_title"
+                  },
+                  "embedded_text": {
+                    "contains": {
+                      "properties": {
+                        "legibility": {
+                          "const": "readable"
+                        },
+                        "text": {
+                          "type": "string",
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "legibility"
+                      ]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          ]
         },
         "raster_reason": {
           "type": "string",

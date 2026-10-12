@@ -75,7 +75,27 @@ def registered_context(manager, tid, args, explicit_project=None):
     input_paths, output_paths = [], []
     text_fit_options = None
     path_fit_options = None
-    if tid in {"ops.text-fit-plan", "ops.text-fit-evaluate",
+    generation_options = None
+    if tid in {'ops.generation-prepare', 'ops.generation-ingest'} and '--help' not in args:
+        if explicit_project is None:
+            raise PolicyDenied('Generation tools require an explicit managed --project context')
+        parser = argparse.ArgumentParser(add_help=False, exit_on_error=False, allow_abbrev=False)
+        parser.add_argument('--project', default=str(explicit_project))
+        parser.add_argument('--outdir', required=True)
+        if tid == 'ops.generation-ingest':
+            for field in ('request', 'image', 'producer'):
+                parser.add_argument('--' + field, required=True)
+            parser.add_argument('--crops')
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                generation_options = vars(parser.parse_args(args))
+            except (SystemExit, argparse.ArgumentError):
+                raise ValueError('Invalid registered generation arguments') from None
+        if Path(generation_options['project']).resolve() != Path(explicit_project).resolve():
+            raise PolicyDenied('Generation --project must match the explicit managed project')
+        input_paths.extend(generation_options[field] for field in ('request','image','producer','crops') if generation_options.get(field))
+        output_paths.append(generation_options['outdir'])
+    elif tid in {"ops.text-fit-plan", "ops.text-fit-evaluate",
                "ops.path-office-plan", "ops.path-office-evaluate",
                "ops.text-refine-plan"} and "--help" not in args:
         parser = argparse.ArgumentParser(add_help=False, exit_on_error=False, allow_abbrev=False)
@@ -83,14 +103,25 @@ def registered_context(manager, tid, args, explicit_project=None):
         if tid in {"ops.path-office-plan", "ops.text-refine-plan"}:
             fields = ("scene", "request", "outdir")
         for field in fields:
-            parser.add_argument("--" + field, required=True)
+            parser.add_argument("--" + field, required=not (tid == 'ops.text-fit-plan' and field == 'references'))
+        if tid == 'ops.text-fit-plan':
+            parser.add_argument('--mode', choices=('fit','calibration'), default='fit')
+            parser.add_argument('--reuse')
+            parser.add_argument('--max-samples', type=int, default=8)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             try:
                 text_fit_options = vars(parser.parse_args(args))
             except (SystemExit, argparse.ArgumentError):
                 raise ValueError("Invalid registered text-fit arguments") from None
         if tid.endswith("-plan"):
-            input_paths.extend(text_fit_options[k] for k in fields[:-1])
+            if tid == 'ops.text-fit-plan':
+                options=text_fit_options
+                if options['mode']=='fit' and (not options['references'] or options['reuse'] or options['max_samples']!=8):
+                    raise ValueError('Fit needs references; reuse/max-samples belong to calibration')
+                if options['mode']=='calibration' and (options['references'] or not 1<=options['max_samples']<=8):
+                    raise ValueError('Calibration uses 1..8 samples without a reference map')
+                if options['reuse']:input_paths.append(options['reuse'])
+            input_paths.extend(text_fit_options[k] for k in fields[:-1] if text_fit_options[k])
             output_paths.append(text_fit_options["outdir"])
         else:
             input_paths.extend(str(Path(text_fit_options["plan"])/name)
@@ -150,7 +181,7 @@ def registered_context(manager, tid, args, explicit_project=None):
         while i < len(args):
             flag, sep, inline = args[i].partition(":")
             flag = flag.lower()
-            if flag == "-probeonly" and not sep:
+            if flag in {"-probeonly", "-textcalibration"} and not sep:
                 i += 1
                 continue
             if flag not in {"-pptx", "-outputdir", "-sizesjson", "-width", "-height"}:
@@ -207,7 +238,16 @@ def registered_context(manager, tid, args, explicit_project=None):
         if text_fit_options:
             # Manifests carry indirect reads; validate them before spawning the tool.
             if tid.endswith("-plan"):
-                if tid in {"ops.path-office-plan", "ops.text-refine-plan"}:
+                if tid=='ops.text-fit-plan' and text_fit_options['mode']=='calibration':
+                    from scripts.scene_paths import prepare
+                    path=absolute(text_fit_options['scene'])
+                    scene=json.loads(path.read_text(encoding='utf-8-sig'))
+                    indirect=[r['resolved'] for r in prepare(scene,path.parent,project)[2] if r.get('resolved')]
+                    if text_fit_options.get('reuse'):
+                        from scripts.text_calibration import cache
+                        cache(absolute(text_fit_options['reuse']),
+                              check_path=lambda p:check_input(absolute(p),project,roots))
+                elif tid in {"ops.path-office-plan", "ops.text-refine-plan"}:
                     request = json.loads(absolute(text_fit_options["request"]).read_text(encoding="utf-8-sig"))
                     if (not isinstance(request, dict) or not isinstance(request.get("targets"), list)
                             or not 1 <= len(request["targets"]) <= 16
@@ -245,6 +285,13 @@ def registered_context(manager, tid, args, explicit_project=None):
                 raise ValueError("Invalid path-fit input manifest")
             for row in request["targets"]:
                 check_input(absolute(row["reference"]), project, roots)
+        if generation_options:
+            # The manager consumes its --project prefix; forward only the same
+            # authorized context and paths to the registered child.
+            args[:] = ['--project', str(project), '--outdir', str(absolute(generation_options['outdir']).resolve())]
+            for field in ('request','image','producer','crops'):
+                if generation_options.get(field):
+                    args.extend(['--'+field, str(absolute(generation_options[field]).resolve())])
     return project
 
 
@@ -252,6 +299,29 @@ def cli_arguments(manager, command, args):
     if not isinstance(args, list) or len(args) > 200 or any(
             not isinstance(a, str) or "\0" in a or len(a) > 8000 for a in args):
         raise ValueError("Invalid workflow CLI arguments")
+    if '--response-detail' in args:
+        pos = args.index('--response-detail')
+        if pos+1 >= len(args) or args[pos+1] not in {'full','compact'} or args.count('--response-detail') != 1:
+            raise ValueError('Use --response-detail full or compact')
+        detail = args[pos+1]
+        payload = cli_arguments(manager, command, args[:pos]+args[pos+2:])
+        if 'response_detail' in payload and payload['response_detail'] != detail:
+            raise ValueError('Conflicting response detail')
+        return {**payload, 'response_detail':detail}
+    if '--request-json' in args:
+        if command == 'start':raise ValueError('For start use the existing --references or --scene entry')
+        parser = argparse.ArgumentParser(add_help=False, exit_on_error=False, allow_abbrev=False)
+        parser.add_argument('--project', required=True)
+        parser.add_argument('--request-json', required=True)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:options = parser.parse_args(args)
+            except (SystemExit, argparse.ArgumentError):raise ValueError('Use --project and --request-json only') from None
+        project, roots = authorize(manager, options.project)
+        from .payload_transport import read_json_file
+        payload = read_json_file(check_input(options.request_json, project, roots))
+        if not isinstance(payload, dict) or 'project' in payload or 'context_id' in payload:
+            raise ValueError('Request JSON omits project and context_id; supplied by managed CLI')
+        return {'project':str(project), **payload}
     if command == "start":
         # This parser runs before permission(); never import selected package code.
         parser = argparse.ArgumentParser(add_help=False, exit_on_error=False, allow_abbrev=False)
@@ -347,18 +417,16 @@ def enrich_task(manager, result, project, response_detail='full'):
     for command in result.get("tool_commands", []):
         old = command["argv"]
         command["argv"] = manager.tool(command["tool_id"])["managed_argv_prefix"] + old[6:]
-    task["related_tools"] = [manager.tool(t) for t in task["suggested_tools"]
-                             if t in {r["id"] for r in manager.catalog()}]
     if response_detail == 'compact':
-        task['response_detail']='compact'
-        task['required_read_files']=[{'file':str(path), 'sha256':digest(path.read_bytes())}
-            for path in (Path(task['packet']),Path(task['response_template']))]
-        task['context_summary']={k:v for k,v in task['context'].items() if k in {
-            'region','local_size','coordinate_contract','native_first','required_edit_actions',
-            'submission_constraints','asset_policy_revision'}}
-        task['related_tools']=[{k:v for k,v in row.items() if k in {'id','title','manuals'}} for row in task['related_tools']]
-        task.pop('context',None);task.pop('response',None)
-        task['read_instruction']='Read the hashed packet and response template before authoring. Full task constraints and source evidence remain in those files.'
+        catalog = {r['id']: r for r in manager.catalog()}
+        task['related_tools'] = [{'id': tid, 'title': catalog[tid].get('title', tid),
+                                  'describe_tool': 'toolbox_describe'}
+                                 for tid in task['suggested_tools'] if tid in catalog]
+        from .context_delivery import compact_task
+        compact_task(task, packet, template)
+    else:
+        task['related_tools'] = [manager.tool(t) for t in task['suggested_tools']
+                                 if t in {r['id'] for r in manager.catalog()}]
     return result
 
 
@@ -426,6 +494,8 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
               "revision_after": None, "workflow_status": None, "command_status": "started",
               "parameters": {}, "code": None, "output_directory": None,
               "null_note": "Unavailable before authorization/start; no identity or result is fabricated"}
+    from .call_metrics import fingerprint, finish as finish_metrics
+    record['input_sha256']=fingerprint(arguments)
     manager.store.event("tool.started", "Managed workflow call started", source=source, details=record)
     try:
         if command == "start":
@@ -506,6 +576,9 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                         "input_roots": [str(r) for r in inputs],
                         "allowed": [r["id"] for r in manager.catalog() if r["enabled"]],
                         "command": command, "arguments": arguments}
+            from .production_settings import effective as production_effective, ensure_project
+            envelope['production_settings'] = (ensure_project(manager,project,new=True)
+                if command == 'start' else production_effective(manager,project))
             argv = [settings["python_path"] or sys.executable, str(manager.root/"toolbox_manager/worker.py")]
             from .payload_transport import encode_worker
             worker_payload = encode_worker(envelope)
@@ -570,6 +643,12 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                 record['output_directory']=str(target)
             except (OSError,ValueError) as exc:
                 result['log_warning']='Project initialized; start log remains in toolbox cache: '+str(exc)
+        from .production_settings import effective as production_effective, mark_applied
+        production = production_effective(manager,project)
+        applied = production.get('applied') or {}
+        if production.get('pending') and applied.get('revision') == production['revision'] and applied.get('effective_sha256') == production.get('effective_sha256'):
+            production = mark_applied(manager,project,production['revision'])
+        result['production_settings'] = production
         from .recovery import describe_result
         describe_result(result, dispatched=record["worker_pid"] is not None)
         from .project_status import safe_message
@@ -624,8 +703,25 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         describe_result(result, dispatched=record["worker_pid"] is not None)
         from .learning import record_attempt_safely
         record_attempt_safely(manager, command, arguments, result)
+        if arguments.get('response_detail') == 'compact':
+            from .context_delivery import measure_delivery
+            measure_delivery(result)
+            record['ended_at']=stamp()
+            finish_metrics(record,result,began)
+            try:
+                (output_dir/'call.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
+            except OSError as exc:
+                result['metrics_warning']=str(exc)[:300]
+            # Worker stdout/stderr remain in output_directory; no second full JSON copy in CLI output.
+            return result
         result["stdout"] = json.dumps({k: v for k, v in result.items() if k not in {"stdout", "stderr"}}, ensure_ascii=False)
         result["stderr"] = (output_dir/"stderr.log").read_text(encoding="utf-8") if (output_dir/"stderr.log").exists() else ""
+        record['ended_at']=stamp()
+        finish_metrics(record,result,began)
+        try:
+            (output_dir/'call.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
+        except OSError as exc:
+            result['metrics_warning']=str(exc)[:300]
         return result
     except Exception as exc:
         status = "permission_denied" if isinstance(exc, PolicyDenied) else "invalid_arguments" if isinstance(exc, (ValueError, argparse.ArgumentError)) else "failed"
@@ -639,6 +735,9 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         result = {"call_id": call_id, "tool_id": tid, "command_status": status,
                 "workflow_status": after.get("workflow_status"), "returncode": 2,
                 "error": {"code": getattr(exc, "code", status), "message": str(exc)}}
+        if hasattr(exc, 'diagnostics'):
+            result['error']['diagnostics'] = exc.diagnostics
+            result['error']['not_checked'] = getattr(exc,'not_checked',[])
         if previous_result.get("accepted_task"):
             result.update(accepted_task=previous_result["accepted_task"],
                           submission=previous_result.get("submission"),
@@ -654,6 +753,7 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                       error_type=type(exc).__name__, recovery=result["recovery"])
         from .project_status import safe_message
         record.update(error_code=getattr(exc,'code',status), error_message=safe_message(exc))
+        finish_metrics(record,result,began)
         try:
             manager.store.event("tool.finished", "Managed workflow call reporting ended", source=source,
                                 status="ok" if result["command_status"] == "completed" else "error",

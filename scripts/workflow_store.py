@@ -8,8 +8,12 @@ import socket
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from common import read_json, write_json, sha256
-from evidence_session import measured
+if __package__:
+    from .common import read_json, write_json, sha256
+    from .evidence_session import measured
+else:
+    from common import read_json, write_json, sha256
+    from evidence_session import measured
 
 FORMAT='ppt-workflow/1.2'
 
@@ -97,16 +101,11 @@ def save(root:Path, state:dict, event:str, detail=None):
     # The state contains its journal in the same atomic commit. Handoff is derived/cache only.
     write_json(root/'workflow/state.json',s)
     summary=brief(s)
-    lines=['# 当前制作状态', '', '本文件是便于交接的摘要；workflow/state.json 为权威状态。', '',
-           f'- 项目 {s["project_id"]}',f'- 修订 {s["revision"]}',f'- 工作流 {summary["workflow_status"]}',
-           f'- 完整页数 {summary["pages_ready"]}/{summary["pages_total"]}',
-           f'- 当前任务 {s.get("active_task",{}).get("id") if s.get("active_task") else "无"}', '',
-           '接手后从 Skill 的 toolbox.py 执行 status 和 next，不从旧聊天重建状态。',
-           '按当前任务 view_strategy 取图。重复领取同一任务无需反复看同图；上下文丢失后补看必要图片。',
-           '整页理解布局，原始像素局部用于制作和找错；保存发现与修改范围后可换短对话接续。',
-           '等待看图/素材/Office均不是构建失败；不修改状态文件，不批量填通过。']
-    try:(root/'HANDOFF.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
-    except OSError:pass  # State already committed; a missing convenience summary is not lost state.
+    try:
+        from handoff_summary import render
+        (root/'HANDOFF.md').write_text(render(root,s,summary),encoding='utf-8')
+    except (OSError,ValueError,KeyError):pass  # Derived summary cannot undo an accepted state commit.
+
 
 
 def page_ready(p):

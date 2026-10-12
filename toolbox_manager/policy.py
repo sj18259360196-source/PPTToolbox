@@ -79,8 +79,15 @@ def authorize(manager, project):
 class Policy:
     def __init__(self, envelope):
         required = {"format", "call_id", "parent_pid", "package_root", "project", "input_roots", "allowed", "command", "arguments"}
-        if set(envelope) != required or envelope["format"] != "ppt-managed-call/1":
+        if not required <= set(envelope) or set(envelope) - required - {'production_settings'} or envelope["format"] != "ppt-managed-call/1":
             raise PolicyDenied("Missing managed execution context")
+        if 'production_settings' in envelope:
+            preferences = envelope['production_settings']
+            if not isinstance(preferences,dict):
+                raise PolicyDenied('Invalid production settings context')
+            if preferences.get('values') is not None:
+                from scripts.production_settings import validate_values
+                validate_values(preferences['values'])
         if envelope["call_id"] != os.environ.get("PPT_MANAGED_CALL_ID"):
             raise PolicyDenied("Managed execution identity mismatch")
         if envelope["parent_pid"] != os.getppid():
@@ -104,8 +111,11 @@ class Policy:
         return check_input(value, self.project, self.inputs)
 
     def result_paths(self, result, kind):
+        if kind == 'asset_material' and 'items' in result:
+            result={**result,'items':[{**item,'viewed_files':[str(self.input(v)) for v in item['viewed_files']]}
+                                    for item in result['items']]}
         result=dict(result)
-        if kind == 'review_full' and 'additional_reviews' in result:
+        if kind in {'review_full','review_local'} and 'additional_reviews' in result:
             result['additional_reviews'] = [
                 {**row, 'result': self.result_paths(row['result'], 'review_local')}
                 for row in result['additional_reviews']]
@@ -117,4 +127,7 @@ class Policy:
                 check_tree(p.parent)
         for key in ("viewed_files", "files"):
             if key in result:result[key]=[str(self.input(value)) for value in result[key]]
+        if kind=='editable_behavior' and 'edit_tests' in result:
+            result['edit_tests']=[{**row,'evidence_files':[str(self.input(value)) for value in row['evidence_files']]}
+                                  for row in result['edit_tests']]
         return result

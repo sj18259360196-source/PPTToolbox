@@ -29,7 +29,8 @@ def main():
         os.execv(str(bundle/'runtime/python.exe'), [str(bundle/'runtime/python.exe'), '-B', str(bundle/'portable.py'), *sys.argv[1:]])
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--version',action='version',version=VERSION);p.add_argument('--data-dir',type=Path,default=default_data())
     s=p.add_subparsers(dest='command');a=s.add_parser('serve');a.add_argument('--port',type=int,default=0);a.add_argument('--no-browser',action='store_true')
-    for n in ['mcp','check','context','export-config']:s.add_parser(n)
+    for n in ['mcp','check','export-config']:s.add_parser(n)
+    a=s.add_parser('context');a.add_argument('--profile',choices=['full','production'],default='full')
     a=s.add_parser('desktop',help='Windows background tray host; no execution permission changes')
     a.add_argument('--vendor',type=Path);a.add_argument('--show',action='store_true')
     a.add_argument('--smoke',action='store_true');a.add_argument('--agent-start',action='store_true')
@@ -59,7 +60,7 @@ def main():
         out=run(m,vars(x))
     elif x.command=='authorize-project':out=m.authorize_project(x.project,x.input_root)
     elif x.command=='check':out={'manager':m.boot(),'environment':m.doctor()}
-    elif x.command=='context':out=m.context()
+    elif x.command=='context':out=m.context(profile=x.profile)
     elif x.command=='describe':out=m.tool(x.tool)
     elif x.command=='export-config':out=m.export_integration()
     elif x.command=='register-codex':

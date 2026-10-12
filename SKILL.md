@@ -2,34 +2,31 @@
 name: ppt-reference-rebuild
 description: 将PPT设计图片稿或页面截图重建为可编辑PPTX。通过统一工具箱领取局部任务、构建、PowerPoint渲染、左右对照、审查及续作；适用于单页、多页、素材替换和局部返修，不用于无参考图的自由设计。
 metadata:
-  compatibility: 可执行本地脚本并查看图像的Agent；Python 3.10+。目标软件验证需要Windows桌面PowerPoint及PowerShell；视觉、生图和参考图编辑由宿主提供。
-  version: "1.26.7"
+  compatibility: 可执行本地脚本并查看图像的Agent；Python 3.11+。目标软件验证需要Windows桌面PowerPoint及PowerShell；视觉、生图和参考图编辑由宿主提供。
+  version: "1.27.6"
   language: "zh-CN"
-  source-records: "31"
-  guidance-revision: "2026-10-02-call-recovery"
+  source-records: "读取当前经验查询结果"
+  guidance-revision: "2026-10-10-layered-material-guidance"
 ---
 # 设计稿复刻工具箱
-保留原文、页序、布局与关系。可重绘的图标、标志和插画保持原生可编辑；轮廓失真时返修路径和组合。照片、纹理及连续色调画作按[唯一素材决策](references/asset-policy.md)使用独立图片，不能把正文、数值与关系一起图片化。按 view_strategy 选择范围，整页理解布局，高清局部制作和找错。同任务同哈希已在当前上下文中查看时直接继续，提交优先 return_next=true。对话变长时保存发现，从项目状态接续。具体见[多页制作与修订](references/multipage-efficiency.md)。
-开始制作前先看整页，自行判断视觉重点、必做分区、编辑深度与不确定处，再安排制作顺序和工具组合。在现有 page_plan.notes 中简记重点及取舍，分区 summary 写目标；不增加固定评分、逐对象分析表或新的审批步骤。regions 的顺序仍表示背景到前景。每轮对照后重新判断剩余问题，具体见[分析与制作判断](references/analysis-and-planning.md)。
-
-先完成整体布局及关键图标、形状、组件、背景。图标、标志、图表与可分解插画使用原生形状、路径和语义组合，不得直接截图替代。照片、纹理或必须保留连续色调的画作需要声明 raster_content、raster_reason 及逐项 asset_decisions，再接受实际视觉检查。工具箱约束输出并提供绘制工具，具体重绘仍由 Agent 完成。字体默认选择风格和字重相近的可用字体，保留可编辑文本，重点检查原文完整、重叠、溢出、异常换行、间距和对齐。用户明确要求原字体或特定字形时再做专项匹配。
-
-遇到设计花字、细长尖刺、镂空或复杂贴纸轮廓，先按对象确定编辑深度。用户允许花字不逐字编辑时，可直接测试独立生成标题；粗蒙版会切断主体且允许近似时，测试完整透明素材与白边。保留普通正文原生，逐字检查生成标题，再检查 alpha 和 PowerPoint 回装效果。具体做法与适用限制见[花字与完整贴纸素材](references/generated-stickers.md)。
+新建参考图项目先按[插画要求与素材验收](references/material-quality.md)保存原始要求来源，声明素材资格，再分别核对独立性、边缘和参考保真。已有干净素材可复用，页面截图不因清楚而自动成为独立素材。旧合同通过正式范围修订启用新检查。
+保留原文、页序、布局与关系。先分析背景、分区、前后层次和内容归属，再逐组件复现。先读取当前 production_settings。图片生成优先按参考制作复杂插画、人物与装饰标题；可编辑绘制优先保留内部原生对象。简单线性、粗线条及少量规则部件构成的图标，两种模式都绘制为原生形状或路径。简单插画按模式和实际轮廓选路，已有合格独立素材可复用。照片按原件保留或参考生成要求处理，准确身份与明确保留约束继续有效。页面独立文字保持原生，素材内部文字随素材保留。编辑要求与路线见[唯一素材决策](references/asset-policy.md)。按 view_strategy 选择范围，整页理解布局，高清局部制作和找错。同任务同哈希已在当前上下文中查看时直接继续，提交优先 return_next=true。对话变长时保存发现，从项目状态接续。具体见[多页制作与修订](references/multipage-efficiency.md)。
+在同一份 page_plan 与 element_scope 记录组件类别、来源框、目标框、归属和编辑要求，regions 仍按背景到前景排列。固定组件框后按依赖装配，内部编辑按可编辑绘制优先设置及具体对象要求启用。图片填写 raster_content、raster_reason 和 asset_decisions；生成标题逐字核对，素材内嵌字保留原文，模糊字不猜写。详细流程见[分层分区与素材回装](references/component-material-workflow.md)，装饰标题须声明 asset_title 与准确可读原文，图片默认验证整体移动、缩放、替换和保存重开。特殊标题和完整轮廓见[花字与贴纸素材](references/generated-stickers.md)。
+制作前和续作时读取 `toolbox_production_settings` 或任务 `context.production_settings`，设置版本与任务摘要保持一致。三项默认值及作用范围见[制作设置](references/production-settings.md)。项目切换后重新查询，Agent 不自行降低要求。
 ## 默认只走一个入口
 项目的大阶段打卡见[项目工作链](references/project-work-chain.md)。受管 start 返回 `stage_context` 后登记接单开始。确定方案、制作、修订、交付各切换一次，交付完成再收尾，正常共六次。可随 next/submit 的 `checkpoint` 提交；阶段内无需定时或逐工具汇报。软件自动记录调用与文件变化。项目运行图由软件自动排布；需要细分或分支时，可在同次打卡的 `flow` 中提交步骤编号、名称和前置关系，后续只提交变化字段，见[工作图说明](references/project-work-graph.md)。推荐经验按需选择，实际采用的编号填在同一次打卡的 `used_experiences`，不用再单独引用。
-日常软件入口、目录、授权与迁移见[软件启动与 Agent 接入](references/current-desktop.md)。先读 `toolbox_context`，以返回的 `instance`、`storage`、当前 Skill 和 schema 为准。工具代码与管理数据使用固定位置。`settings.projects_directory` 只设置默认项目根目录，未设置时使用 `C:/Work/PPTProjects`；用户明确指定的项目目录优先。先用 `toolbox_project_bind` 绑定明确的 project，或传 name 在默认根目录下建立独立任务。后续 rebuild 调用携带 context_id；切换项目重新绑定，不修改全局目录。素材、版本、日志和成品均留在项目中，具体布局见[项目目录与上下文](references/project-context.md)。`settings.auto_approve_project_requests` 开启时，受管 start 自动应用已保存的项目批准策略并继续创建；关闭时，未授权请求由用户在项目页批准或拒绝。已拒绝的项目继续停止；已归档启动申请须由用户恢复后再继续。Agent 不自行改动授权或恢复申请。
+日常软件入口、目录、授权与迁移见[软件启动与 Agent 接入](references/current-desktop.md)。先读 `toolbox_context` 并设置 `profile=production`，以返回的 `instance`、`storage`、当前 Skill 和 schema 为准。工具代码与管理数据使用固定位置。`settings.projects_directory` 只设置默认项目根目录，未设置时使用 `C:/Work/PPTProjects`；用户明确指定的项目目录优先。先用 `toolbox_project_bind` 绑定明确的 project，或传 name 在默认根目录下建立独立任务。后续 rebuild 调用携带 context_id；切换项目重新绑定，不修改全局目录。素材、版本、日志和成品均留在项目中，具体布局见[项目目录与上下文](references/project-context.md)。`settings.auto_approve_project_requests` 开启时，受管 start 自动应用已保存的项目批准策略并继续创建；关闭时，未授权请求由用户在项目页批准或拒绝。已拒绝的项目继续停止；已归档启动申请须由用户恢复后再继续。Agent 不自行改动授权或恢复申请。
 
 先区分命令状态、工作流状态及实际任务。`awaiting_revision` 且 `active_task=null` 时，按明确返修范围调用 `rebuild_revise` 后再领取任务，不假设每次 `next` 都有 `task`。`outcome_unknown` 先核查状态和日志，不重放未决副作用。
 
 启用管理器MCP时，本阶段主流程使用 `rebuild_start → rebuild_next → rebuild_submit`，并用 `rebuild_status/revise/finish` 续作、返修和交付。它们与受管CLI共用执行服务和授权；不可用下方原始核心示例绕过已禁用工具。目录授权、内部权限和未决恢复规则见[受管执行](references/managed-execution.md)。其他Office抽查工具仍经受管CLI执行并保留关联证据。
-
 整页尚未完成时，可用 `rebuild_probe` 试制当前区域；已有候选可用 `rebuild_patch` 做六类限定增量修改，再经 `rebuild_compare` 生成实际对照，提交真实观察后用 `rebuild_adopt` 接回原流程。同一区域默认最多6个候选；不消耗主任务的试制与会刷新验收的采用分开。参数、单位、对象边界及恢复见[局部重建](references/local-rebuild.md)。采用不替代原正式门禁。
 
 使用本地学习技能前，先看完整参考页并核对区域需求，再用 `rebuild_route_check` 检查执行范围、证据覆盖和适用性。未知项保留待复核，不适用则继续普通重建；`rebuild_route_report` 区分技能实例、区域任务和整页结果。路由结论不能替代视觉验收，具体字段与限制见[第五阶段路由合同](docs/upgrade/phase-05/ROUTING_CONTRACT.md)。
 
 日常操作优先使用 MCP；其他工具按 describe 返回的 `managed_argv_prefix` 执行，保留随包解释器和数据目录。CLI 参数按[控制器说明](references/workflow-protocol.md)查阅，不猜安装路径或绕过权限。环境检查按当前授权和任务需要执行。
 
-循环使用 **next → 当前任务 → submit**。next会执行已经具备条件的确定性步骤，只返回一个需判断的任务。先检查返回的 `submission_constraints` 和 `response.examples.json`（如有），再打开 `must_view_files`，再读 `packet.json` 中当前局部的内容和参数。只修改响应模板的result，任务ID、token、路径与哈希由程序管理。
+循环使用 **next → 当前任务 → submit**。next会执行已经具备条件的确定性步骤，只返回一个需判断的任务。先检查返回的 `submission_constraints` 和 `response.examples.json`（如有），再打开 `must_view_files`，使用 `response_detail=compact` 返回的完整 `context` 与 `response`。`delivery_format=ppt-task-inline/2` 时无需再读任务包和模板；旧版 compact 仍按 `required_read_files` 读取。完整输出可用 `response_detail=full` 获取。只修改响应模板的result，任务ID、token、路径与哈希由程序管理。
 单页和多页均优先在 `rebuild_submit` 设置 `return_next=true`，直接处理返回的下一任务，避免每次再发一次领取请求。先检查 `submission`、`accepted_task` 和 `recovery`，已经保存的提交不能因后续领取失败而重放。全页审查只有在当前模板提供 `additional_reviews` 时才合并同页局部审查，最多六项；每项均须实际看图并填写独立结论，不得省略局部检查。 修订与接入诊断见 [多页制作](references/multipage-efficiency.md) 和 [工作流恢复](references/workflow-efficiency.md)。
 
 任务尚未提交时，重复next返回同一任务，不重新构建。字段错误只修当前result；过期任务重新领取。换模型或中断后执行status、next，从状态继续，不靠旧聊天重新猜测。项目目录和Skill目录分开。
@@ -41,9 +38,9 @@ metadata:
 2. 原生文字、表格、规则几何和关系按编辑要求重建；原始图表数据与截图估读分开。SVG文件不自动等于内部原生路径。
 3. Agent已有视觉能力时直接使用，不要求额外视觉API。生图通过宿主真实工具调用；没有入口时登记缺失，不伪造模型名或产物。生成PNG和SVG代码重建分开。
 4. `region_objects`用局部裁图像素，bbox为xywh；字体与线宽为pt。可提交`components`参数调用现成原生组件，程序编译、加ID前缀和转换坐标；不要重复换算。
-5. 插图和图标默认先绘制，再由 Agent 对参考局部判断相似度。低于 75% 可申请透明背景生图；用户明确要求直接生图时可跳过绘制，要求原生可编辑或禁止生图时遵从用户要求。request_asset 携带 generation_decision，记录参考图、绘制稿、分数及理由；软件自动加入默认工作图分支。多个图标可同图生成，随后分别裁剪回装。具体字段见[素材规则](references/asset-policy.md)。request_assets 仍支持一次最多 8 项，先读取素材权限，不增加打卡次数。
+5. 图片生成优先时复杂插画与装饰标题直接参考生成，`generation_decision.basis=content_category` 记录类别、编辑要求、参考和理由，无需试稿或分数。旧 `low_similarity` 记录继续保留原条件。多个独立小组件可用一条 `request_asset` 的 `request.items` 生成透明素材板，逐项裁切、核对与登记；`request_assets` 是多任务提交。准确标题原文及素材内嵌字进入所属组件约束，页面外加标签与关系线继续原生。字段见[素材规则](references/asset-policy.md)。
 6. 待Office、待素材、待看图不是程序失败，不反复从头运行。命令是否成功看command_status，制作到哪里看workflow_status。
-7. 必须实际查看每页全页左右图及已列出的局部图。生成文件、像素分数或检查收据都不能证明看懂或视觉合格。
+7. 必须实际查看每页全页、重要局部的左右图与叠图。左右图核对内容和风格，叠图查位置、比例、轮廓与遮挡。生成标题逐字核对，插图内嵌字核对实际可见文字与图形关系，不能只看元数据。
 8. 原图→内容核对与scene→PPTX核对分别完成。在副本实际编辑/重建后再提交相应检查，不批量填通过。
 9. 只报告实际运行结果。缺目标Office验证保留等待；不强制结束用户Office、不覆盖旧文件、不绕过权限、不上传到未经许可的新服务。
 10. 素材操作先读取 `toolbox_material_policy` 或 `toolbox_context.material_policy`。其中的允许值是用户保存的持久授权，联网搜图、生图和必要局部参考上传在允许范围内直接执行，不重复询问。项目覆盖和当前用户明确限制优先；缺少工具时报告能力缺失，不把缺少能力当成缺少同意。
@@ -89,13 +86,5 @@ For native gradient work, read [gradient contracts](references/gradient-capabili
 Before redrawing, call `icons_search` and `icons_inspect`; check meaning and appearance. Never replace scientific symbols merely because silhouettes match. Use `icons_fragment` in region_objects or `icons_place` for authorized project copies.
 For missing icons, author semantic groups of native shapes and paths in the current `region_objects` result. For a small detailed contour, segment one semantic part into an opaque black/white mask and use `icons_trace_fragment`; inspect its paths, holes and actual Office rendering. This route does not write to the global library. `icons_redraw_submit`, `icons_trace` and `icons_model_generate` write to the global library and are owner-only; do not start a global-library redraw job for project-local reconstruction. Drafts, library review and real Office render/edit/readback are separate gates; never invent approval. Read [icon contracts](references/icon-library.md).
 Repeated curves, shared boundaries, fitted gradients and linked copies use `graphics_inspect`, `graphics_preview`, `graphics_compile` and `graphics_regenerate`. Regeneration requires the prior version and refuses native edits. Relations live in the recipe, not PowerPoint. Read [graphics contracts](references/graphics-construction.md) and retain real Office/visual verification.
-
 For editable illustrations, read [material construction and diagnostics](references/native-illustration.md). Use `graphics_analyze` for command/subpath complexity and transparency warnings, `graphics_material_recipe` for editable droplet or rotated-end drafts, and `graphics_audit_sources` for explicit project dependencies before delivery. Inspect current capabilities first; drafts and structural diagnostics never certify visual quality. Search EXP-174 through EXP-180 for representation choice, lighting direction, and persistence guidance.
-
-
-少色分层插画保留钢笔节点与选区转路径两条方法。实际观察后调用 graphics_route_illustration，在 page_plan.notes 记录部件、路线及理由；孔洞变化和评价口径排名反转必须复查。使用 [双路线插画方法](references/layered-illustration.md) 与默认指令 illustration-method-choice，分开测量几何、颜色和实际编辑行为。
-
-
-## 1.26.7 插画方法直接入口
-
-少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。
+简单分层插画或明确要求内部编辑时，按需调用 graphics_illustration_guide 与 graphics_route_illustration，选择钢笔节点或选区转路径，保留孔洞与共享边，复查拓扑变化和评价口径排名反转。参数与步骤见[Agent 调用指南](references/illustration-agent-guide.md)及[双路线方法](references/layered-illustration.md)。复杂插画直接按组件素材流程处理；升级后重连 MCP。

@@ -4,11 +4,13 @@ from PIL import Image
 from common import sha256
 
 
-def strategy(project, packet):
+def strategy(project, packet, *, offset=0, limit=None):
     kind = packet['kind']
     local = kind in {'region_objects', 'asset_material', 'review_local', 'preview_local'}
     items = []
-    for rel in packet['required_view_files']:
+    files = packet['required_view_files']
+    selected = files[offset:] if limit is None else files[offset:offset+limit]
+    for rel in selected:
         path = Path(project) / rel
         with Image.open(path) as im:
             size = list(im.size)
@@ -28,6 +30,10 @@ def strategy(project, packet):
         'quality_rule': '缩略图不能证明细节通过。补看局部不替代当前 must_view_files；只提交实际查看且覆盖要求的观察。',
         'continuation': '对话变长时保存当前工作与发现，从项目 HANDOFF、status 和 next 接续，按当前任务取图，不重新读取历史图片目录。',
     }
+    if limit is not None:
+        result['pagination'] = {'offset': offset, 'limit': limit, 'total': len(files),
+                                'next_offset': offset+limit if offset+limit < len(files) else None}
+        result['measurement_scope'] = 'Selected page of local encoded files only; not the complete task or API traffic.'
     if packet.get('context',{}).get('whole_page'):
         result['optional_whole_page']=str((Path(project)/packet['context']['whole_page']).resolve())
         result['original_reference_size']=packet['context'].get('reference_size')

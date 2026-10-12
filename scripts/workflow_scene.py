@@ -8,6 +8,8 @@ import json
 import math
 import re
 import shutil
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from PIL import Image
 from common import read_json, write_json, sha256, resolve_asset, walk_objects
@@ -62,11 +64,13 @@ def text_list(value, label):
     return value
 
 
-def valid_plan(value, size):
+def valid_plan(value, size, project=None):
+    from validation_checks import Checks
+    checks=Checks()
     keys(value, ['regions'], ['notes','uncertainties','element_scope'])
     if not isinstance(value['regions'],list) or not value['regions']: raise ValueError('regions: at least one region required')
     seen=set(); rows=[]
-    for row in value['regions']:
+    def check_region(row):
         keys(row,['id','bbox','role','summary'],['local_review'])
         rid=identifier(row['id'],'region id')
         if rid.casefold() in seen or rid.casefold()=='full': raise ValueError('Duplicate/reserved region id: '+rid)
@@ -76,10 +80,20 @@ def valid_plan(value, size):
         text(row['summary'],'region summary')
         if 'local_review' in row and type(row['local_review']) is not bool: raise ValueError('local_review must be boolean')
         rows.append({**row,'local_review':row.get('local_review',row['role'] in {'diagram','chart','table'})})
-    result = {'regions':rows, 'notes':value.get('notes',''), 'uncertainties':text_list(value.get('uncertainties',[]),'uncertainties')}
+    for index,row in enumerate(value['regions']):
+        checks.run(lambda:check_region(row),'/regions/'+str(index),'region_contract',
+                   row.get('id') if isinstance(row,dict) else None)
+    uncertainties=checks.run(lambda:text_list(value.get('uncertainties',[]),'uncertainties'),'/uncertainties','uncertainties')
+    result = {'regions':rows, 'notes':value.get('notes',''), 'uncertainties':uncertainties}
     if 'element_scope' in value:
         from element_scope import validate_plan
-        result['element_scope'] = copy.deepcopy(validate_plan(value['element_scope'], [r['id'] for r in rows]))
+        # Invalid regions cannot establish scope-to-region membership, but scope
+        # rules and source hashes remain independently checkable.
+        region_ids=[r['id'] for r in rows] if len(rows)==len(value['regions']) else None
+        if region_ids is None:checks.not_checked.add('scope_region_membership')
+        result['element_scope'] = copy.deepcopy(checks.run(lambda:validate_plan(value['element_scope'], region_ids,project=project),
+                                                          '/element_scope','page_scope'))
+    checks.finish()
     return result
 
 
@@ -108,23 +122,44 @@ def import_file(source:Path, project:Path, folder='assets'):
     return target.relative_to(project).as_posix()
 
 
-def import_scene(scene_path:Path, project:Path):
+@contextmanager
+def temporary_import_project(project):
+    scratch=project/'.tmp/codex/scene-import'
+    existed=scratch.exists()
+    scratch.mkdir(parents=True,exist_ok=True)
+    try:
+        with tempfile.TemporaryDirectory(prefix='check-',dir=scratch) as temp:
+            yield Path(temp)
+    finally:
+        if not existed:
+            try:scratch.rmdir()
+            except OSError:pass  # Another concurrent import may still own children.
+
+
+def import_scene(scene_path:Path, project:Path, *, source_project=None):
     from scene_preflight import require
-    require(scene_path)
-    scene=read_json(scene_path)
+    from scene_paths import load as load_scene
+    require(scene_path,source_project)
+    scene,base=load_scene(scene_path,source_project)
     scene=copy.deepcopy(scene); pages=[]
     for i,s in enumerate(scene['slides'],1):
-        ref=resolve_asset(scene_path.parent,s.get('reference',''))
+        ref=resolve_asset(base,s.get('reference',''))
         size=image_size(ref); rel=f'input/slide-{i:03}{ref.suffix.lower()}'
         (project/'input').mkdir(parents=True,exist_ok=True);shutil.copyfile(ref,project/rel)
         s['reference']=rel
         # Enforce an explicit and usable comparison transform at import time.
         review_mapping(scene,s,size)
         for obj in walk_objects(s['objects']):
-            if obj['kind']=='image':obj['asset']=import_file(resolve_asset(scene_path.parent,obj['asset']),project)
+            if obj['kind']=='image':obj['asset']=import_file(resolve_asset(base,obj['asset']),project)
+            for field in ('reference','drawing'):
+                decision=obj.get('generation_decision',{})
+                if field in decision:decision[field]=import_file(resolve_asset(base,decision[field]),project)
         for unit in s.get('element_scope', {}).get('units', []):
             if 'source' in unit:
-                unit['source']['asset'] = import_file(resolve_asset(scene_path.parent,unit['source']['asset']),project)
+                unit['source']['asset'] = import_file(resolve_asset(base,unit['source']['asset']),project)
+        from material_quality import sources
+        for source in sources(s.get('element_scope')):
+            source['file'] = import_file(resolve_asset(base,source['file']),project)
         pages.append({'id':s['id'],'index':i,'reference':rel,'size':size,'sha256':sha256(project/rel),
                       'imported_slide':s,'plan':None,'fragments':{},'source_review':None})
     return scene['canvas'],scene.get('title','Reference rebuild'),pages
@@ -167,7 +202,7 @@ def fragment_digest(payload):
 
 def merge_fragment_revision(previous, result):
     """Replace selected top-level records; preserve all other payload data."""
-    keys(result, ['action', 'base_fragment_sha256', 'reason'], ['objects', 'components'])
+    keys(result, ['action', 'base_fragment_sha256', 'reason'], ['objects', 'components', 'material_reviews'])
     if result['action'] != 'revise_objects':
         raise ValueError('Expected revise_objects action')
     text(result['reason'], 'object revision reason')
@@ -176,6 +211,10 @@ def merge_fragment_revision(previous, result):
     if result['base_fragment_sha256'] != fragment_digest(previous):
         raise ValueError('Stale previous fragment hash')
     merged = copy.deepcopy(previous)
+    if 'material_reviews' in previous:
+        if 'material_reviews' not in result:
+            raise ValueError('Material changes need fresh material_reviews; previous visual observations cannot be copied automatically')
+        merged['material_reviews'] = copy.deepcopy(result['material_reviews'])
     replacements = 0
     for field in ('objects', 'components'):
         rows = result.get(field, [])
@@ -204,7 +243,7 @@ def merge_fragment_revision(previous, result):
 
 
 def compile_fragment(page, region, payload, canvas, project):
-    keys(payload,['objects','source_notes'],['relationship_ids','uncertainties','components','draw_order','asset_decisions','scope_bindings'])
+    keys(payload,['objects','source_notes'],['relationship_ids','uncertainties','components','draw_order','asset_decisions','scope_bindings','material_reviews'])
     if not isinstance(payload['objects'],list): raise ValueError('objects must be an array')
     if not payload['objects'] and not payload.get('components'): raise ValueError('objects: empty regions cannot be marked reconstructed')
     if not isinstance(payload.get('components',[]),list):raise ValueError('components must be an array')
@@ -212,24 +251,43 @@ def compile_fragment(page, region, payload, canvas, project):
     text_list(payload.get('uncertainties',[]),'uncertainties')
     from components import compile_component
     raw=[compile_component(s) for s in payload.get('components',[])]+copy.deepcopy(payload['objects']); prefix=f'{page["id"]}.{region["id"]}.'
-    local=[]
-    def collect(rows):
-        for obj in rows:
-            if not isinstance(obj,dict):raise ValueError('objects must contain object records')
-            identifier(obj.get('id'),'local object id'); local.append(obj['id'])
-            if obj.get('kind')=='group': collect(obj.get('children',[]))
-    collect(raw)
-    if len(local)!=len(set(local)):raise ValueError('Duplicate local object IDs')
+    from validation_checks import Checks
+    checks=Checks();local=[]
+    def collect(rows, path):
+        for index,obj in enumerate(rows):
+            field=path+'/'+str(index)
+            if not isinstance(obj,dict):
+                checks.add('objects must contain object records',field,'object_record');continue
+            oid=obj.get('id')
+            checks.run(lambda:identifier(oid,'local object id'),field+'/id','local_object_id',oid)
+            if isinstance(oid,str):
+                if oid in local:checks.add('Duplicate local object IDs',field+'/id','unique_object_id',oid)
+                local.append(oid)
+            if obj.get('kind')=='group':collect(obj.get('children',[]),field+'/children')
+    for index,obj in enumerate(raw):
+        # Component expansion has its own stable source pointer.
+        base='/components' if index<len(payload.get('components',[])) else '/objects'
+        source_index=index if base=='/components' else index-len(payload.get('components',[]))
+        collect([obj],base+'/'+str(source_index)+'/expanded' if base=='/components' else base+'/'+str(source_index)+'/item')
+    # Remove the synthetic singleton segments from primitive source pointers.
+    for issue in checks.errors:issue['path']=issue['path'].replace('/item/0','')
+    checks.finish(['object_compilation', 'scope_bindings'])
     from task_contracts import validate_asset_decisions
-    decisions=validate_asset_decisions(payload.get('asset_decisions',[]),set(local))
+    decisions=checks.run(lambda:validate_asset_decisions(payload.get('asset_decisions',[]),set(local)),
+                         '/asset_decisions','asset_decision')
     from element_scope import validate_outputs
     scope = (page.get('plan') or {}).get('element_scope')
     preserved = set()
     if scope is not None:
-        preserved = validate_outputs(scope, raw, project, region_id=region['id'],
-                                     bindings=payload.get('scope_bindings'), check_native=False)
+        preserved = checks.run(lambda:validate_outputs(scope, raw, project, region_id=region['id'],
+                                     bindings=payload.get('scope_bindings'), check_native=False),
+                               '/scope_bindings','output_scope') or set()
     elif 'scope_bindings' in payload:
-        raise ValueError('scope_bindings requires a page element_scope')
+        checks.add('scope_bindings requires a page element_scope','/scope_bindings','scope_missing')
+    checks.finish(['object_compilation'])
+    from material_quality import validate_reviews
+    validate_reviews(scope, raw, payload, project, region_id=region['id'],
+                     bindings=payload.get('scope_bindings'), stage='region')
     if page.get('native_first'):
         from material_routes import generated_illustration
         by_target = {row['target_id']: row for row in decisions}
@@ -338,6 +396,10 @@ def assemble(state):
         from element_scope import compiled_scope
         scope = compiled_scope(page)
         if scope is not None: slides[-1]['element_scope'] = scope
+        if page.get('production_settings'):
+            slides[-1]['production_settings'] = copy.deepcopy(page['production_settings'])
+        if page.get('region_production_settings'):
+            slides[-1]['region_production_settings'] = copy.deepcopy(page['region_production_settings'])
     return {'version':'1.0','title':state['title'],'canvas':state['canvas'],'slides':slides}
 
 
@@ -360,6 +422,10 @@ def auto_regions(scene, pages):
             assigned.update(ids)
         review_plan=page.get('review_plan') if page.get('imported_slide') is not None else None
         plan=review_plan or page.get('plan') or {}
+        from review_components import components
+        for component in components(slide):
+            ids=set(component['object_ids'])
+            if component['source']=='review_requirements' and ids & set(required['local_objects']):add(ids)
         for region in plan.get('regions',[]):
             if review_plan:
                 ids=set(region['object_ids']) & lookup.keys()
@@ -368,10 +434,16 @@ def auto_regions(scene, pages):
                 ids={oid for oid in lookup if oid.startswith(prefix)}
             else:
                 ids={o['id'] for o in walk_objects(page['fragments'].get(region['id'],{}).get('objects',[]))}
+            ids-=assigned
             mandatory=ids & set(required['local_objects'])
             # These are review crops, not write bounds. Include current geometry
             # even when a retained object has moved beyond the old region.
-            if mandatory or region['local_review']:add(ids if region['local_review'] else mandatory,region['bbox'])
+            if ids and (mandatory or region['local_review']):add(ids if region['local_review'] else mandatory,region['bbox'])
+        # Existing plans already provide semantic context. Do not split those into
+        # more crops just because a finer scope declaration is also available.
+        for component in components(slide):
+            ids=set(component['object_ids'])
+            if ids & set(required['local_objects']) - assigned:add(ids)
         # Imported scenes may have semantic groups but no page-plan fragments.
         # Review each bounded group in context instead of hundreds of tiny leaf crops.
         # Large slide-wide groups are descended; every required ID remains covered.
@@ -402,6 +474,8 @@ def freeze_scene(state, project, run_dir):
     if errors:raise ValueError('Assembled scene errors: '+'; '.join(errors[:16]))
     files=set(s['reference'] for s in scene['slides'])
     for s in scene['slides']:
+        from material_quality import sources
+        files.update(row['file'] for row in sources(s.get('element_scope')))
         files.update(u['source']['asset'] for u in s.get('element_scope', {}).get('units', []) if 'source' in u)
         files.update(o['asset'] for o in walk_objects(s['objects']) if o['kind']=='image')
         for obj in walk_objects(s['objects']):

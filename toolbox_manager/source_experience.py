@@ -1,7 +1,7 @@
 """Read-only UI access to bundled knowledge plus persistent user imports."""
 import json
 import re
-from scripts.experience_library import load_library, show, read_source
+from scripts.experience_library import load_library, show, read_source, with_current_guidance, current_production_guidance
 
 
 def call(manager, action, args):
@@ -11,13 +11,14 @@ def call(manager, action, args):
         query = str(args.get('query', '')).casefold().split()
         items = []
         for row in rows:
-            item = {k: v for k, v in row.items() if not k.startswith('_') and k != 'evidence'}
+            item = with_current_guidance({k: v for k, v in row.items() if not k.startswith('_') and k != 'evidence'}, include_policy=False)
             item['source_ids'] = list(dict.fromkeys(e['source_id'] for e in row['evidence']))
             item['proposed'] = row.get('kind') == 'proposed_method'
             item['external_import'] = bool(row.get('external_import'))
             if all(word in json.dumps(item, ensure_ascii=False).casefold() for word in query):
                 items.append(item)
         return {'items': items, 'total': len(rows), 'source_count': len(sources),
+                'production_guidance': current_production_guidance(),
                 'imported_count': sum(bool(r.get('external_import')) for r in rows),
                 'storage_path': str(options['external_root'])}
     if action == 'show':

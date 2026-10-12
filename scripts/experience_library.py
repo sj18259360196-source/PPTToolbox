@@ -27,6 +27,30 @@ ROOT = Path(__file__).resolve().parents[1]
 KNOWLEDGE = Path('assets/experience/knowledge')
 
 
+def current_production_guidance():
+    if __package__:
+        from .material_routes import GUIDANCE
+    else:
+        from material_routes import GUIDANCE
+    return {'policy': 'layered-material/2', 'guidance': GUIDANCE,
+            'scope': 'Current execution context; original actions and historical evidence are preserved'}
+
+
+def with_current_guidance(row, *, include_policy=True):
+    """Add current execution context to a query result, preserving stored history.
+
+    Keep imports, user edits, hidden-state overlays and management revisions
+    untouched. This function applies only to returned read-only query copies.
+    """
+    note = ('当前执行适用提示。具体对象要求、当前任务已生效 production_settings 与已接受路线先于历史案例步骤。'
+            '插画按 illustration_mode、字体按 font_matching、文本框按 text_layout 执行。'
+            '历史原生方法在组件已选原生路线或明确要求内部编辑时采用。')
+    result = {**row, 'constraints': [note, *row.get('constraints', [])]}
+    if include_policy:
+        result['production_guidance'] = current_production_guidance()
+    return result
+
+
 def local_file(root, relative):
     root = Path(root).resolve()
     path = (root / relative).resolve()
@@ -153,7 +177,7 @@ def show(identifier, root=None, external_root=None):
     if row is None:
         raise ValueError('Unknown experience ID: ' + str(identifier))
     by_id = {source['source_id']: source for source in sources}
-    return {**row, 'tools': tool_links(row, registry, detailed=True),
+    return {**with_current_guidance(row), 'tools': tool_links(row, registry, detailed=True),
             'manual': str(local_file(row['_manual_root'], row['manual'])) if row.get('_manual_root') else row['manual'],
             'sources': [{**e, 'file': str(local_file(by_id[e['source_id']].get('_library_root', root or ROOT), source_path(by_id[e['source_id']]))),
                          'topic': by_id[e['source_id']]['topic'],

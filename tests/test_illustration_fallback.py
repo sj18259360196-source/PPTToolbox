@@ -162,6 +162,7 @@ def test_project_observer_collects_generation_route_and_prompt_exposes_policy(pr
     assert any(n.get('kind')=='generation' for n in hub.snapshot(manager,key)['display_graph']['nodes'])
     from toolbox_manager.material_policy import effective
     policy=effective(manager,p)
-    assert policy['illustration_route']['threshold_pct']==75
+    assert policy['illustration_route']['default_basis']=='content_category'
+    assert policy['illustration_route']['legacy_fallback']['threshold_pct']==75
     from toolbox_manager.production_storage import startup_prompt
     assert '75%' in startup_prompt(manager)['text']

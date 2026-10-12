@@ -12,8 +12,19 @@ ADJUSTMENT_COUNTS = {"rect":0, "round_rect":1, "ellipse":0, "triangle":1,
                      "diamond":0, "chevron":1, "right_arrow":2,
                      "left_right_arrow":2, "star5":3, "arc":2}
 
-def validate(scene: dict, base: Path, check_files: bool = True) -> list[str]:
+def validate(scene: dict, base: Path, check_files: bool = True, *, project_root=None) -> list[str]:
     import jsonschema
+    path_errors = []
+    if isinstance(scene, dict) and scene.get('version') == '1.1' and check_files:
+        if __package__:
+            from .scene_paths import prepare
+        else:
+            from scene_paths import prepare
+        try:
+            scene, base, paths = prepare(scene, base, project_root)
+            path_errors = [r['field']+': '+r['error'] for r in paths if 'error' in r]
+        except ValueError as exc:
+            return [str(exc)]
     schema = read_json(Path(__file__).resolve().parents[1] / "assets/schemas/scene.schema.json")
     errors = [f"{'/'.join(map(str, e.absolute_path)) or '$'}: {e.message}" for e in
               jsonschema.Draft202012Validator(schema).iter_errors(scene)]
@@ -206,6 +217,7 @@ def validate(scene: dict, base: Path, check_files: bool = True) -> list[str]:
                 if not o.get("data_provenance"): errors.append(f"{oid}: data provenance required")
     from native_extensions import validate_extensions
     errors.extend(validate_extensions(scene))
+    errors.extend(path_errors)
     return errors
 
 def main():

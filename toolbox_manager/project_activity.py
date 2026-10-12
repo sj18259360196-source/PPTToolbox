@@ -6,6 +6,7 @@ import uuid
 import contextvars
 import hashlib
 import json
+import time
 
 CALL_ID = contextvars.ContextVar('ppttool_activity_call', default=None)
 
@@ -13,6 +14,7 @@ from .project_status import safe_message
 
 
 def observe_call(manager, tool, args, source, invoke, project_scope=None):
+    began = time.perf_counter()
     args = args if isinstance(args,dict) else {}
     scope = args.get('project') or args.get('project_key') or project_scope
     if not scope:
@@ -24,10 +26,13 @@ def observe_call(manager, tool, args, source, invoke, project_scope=None):
         # Attribution must not replace the tool's own project validation.
         return invoke()
     task = workflow.get('active_task') or {}
+    from .storage import stamp
+    from .call_metrics import fingerprint, finish
     record = {'project':str(root), 'tool_id':tool, 'call_id':uuid.uuid4().hex,
+              'started_at':stamp(), 'ended_at':None, 'source':source,
               'owner_pid':os.getpid(), 'task_id':task.get('id'), 'task_kind':task.get('kind'),
               'project_id':workflow.get('project_id'), 'revision_before':workflow.get('revision'),
-              'input_sha256':hashlib.sha256(json.dumps(args,sort_keys=True,default=str).encode()).hexdigest()}
+              'input_sha256':fingerprint(args)}
 
     from scripts import project_journal as journal
     from .storage import redact
@@ -53,9 +58,11 @@ def observe_call(manager, tool, args, source, invoke, project_scope=None):
     try:
         result = invoke()
         status = result.get('command_status','completed') if isinstance(result,dict) else 'completed'
-        if isinstance(result,dict) and result.get('failed',0): status='failed'
+        if isinstance(result,dict) and result.get('failed',0):
+            status='partial' if result.get('succeeded',0) else 'failed'
         if tool=='icons.search' and isinstance(result,dict) and result.get('items')==[]: status='no_results'
-        record.update(command_status=status)
+        record.update(command_status=status, ended_at=stamp())
+        finish(record, result, began)
         try:
             persist(status, result)
         except OSError as exc:
@@ -68,7 +75,8 @@ def observe_call(manager, tool, args, source, invoke, project_scope=None):
         from .policy import PolicyDenied
         status = 'permission_denied' if isinstance(exc,PolicyDenied) else 'invalid_arguments' if isinstance(exc,ValueError) else 'failed'
         if isinstance(exc,(TimeoutError,subprocess.TimeoutExpired)): status='outcome_unknown'
-        record.update(command_status=status, error_code=getattr(exc,'code',status), error_message=safe_message(exc))
+        record.update(command_status=status, ended_at=stamp(), error_code=getattr(exc,'code',status), error_message=safe_message(exc))
+        finish(record, None, began)
         try:
             persist(status)
         except OSError as receipt_error:

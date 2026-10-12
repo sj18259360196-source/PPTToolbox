@@ -10,7 +10,7 @@ def preflight(project,args):
     path=plain_path(project/args['scene'])
     if not path.is_relative_to(project): raise ValueError('Scene must be inside authorized project')
     from scene_preflight import inspect
-    return inspect(path)
+    return inspect(path,project)
 
 
 def select_versions(project,args):
@@ -21,7 +21,9 @@ def select_versions(project,args):
         p=plain_path(project/spec['scene'])
         if not p.is_relative_to(project): raise ValueError('Scene outside project')
         if sha256(p)!=spec['sha256']: raise ValueError('Stale scene hash')
-        return read_json(p),p
+        from scene_paths import load as load_scene
+        scene,_=load_scene(p,project)
+        return scene,p
     base,path=load(args['base']);result=copy.deepcopy(base);selected=set();records=[];dependencies=[]
     for choice in args['selections']:
         other,other_path=load(choice)
@@ -47,10 +49,12 @@ def select_versions(project,args):
         slide=next(s for s in result['slides'] if s['id']==slide_id)
         if digest(next(o for o in slide['objects'] if o['id']==dep))!=expected:
             raise ValueError('A later selection changed a background dependency: '+dep)
-    errors=validate(result,path.parent)
+    from scene_paths import base_for
+    scene_base=base_for(result,path.parent,project)
+    errors=validate(result,scene_base,project_root=scene_base)
     if errors: raise ValueError('; '.join(errors[:5]))
     # Return proposal in memory so existing relative assets retain their original base.
-    return {'scene':result,'scene_base':str(path.parent),'selections':records,'base_sha256':args['base']['sha256'],
+    return {'scene':result,'scene_base':str(scene_base),'selections':records,'base_sha256':args['base']['sha256'],
             'adopted':False,'mutated':False,'visual_review':'pending',
             'next':'Save proposal beside its scene_base, then use managed import/review; protect other objects'}
 

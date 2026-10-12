@@ -5,7 +5,8 @@ param(
     [ValidateRange(1,16000)][int]$Width=1920,
     [ValidateRange(0,16000)][int]$Height=0,
     [switch]$ProbeOnly,
-    [string]$SizesJson
+    [string]$SizesJson,
+    [switch]$TextCalibration
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -14,6 +15,7 @@ if(Test-Path -LiteralPath $out){if(@(Get-ChildItem -LiteralPath $out -Force).Cou
 [System.IO.Directory]::CreateDirectory($out)|Out-Null
 $report=[ordered]@{status='not_run';renderer='Microsoft PowerPoint';pptx_sha256=$null;slides=@();text_bounds=@();scope='Read-only PowerPoint open/export; visual and editing review not performed';probe_only=[bool]$ProbeOnly}
 $app=$null;$deck=$null;$owned=$false;$code=0
+if($TextCalibration){. (Join-Path $PSScriptRoot 'text_calibration_measure.ps1')}
 try{
     if($env:OS -ne 'Windows_NT'){$report.status='blocked';throw 'Windows PowerPoint COM is required'}
     $app=New-Object -ComObject PowerPoint.Application
@@ -56,6 +58,7 @@ try{
                 try{
                     $t=$s.TextFrame2.TextRange
                     $g=@{slide=$i;id=[string]$s.Name;rotation=[double]$s.Rotation;box_pt=@([double]$s.Left,[double]$s.Top,[double]$s.Width,[double]$s.Height);bound_pt=@([double]$t.BoundLeft,[double]$t.BoundTop,[double]$t.BoundWidth,[double]$t.BoundHeight);status='not_run';reason='Raw text bounds recorded; interpret rotation/WordArt/margins against actual render'}
+                    if($TextCalibration){$g['calibration']=Read-TextCalibration -Shape $s}
                     $report.text_bounds+=$g
                 }catch{$report.text_bounds+=@{slide=$i;id=[string]$s.Name;status='blocked';reason=$_.Exception.Message}}
             }

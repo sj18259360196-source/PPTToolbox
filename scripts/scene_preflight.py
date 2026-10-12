@@ -8,38 +8,33 @@ else:
     from validate_scene import validate
 
 
-def inspect(path):
+def inspect(path, project_root=None):
     path = Path(path).resolve()
     scene = read_json(path)
-    errors = validate(scene, path.parent)
-    references = []
-    def scan(value, pointer=''):
-        if isinstance(value, dict):
-            for key, item in value.items():
-                field = pointer+'/'+key
-                if key in {'reference','asset'} and isinstance(item, str):
-                    record = {'field': field, 'value': item, 'base': str(path.parent)}
-                    try:
-                        resolved = resolve_asset(path.parent, item)
-                        record.update(resolved=str(resolved), exists=resolved.is_file())
-                        if not resolved.is_file():
-                            errors.append(field+': missing file relative to scene directory: '+item)
-                    except (OSError, ValueError) as exc:
-                        record.update(exists=False, error=str(exc))
-                        errors.append(field+': '+str(exc))
-                    references.append(record)
-                elif isinstance(item, (dict,list)): scan(item, field)
-        elif isinstance(value, list):
-            for index, item in enumerate(value): scan(item, pointer+'/'+str(index))
-    scan(scene)
+    if __package__:
+        from .scene_paths import prepare
+    else:
+        from scene_paths import prepare
+    try:
+        normalized, base, references = prepare(scene, path.parent, project_root)
+        errors = validate(normalized, base, project_root=base)
+        errors += [r['field']+': '+r['error'] for r in references if 'error' in r]
+    except ValueError as exc:
+        base, references, errors = path.parent, [], [str(exc)]
     errors = list(dict.fromkeys(errors))
+    metadata = scene if isinstance(scene, dict) else {}
     return {'status':'invalid' if errors else 'valid', 'code':'scene_contract_invalid' if errors else None,
-            'scene_sha256':sha256(path),'base':str(path.parent),'errors':errors,'references':references,
-            'mutated':False,'guidance':'Use scene-relative paths for reference/asset; keep references inside that base. Supply real evidence for every required object; no automatic evidence fabrication.'}
+            'scene_sha256':sha256(path),'base':str(base),'scene_directory':str(path.parent),
+            'path_base':metadata.get('path_base','scene_directory'),
+            'project_root':str(base) if metadata.get('version')=='1.1' and references else None,
+            'errors':errors,'references':references,
+            'mutated':False,'guidance':('Scene 1.1 uses the selected project root; project-contained absolute paths are normalized in memory. '
+                if metadata.get('version')=='1.1' else 'Scene 1.0 uses scene-relative paths; moving the scene changes its base. ')+
+                'Keep files inside that base. Supply actual evidence; no automatic evidence fabrication.'}
 
 
-def require(path):
-    report = inspect(path)
+def require(path, project_root=None):
+    report = inspect(path, project_root)
     if report['errors']:
         raise ValueError('Scene import errors: '+'; '.join(report['errors'][:20])+
                          ' | base='+report['base']+' | '+report['guidance'])

@@ -16,7 +16,9 @@ from evidence_contract import required_review
 
 def run(scene:Path,out:Path,office=False,regions:Path|None=None):
     if out.exists():raise FileExistsError('Output folder already exists; choose a new run folder')
-    out.mkdir(parents=True);sd=read_json(scene)
+    from scene_paths import load as load_scene
+    sd,scene_base=load_scene(scene)
+    out.mkdir(parents=True)
     write_json(out/'preflight.json',probe())
     pptx=out/'candidate.pptx';build(scene,pptx);audit=inspect(pptx,scene);write_json(out/'audit.json',audit)
     if any(c['status']=='failed' for c in audit['checks'].values()):raise ValueError('Automatic audit failed; inspect audit.json')
@@ -37,7 +39,7 @@ def run(scene:Path,out:Path,office=False,regions:Path|None=None):
     sizes=[]
     for i,s in enumerate(sd['slides'],1):
         if s.get('reference'):
-            with Image.open(resolve_asset(scene.parent,s['reference'])) as im:w,h=im.size
+            with Image.open(resolve_asset(scene_base,s['reference'])) as im:w,h=im.size
         else:w=1920;h=round(w*sd['canvas']['height_pt']/sd['canvas']['width_pt'])
         sizes.append({'index':i,'width':w,'height':h})
     write_json(out/'render-sizes.json',sizes)

@@ -1,15 +1,17 @@
 """Editable production prompt backed by existing document revision history."""
 from .production_storage import startup_prompt
+from .prompt_modes import MODE_KEY, MODES, concise
 
 PATH='给模型的启动指令.txt'
 MARKER='{{production_storage}}'
 
 def read(m):
     doc=m.document(PATH)
-    live=startup_prompt(m)
+    live=startup_prompt(m,package_id=doc['package_id'],template_document=doc)
     return {'content':doc['content'].replace(MARKER,'').strip(),'revision':doc['revision'],
             'package_id':doc['package_id'],'history':doc['history'],'base_changed':doc['base_changed'],
-            'text':live['text'],'creation_instruction':live['creation_instruction'],
+            'text':live['text'],'concise':concise(m,live),'mode':m.store.get(MODE_KEY,'concise'),
+            'creation_instruction':live['creation_instruction'],
             'paths':{k:live[k] for k in ('toolbox_root','management_root','default_projects_root')}}
 
 def history(m,revision):
@@ -23,6 +25,10 @@ def history(m,revision):
 def call(m,op,a):
     if op=='read':return read(m)
     if op=='history':return history(m,int(a['revision']))
+    if op=='mode':
+        if a.get('mode') not in MODES:raise ValueError('请选择精简版或专业版')
+        m.store.set(MODE_KEY,a['mode'])
+        return {'mode':a['mode']}
     if op not in {'save','restore','default'}:raise ValueError('未知提示词操作')
     if a.get('package_id')!=m.package()['id']:raise ValueError('当前工具包已切换，请刷新后重试')
     if op=='restore':content=history(m,a.get('restore_revision'))['content']

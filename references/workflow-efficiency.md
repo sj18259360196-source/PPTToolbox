@@ -1,5 +1,15 @@
 # 调用效率与恢复
 
+场景 1.1 的项目路径、结构化提交预检、调用统计和逐对象编辑限制见 [第一批接口说明](stage1-contracts.md)。这些能力复用现有检查与提交入口。
+
+## 组件决策与合图
+
+制作前在现有 page_plan 中一次记录层级、组件类型、编辑需求和素材方法，执行时只重新判断出现问题的组件。复杂插画和装饰标题可直接参考生图，照片保留原像素；简单插画选择完整闭合部件。具体字段见 `component-material-workflow.md`。
+
+同页兼容小素材使用一条 `request_asset` 的 `request.items` 合成一张透明图，按实际输出逐项裁切，复用已接受素材，只重做失败项。它与 `request_assets` 的多个独立任务有不同用途。合图前检查每个主体的有效像素和间距，不能靠降低细节换取速度。
+
+新任务全页与局部都保留左右对比和叠加图。独立观察、文字核对和 Office 检查照常执行。节省调用来自共用输入、合并生成与局部返修，不从检查范围中扣除组件。
+
 ## 证据校验
 
 同一次调用中，同一路径的同一内容只完整解码一次。每次复用之前仍读取真实文件并计算哈希，缓存只保存格式和尺寸，不保存图片像素或审查结论。调用结束后清空，不建立跨调用通过缓存。
@@ -48,7 +58,7 @@ Office 全页及局部审查任务会返回 `text_geometry_hints`。它使用当
 
 ## 反馈修复后的调用方式
 
-`rebuild_start`、`rebuild_next`、`rebuild_status`、`rebuild_submit` 可选 `response_detail="compact"`。默认仍返回完整任务。精简模式保留任务身份、必看文件、提交约束和素材权限，完整 packet 与 response template 返回路径及 SHA-256。提交前必须读取这些文件，不凭摘要猜字段。`return_next=true` 可与精简模式合用。
+`rebuild_start`、`rebuild_next`、`rebuild_status`、`rebuild_submit` 可选 `response_detail="compact"`。默认仍返回完整任务。精简模式保留任务身份、必看文件、完整当前 context、响应模板、提交约束和素材权限。返回 `delivery_format=ppt-task-inline/2` 时无需再次读取 packet 和 response template；路径及 SHA-256 仅用于追溯。旧版精简回包没有此标识时，仍读取其 `required_read_files`。`return_next=true` 可与精简模式合用。
 
 `region_objects` 可用 `action="request_assets"` 和 `requests` 数组一次申请 1 到 8 项素材。单项字段仍为 id、purpose、prompt、transparent、allowed_approximation。整批校验通过后才登记，每项继续独立领取 asset_material 任务。已接受的批次不重放；一项完成后，其他项保持 pending。关闭宿主生图权限时，受管入口拒绝登记生成请求。
 
@@ -65,3 +75,16 @@ Office 全页及局部审查任务会返回 `text_geometry_hints`。它使用当
 ## 回归记录
 
 本轮固定案例见 `docs/upgrade/conversation-optimization/regressions.json`。条目连接历史问题和测试，不写入用户经验库，不自动记录用户接受，也不把尚未进行的真实制作标为复发率下降。
+
+
+## Inline task delivery v2
+
+Use toolbox_context with profile=production for reviewed startup deduplication. Legacy profile=full remains supported. The production profile preserves the complete current skill, effective policies, owner commands, disabled tools and identity. Customized or changed bootstrap sources fall back to full context.
+
+Set response_detail=compact on start/next/status/submit. With delivery_format=ppt-task-inline/2, context and response are complete inline, including new task fields. required_read_files is empty. source_files contains immutable packet/template provenance, not additional reading or viewing obligations. Open every current must_view_files item and manuals actually needed. Old compact responses without this format still require their listed text reads.
+
+The managed CLI accepts --response-detail compact. Existing-project calls can use --project <absolute path> --request-json <project JSON file>; omit project/context_id from the file. Normal authorization, size limits, validation and accepted-task recovery still apply. Compact CLI output avoids the duplicate stdout string; the worker files remain in output_directory.
+
+Delivery metrics count local JSON characters and UTF-8 bytes only. They exclude their own record, optional manual reads, images and host traffic. Benchmark task response plus all required text reads, call counts and full completion time. A smaller response alone is not evidence of faster or equal-quality production.
+
+Paginated view inspection returns only the selected page in both items and view_strategy.required. required_file_bytes describes that selected page, not the whole task. No view or review is approved by listing files.

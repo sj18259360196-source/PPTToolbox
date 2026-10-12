@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
 SOURCE_ID = 'S38'
+from scripts.material_routes import GUIDANCE as CURRENT_ROUTE
 
 def entries(root):
     rows=[json.loads(line) for line in (Path(root)/'assets/experience/knowledge/experience-ledger.jsonl').read_text('utf-8').splitlines() if line.strip()]
@@ -29,7 +30,9 @@ def build(root: Path):
         return value
     lines = ['# PPT Toolbox 项目默认方法',
              '随包提供的通用方法说明。只保留适用条件、操作、验证和限制，不包含个人项目原文、图片或历史验收结论。',
-             '本说明属于维护者整理的方法文档。当前任务仍需核对合同、授权与实际输出。']
+             '本说明属于维护者整理的方法文档。当前任务仍需核对合同、授权与实际输出。',
+             CURRENT_ROUTE,
+             '历史原生案例只在当前组件已选择原生路线或明确要求内部编辑时使用。当前路线先于案例步骤；仅在判断会影响选择时做局部试样。']
     rows = []
     for key in default_ids:
         old = by_id[key]
@@ -43,12 +46,15 @@ def build(root: Path):
             'EXP-190':'受限节点与控制点修改使用 rebuild_patch native.nodes；检查 expected 坐标、位移上限、保存重开、孔洞和保护对象，再看新 Office 渲染。'}
         if key in additions:row['actions']=[*row['actions'],additions[key]]
         row=normalize(row)
+        row['guidance_policy']='layered-material/2'
         row['method_provenance']={'source_ids':sorted({e['source_id'] for e in old.get('evidence',[])}),
                                  'original_evidence_level':old.get('evidence_level','retrospective_only'),
                                  'scope':'Method summary; source documents and past acceptance are not bundled'}
         lines.append('## '+row['id']+' '+row['title'])
         # No historic excerpt, machine path, artifact identity or acceptance record.
-        excerpt = '；'.join(row['actions'])
+        # The standalone public method text must carry applicability as well as
+        # actions; consumers may retrieve this source without its ledger row.
+        excerpt = '；'.join([*row['constraints'], *row['actions']])
         lines.append(excerpt)
         row.update(origin='bundled_method_guidance',evidence_level='retrospective_only',
                    runtime_retested_in_this_delivery=False,

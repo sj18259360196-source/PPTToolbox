@@ -191,7 +191,7 @@
     },
     {
       "id": "compare.page",
-      "title": "单页与局部左右对照",
+      "title": "单页与局部左右对比、叠加检查",
       "kind": "python",
       "inputs": "reference.png rendered.png --outdir NEW [--regions regions.json]；兼容命名区域或旧四整数数组，多页加--slide；替代渲染用--right-label明确标注",
       "outputs": "左右/叠加/差图与逐页收据",
@@ -309,7 +309,7 @@
       "id": "office.render",
       "title": "PowerPoint真实打开和逐页导出",
       "kind": "powershell",
-      "inputs": "-Pptx <actual.pptx> -OutputDir <NEW> [-SizesJson <sizes.json>] or -ProbeOnly -OutputDir <NEW>",
+      "inputs": "-Pptx <actual.pptx> -OutputDir <NEW> [-SizesJson <sizes.json>] [-TextCalibration] or -ProbeOnly -OutputDir <NEW>",
       "outputs": "逐页PNG、字体边界及Office收据",
       "manuals": [
         "references/tool-runtime.md"
@@ -788,8 +788,8 @@
       "id": "host.image-generation",
       "title": "宿主生图/参考编辑入口",
       "kind": "host",
-      "inputs": "生成任务+实际参考局部+用户许可",
-      "outputs": "真实PNG及工具报告；模型名仅以返回为准",
+      "inputs": "按组件类别与编辑要求选路的生成任务、实际参考局部与已有授权；复杂插画和装饰标题可直接参考生成",
+      "outputs": "真实 PNG 与工具报告；单项独立素材或一次生成的多项素材板，模型名以实际返回为准",
       "manuals": [
         "references/asset-policy.md",
         "references/assets-and-generation.md"
@@ -800,10 +800,11 @@
       "id": "asset.request",
       "title": "区域任务转为素材请求",
       "kind": "manual",
-      "inputs": "region_objects的request_asset分支，填写prompt、purpose、transparent、allowed_approximation",
-      "outputs": "控制器生成独立asset_material任务",
+      "inputs": "region_objects 的 request_asset 分支；一张多项素材板填写 items、逐项参考与稳定编号；request_assets 保持逐任务提交",
+      "outputs": "独立 asset_material 任务；items 合图只有一个宿主交接，逐项裁切、采用与补做",
       "manuals": [
-        "references/asset-policy.md"
+        "references/asset-policy.md",
+        "references/component-material-workflow.md"
       ],
       "limitations": "这是任务协议，不是生图API调用。",
       "entry": "references/task-packets.md"
@@ -1160,20 +1161,21 @@
     },
     {
       "id": "ops.generation-prepare",
-      "title": "为宿主生成实际生图任务",
+      "title": "准备单项或多项素材板的宿主生成交接",
       "kind": "python",
       "entry": "scripts/direct_ops.py",
       "prefix": [
         "generation-prepare"
       ],
       "manuals": [
-        "references/direct-operations.md"
+        "references/direct-operations.md",
+        "references/component-material-workflow.md"
       ],
       "inputs": [
-        "Use toolbox.py ops generation-prepare --help for exact flags"
+        "先用 rebuild_next 领取当前 asset_material 任务；传入明确 project 与新 outdir，按 --help 核对参数"
       ],
       "outputs": [
-        "New versioned artifacts; see operation-specific result"
+        "保存实际参考、目标位置、文字归属与单项或整张素材板交接；不触发生图、不消费任务"
       ],
       "limitations": [
         "Tool output is not Office or visual acceptance; source files remain unchanged"
@@ -1182,20 +1184,21 @@
     },
     {
       "id": "ops.generation-ingest",
-      "title": "接收真实PNG与来源记录",
+      "title": "接收真实 PNG、逐项裁切与来源记录",
       "kind": "python",
       "entry": "scripts/direct_ops.py",
       "prefix": [
         "generation-ingest"
       ],
       "manuals": [
-        "references/direct-operations.md"
+        "references/direct-operations.md",
+        "references/component-material-workflow.md"
       ],
       "inputs": [
-        "Use toolbox.py ops generation-ingest --help for exact flags"
+        "当前交接、真实 PNG、producer；素材板另传 --crops，记录源图哈希、实际裁切和逐项 accepted/retry"
       ],
       "outputs": [
-        "New versioned artifacts; see operation-specific result"
+        "预检与当前 token 的待提交响应；采用仅表示裁切选择，页面和局部视觉核对继续执行"
       ],
       "limitations": [
         "Tool output is not Office or visual acceptance; source files remain unchanged"
@@ -1474,7 +1477,7 @@
     },
     {
       "id": "preview.compare",
-      "title": "预审全页与必查局部左右对照",
+      "title": "预审全页与必查局部左右对比、叠加检查",
       "kind": "python",
       "entry": "scripts/preview_review.py",
       "prefix": [
@@ -1528,12 +1531,13 @@
       "prefix": [
         "plan"
       ],
-      "inputs": "--scene SCENE --references SLIDE_IMAGE_MAP_JSON --outdir NEW_DIR",
+      "inputs": "--scene SCENE --references SLIDE_IMAGE_MAP_JSON --outdir NEW_DIR; or --mode calibration --scene SCENE --outdir NEW_DIR [--reuse MEASUREMENTS_JSON] [--max-samples 1..8]",
       "outputs": "Frozen text-only PPTX specimens and a bounded measurement plan",
       "manuals": [
-        "references/sol-quality-practice.md"
+        "references/sol-quality-practice.md",
+        "references/stage3-calibration-impact.md"
       ],
-      "limitations": "At most 128 page specimens and 64 plain top-level texts. Does not render Office or modify the candidate.",
+      "limitations": "Fit mode: at most 128 pages/64 plain texts. Calibration: 1..8 representative original-format texts in one Office invocation, one specimen per page. Exact plain measurements may reuse bound evidence; style siblings share advice only. Mixed formatting/low confidence remeasure, excess samples remain pending. No automatic render or candidate changes.",
       "timeout_seconds": 60
     },
     {
@@ -1545,11 +1549,11 @@
         "evaluate"
       ],
       "inputs": "--plan PLAN_DIR --office OFFICE_RENDER_DIR --output NEW_JSON",
-      "outputs": "Per-object font size, color and bounded pixel translation suggestions with confidence and alternatives",
+      "outputs": "Fit suggestions, or calibration report reference with Office text bounds, line height/advance, run sizes and relative baseline shifts",
       "manuals": [
         "references/sol-quality-practice.md"
       ],
-      "limitations": "Requires matching real Office receipts. Plain flat-background text only; no automatic adoption or visual approval.",
+      "limitations": "Requires matching real Office receipts. Calibration needs -TextCalibration; absolute baseline Y is unavailable, mixed/autofit effective sizes remain unresolved. No automatic adoption, uniform shrinking or visual approval.",
       "timeout_seconds": 90
     },
     {
@@ -1891,6 +1895,7 @@
     }
   ],
   "internal_modules": [
+    "scripts/review_components.py",
     "scripts/material_routes.py",
     "scripts/python_entry.py",
     "scripts/text_regression.py",
@@ -1963,7 +1968,24 @@
     "scripts/illustration_methods.py",
     "scripts/illustration_method_contracts.py",
     "scripts/contour_worker.py",
-    "toolbox_manager/illustration_guide.py"
+    "toolbox_manager/illustration_guide.py",
+    "scripts/asset_batch.py",
+    "scripts/component_strategy.py",
+    "scripts/illustration_surfaces.py",
+    "scripts/layered_review.py",
+    "scripts/material_edit_review.py",
+    "scripts/material_quality.py",
+    "scripts/material_text_review.py",
+    "scripts/handoff_summary.py",
+    "scripts/scene_paths.py",
+    "scripts/validation_checks.py",
+    "scripts/edit_summary.py",
+    "toolbox_manager/call_metrics.py",
+    "scripts/review_impact.py",
+    "scripts/text_calibration.py",
+    "scripts/text_calibration_measure.ps1",
+    "scripts/production_settings.py",
+    "scripts/workflow_production.py"
   ],
   "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
 }

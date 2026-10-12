@@ -74,16 +74,30 @@ def generation_routes(workflow):
     task=workflow.get('active_task') or {}
     for job in workflow.get('asset_jobs', [])[-8:]:
         request=job.get('request',{})
-        if not request.get('generation_decision'):continue
-        try:decision=validate_decision(request['generation_decision'])
+        items=request.get('items')
+        if not request.get('generation_decision') and not items:continue
+        try:
+            if items:
+                from scripts.asset_batch import validate_batch_request
+                validate_batch_request(request)
+                decision=None
+                item_decisions=[{'id':i['id'],'purpose':i['purpose'],
+                                 'decision':copy.deepcopy(i['generation_decision'])} for i in items]
+            else:
+                decision=validate_decision(request['generation_decision'])
+                item_decisions=[]
         except ValueError:continue
         page=next((p for p in workflow.get('pages',[]) if p.get('id')==job.get('slide_id')), {})
         objects=[o for f in page.get('fragments',{}).values() for o in walk_objects(f.get('objects',[]))]
         objects += list(walk_objects((page.get('imported_slide') or {}).get('objects',[])))
-        placed=[o for o in objects if o.get('kind')=='image' and job.get('asset') and o.get('asset')==job['asset']]
+        accepted=job.get('accepted_items',{}) if items else {}
+        assets={i['asset'] for i in accepted.values()} if items else {job['asset']} if job.get('asset') else set()
+        placed=[o for o in objects if o.get('kind')=='image' and o.get('asset') in assets]
         routes.append({'id':job['id'],'purpose':request.get('purpose',''),'decision':copy.deepcopy(decision),
             'status':job.get('status'),'multi_icon_sheet':request.get('multi_icon_sheet',False),
-            'placed':len(placed),'cropped':sum('source_crop' in o for o in placed),
+            'placed':len(placed),'cropped':len(accepted) if items else sum('source_crop' in o for o in placed),
+            'item_decisions':item_decisions,'item_count':len(items) if items else 0,
+            'accepted_item_ids':list(accepted),'attempt_count':len(job.get('attempts',[])),
             'task_id':task.get('id') if task.get('target',{}).get('job_id')==job['id'] else None})
     return routes
 
@@ -102,26 +116,41 @@ def generation_nodes(routes):
                   'call_task_id':route.get('task_id') if suffix=='generate' else None}
             if status_label:node['status_label']=status_label
             nodes.append(node);parent=node['id']
-        if decision['basis']=='low_similarity':
+        if route.get('item_decisions'):
+            detail='按独立组件清单生成一张素材板，保留逐项路线。'
+            for item in route['item_decisions']:
+                record=item['decision']
+                detail+='\n'+item['id']+'　'+record['basis']+'　'+record['reason']+'\n参考图　'+record['reference']
+            label='素材板路线'
+        elif decision['basis']=='low_similarity':
             add('draw','material','SVG / 原生绘制','done','绘制稿已记录\n'+decision['drawing'])
             score=decision['similarity_pct']
             score_text=str(int(score)) if score==int(score) else str(score)
-            detail=f'Agent 对该插图的相似度判断为 {score_text}%，低于 75%，已选择生图路线。'
+            detail=f'此任务沿用旧 low_similarity 路线，Agent 记录相似度 {score_text}%。新组件按类别和编辑要求选路，无需先绘制或填写相似度。'
             label=f'Agent {score_text}%'
+        elif decision['basis']=='content_category':
+            detail='按组件类别与编辑要求选择参考生图，无需绘制试稿。'
+            detail+='\n组件类别　'+decision['content_type']+'\n编辑要求　'+decision['required_edit']
+            label='组件路线'
         else:
             detail='按用户明确要求选择生图路线。'
             label='用户指定'
-        add('decision','fidelity','相似度与路线判断','done',detail+'\n'+decision['reason']+'\n参考图　'+decision['reference'],label)
+        if decision is not None:
+            detail+='\n'+decision['reason']+'\n参考图　'+decision['reference']
+        add('decision','fidelity','组件路线判断','done',detail,label)
         done=route['status']=='completed'
-        add('generate','generation','AI 生图','observed' if done else 'planned',
-            route['purpose']+'\n'+('生成素材已登记，仍需核对回装效果。' if done else '等待宿主生图工具生成并提交素材；此记录不表示工具已经开始调用。'),
-            '素材已登记' if done else None)
+        registered=done or bool(route.get('attempt_count'))
+        add('generate','generation','AI 生图','observed' if registered else 'planned',
+            route['purpose']+'\n'+('生成素材已登记，仍需核对回装效果。' if done else
+                '已登记部分裁切，其余项继续待做，已采用项沿用；视觉核对仍按任务进行。' if registered else
+                '等待宿主生图工具生成并提交素材；此记录不表示工具已经开始调用。'),
+            '素材已登记' if done else '部分素材已登记' if registered else None)
         if route['multi_icon_sheet']:
-            cropped=route['cropped']>=2
+            cropped=route['cropped']>=route['item_count'] if route.get('item_count') else route['cropped']>=2
             add('crop','crop','多图标裁剪','observed' if cropped else 'planned',
                 f"已登记 {route['cropped']} 个独立裁剪对象。保留透明边缘并分别放入 PPT。",'裁剪已登记' if cropped else None)
         add('place','compose','放入 PPT','observed' if route['placed'] else 'planned',
-            f"当前场景使用该素材的图片对象共 {route['placed']} 个，文字和连接线继续单独编辑。",'回装已登记' if route['placed'] else None)
+            f"当前场景使用该素材的图片对象共 {route['placed']} 个，素材自带文字随素材保留，页面独立文字和连接线保持原生。",'回装已登记' if route['placed'] else None)
     return nodes
 
 

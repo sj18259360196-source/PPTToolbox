@@ -186,8 +186,9 @@ def make_path(shapes, obj, canvas):
     return shape
 
 def build(scene_path: Path, out: Path, overwrite: bool=False) -> dict:
-    scene_path=scene_path.resolve();base=scene_path.parent;scene=read_json(scene_path)
-    issues=validate(scene,base)
+    from scene_paths import load as load_scene
+    scene_path=scene_path.resolve();scene,base=load_scene(scene_path)
+    issues=validate(scene,base,project_root=base)
     if issues:raise ValueError('\n'.join(issues))
     if out.exists() and not overwrite:raise FileExistsError(f'{out} exists; choose a new version or --overwrite')
     if out.resolve()==scene_path:raise ValueError('Output would overwrite input')

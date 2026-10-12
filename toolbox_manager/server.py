@@ -9,7 +9,7 @@ from .workbench import Workbench
 
 WEB=Path(__file__).parent/'web'
 PROMPT_READS={'prompt.read','prompt.history'}
-PROMPT_WRITES={'prompt.save','prompt.restore','prompt.default'}
+PROMPT_WRITES={'prompt.save','prompt.restore','prompt.default','prompt.mode'}
 READS={'agent.live','learning.status','learning.source','agent.status','source','boot','tools','tool','packages','versions','settings','docs','doc','commands','logs','integration','startup-prompt'}
 WRITES={'retrospective','learning.configure','learning.collect','learning.disable','agent.plan','agent.apply','agent.probe','agent.challenge','settings.save','storage.setup','storage.pick-directory','toggle','doc.save','command.save','doctor','diagnostic','package.commit','package.trust','package.activate','integration.export','integration.plan','integration.apply','config.export'}
 READS |= {'experience.list','experience.show','experience.source'}
@@ -18,6 +18,7 @@ WRITES |= {'experience.export','experience.import-preview','experience.import','
 READS |= {'usage.summary','usage.detail'}
 WRITES |= {'usage.record','usage.cite'}
 READS |= PROMPT_READS
+READS.add('production.settings')
 READS.add('agent.onboarding-prompt')
 WRITES |= PROMPT_WRITES
 
@@ -66,6 +67,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.allowed(auth):return
         try:
             a={k:v[0] for k,v in parse_qs(u.query,keep_blank_values=True).items()}
+            if u.path == '/api/production.settings':
+                from .production_settings import effective
+                self.reply({'ok':True,'result':effective(self.server.manager,a.get('project'))});return
             if u.path == '/api/software-update.status':
                 self.reply({'ok':True,'result':self.server.updater.status()});return
             if u.path == '/api/projects.index':
@@ -218,6 +222,9 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path == '/api/pptagent.settings.save':
                     from .pptagent import save_config
                     self.reply({'ok':True,'result':save_config(self.server.manager,json.loads(raw))});return
+                if u.path == '/api/production.settings.save':
+                    from .production_settings import save
+                    self.reply({'ok':True,'result':save(self.server.manager,json.loads(raw))});return
                 if u.path in {'/api/pptagent.test','/api/pptagent.run','/api/pptagent.cancel'}:
                     from .pptagent_runtime import submit,cancel
                     body=json.loads(raw)

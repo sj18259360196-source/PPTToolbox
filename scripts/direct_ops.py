@@ -45,7 +45,7 @@ def parser():
         p=s.add_parser(name);p.add_argument('--source',type=Path,required=True);p.add_argument('--spec',type=Path,required=True);p.add_argument('--outdir',type=Path,required=True)
     p=s.add_parser('regression');p.add_argument('--before',type=Path,required=True);p.add_argument('--after',type=Path,required=True);p.add_argument('--regions',type=Path,required=True);p.add_argument('--outdir',type=Path,required=True);p.add_argument('--threshold',type=int,default=12);p.add_argument('--max-outside-fraction',type=float,default=.001);p.add_argument('--margin',type=int,default=2);p.add_argument('--environment-before');p.add_argument('--environment-after');p.add_argument('--slide',type=int,help='Select page in a shared deck regions file')
     p=s.add_parser('generation-prepare');p.add_argument('--project',type=Path,required=True);p.add_argument('--outdir',type=Path,required=True)
-    p=s.add_parser('generation-ingest');p.add_argument('--project',type=Path,required=True);p.add_argument('--request',type=Path,required=True);p.add_argument('--image',type=Path,required=True);p.add_argument('--producer',type=Path,required=True);p.add_argument('--outdir',type=Path,required=True)
+    p=s.add_parser('generation-ingest');p.add_argument('--project',type=Path,required=True);p.add_argument('--request',type=Path,required=True);p.add_argument('--image',type=Path,required=True);p.add_argument('--producer',type=Path,required=True);p.add_argument('--outdir',type=Path,required=True);p.add_argument('--crops',type=Path)
     return ap
 
 
@@ -78,7 +78,7 @@ def main(argv=None):
             result=prepare_generation(a.project,a.outdir)
         elif a.action=='generation-ingest':
             from asset_ops import ingest_generation
-            result=ingest_generation(a.project,a.request,a.image,a.producer,a.outdir)
+            result=ingest_generation(a.project,a.request,a.image,a.producer,a.outdir,a.crops)
         else:raise ValueError('Unknown action')
         print(json.dumps(result,ensure_ascii=False,indent=2,allow_nan=False));return 0
     except Exception as exc:

@@ -65,7 +65,9 @@ def analyze(objects, *, cubic_warning=128, subpath_warning=32):
         if kind == 'path' and subpaths > 1:
             warnings.append(dict(id=oid, code='compound_path',
                                  note='Multiple subpaths may be texture or holes; winding is not certified here.'))
+    from illustration_surfaces import surfaces
     return {'format': 'illustration-analysis/1', 'counts': counts,
+            'semantic_surfaces': surfaces(objects),
             'thresholds': {'cubic_warning': cubic_warning, 'subpath_warning': subpath_warning},
             'most_complex': sorted(rows, key=lambda x: (x['cubic_segments'], x['subpaths'], x['commands']), reverse=True)[:20],
             'warnings': warnings[:200], 'warning_count': len(warnings),

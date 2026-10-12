@@ -8,8 +8,12 @@ import re
 from pathlib import Path, PureWindowsPath
 from typing import Any
 from PIL import Image
-from common import read_json, resolve_asset, sha256, walk_objects
-from evidence_session import image_metadata, measured, scoped
+if __package__:
+    from .common import read_json, resolve_asset, sha256, walk_objects
+    from .evidence_session import image_metadata, measured, scoped
+else:
+    from common import read_json, resolve_asset, sha256, walk_objects
+    from evidence_session import image_metadata, measured, scoped
 
 EVIDENCE_VERSION = '1.1.1'
 IMAGE_KINDS = ('side_by_side', 'overlay', 'absolute_difference')
@@ -71,7 +75,8 @@ def indexed_rows(rows: Any, count: int, label: str, exact: bool = True) -> dict[
 
 def reference_snapshot(scene_path: Path) -> tuple[dict, list[dict], str | None]:
     """Re-read all original references; optionally enforce init_project's manifest."""
-    scene = read_json(scene_path)
+    from scene_paths import load as load_scene
+    scene, scene_base = load_scene(scene_path)
     slides = scene.get('slides')
     if not isinstance(slides, list) or not slides:
         raise ValueError('A nonempty slide list is required')
@@ -82,11 +87,11 @@ def reference_snapshot(scene_path: Path) -> tuple[dict, list[dict], str | None]:
         if not nonempty(sid) or sid in seen:
             raise ValueError(f'Invalid or duplicate slide ID: {sid!r}')
         seen.add(sid)
-        ref = safe_file(scene_path.parent, slide.get('reference'))
+        ref = safe_file(scene_base, slide.get('reference'))
         size, identity = image_metadata(ref)
         refs.append({'index': idx, 'slide_id': sid, 'path': slide['reference'],
                      'size': size, 'sha256': identity})
-    manifest = scene_path.parent / 'input/references.json'
+    manifest = scene_base / 'input/references.json'
     manifest_hash = None
     if manifest.exists():
         rows = read_json(manifest)
@@ -200,7 +205,7 @@ def required_review(slide: dict) -> dict:
                 or kind == 'image' and (obj.get('source_kind') == 'generated' or obj.get('asset_role') in {'icon', 'logo'})):
             local.add(obj['id'])
     explicit = slide.get('review_requirements', {})
-    if not isinstance(explicit, dict) or set(explicit) - {'local_objects', 'relationship_objects'}:
+    if not isinstance(explicit, dict) or set(explicit) - {'local_objects', 'relationship_objects', 'components'}:
         raise ValueError('Invalid review_requirements')
     for field, target in [('local_objects', local), ('relationship_objects', relationships)]:
         values = explicit.get(field, [])
@@ -209,6 +214,9 @@ def required_review(slide: dict) -> dict:
         if set(values) - set(names):
             raise ValueError(f'{field}: unknown object IDs {sorted(set(values) - set(names))}')
         target.update(values)
+    from review_components import components
+    for component in components(slide):
+        if component['source']=='review_requirements':local.update(component['object_ids'])
     local.update(relationships)
     return {'local_objects': sorted(local), 'relationship_objects': sorted(relationships)}
 
@@ -305,6 +313,7 @@ def validate_comparison_chain(comparison_path, scene, refs, rendered, expected):
             raise ValueError(f'Comparison binding mismatch: {key}. Regenerate v1.1.1 evidence; do not edit hashes.')
     pages = indexed_rows(comp.get('slides'), len(refs), 'Comparison receipt')
     full_paths, local_paths, relation_paths = {}, {}, {}
+    full_view_paths = {}
     required_by_page = {}
     used_files = set()
     for ref, slide in zip(refs, scene['slides']):
@@ -344,6 +353,7 @@ def validate_comparison_chain(comparison_path, scene, refs, rendered, expected):
             if row.get('pixel_size') != size:
                 raise ValueError(f'Region dimensions mismatch: {name}')
             w, h = size[0] * scale, size[1] * scale
+            view_paths = {}
             for key in IMAGE_KINDS:
                 actual_size = []
                 image = checked_file(cp.parent, row.get(key), row.get(key + '_sha256'),
@@ -355,6 +365,7 @@ def validate_comparison_chain(comparison_path, scene, refs, rendered, expected):
                 required_size = [w * 2 + max(10, round(w * .012)), h + max(34, round(h * .045))] if key == 'side_by_side' else [w, h]
                 if actual_size != required_size or row.get(key + '_size') != actual_size:
                     raise ValueError(f'Invalid {key} image dimensions for {name}')
+                view_paths[key] = image
                 if key == 'side_by_side':
                     if name == 'full':
                         linked = checked_file(comparison_path.parent, page.get('full_side_by_side'), page.get('full_side_by_side_sha256'), image=True)
@@ -365,5 +376,10 @@ def validate_comparison_chain(comparison_path, scene, refs, rendered, expected):
                         local_paths[(idx, name)] = {'file': image, 'object_ids': wanted['object_ids']}
                         for oid in wanted['object_ids']:
                             relation_paths.setdefault((idx, oid), set()).add(image)
+            if name == 'full':
+                full_view_paths[idx] = view_paths
+            else:
+                local_paths[(idx, name)]['views'] = view_paths
     return {'receipt': comp, 'full_paths': full_paths, 'local_paths': local_paths,
+            'full_view_paths': full_view_paths,
             'relation_paths': relation_paths, 'required_by_page': required_by_page}

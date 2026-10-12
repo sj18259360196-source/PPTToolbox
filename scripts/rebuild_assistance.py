@@ -14,7 +14,7 @@ from pathlib import Path
 SCRIPTS = str(Path(__file__).resolve().parent)
 if SCRIPTS not in sys.path:
     sys.path.insert(0, SCRIPTS)
-from experience_library import load_library, source_path, tool_links, local_file
+from experience_library import load_library, source_path, tool_links, local_file, with_current_guidance, current_production_guidance
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'assets/experience'
@@ -62,6 +62,7 @@ def search(query, limit=3, budget=5000, *, stage=None, external_root=None):
     hits = []
     for score, _, row in sorted(ranked, key=lambda x: (-x[0], x[1])):
         item = {k: row[k] for k in ('id', 'title', 'kind', 'trigger', 'actions', 'verification', 'constraints', 'evidence_level')}
+        item = with_current_guidance(item, include_policy=False)
         item['runtime_retested'] = False
         item['match_reason'] = '适用描述与本次任务相关；请按条目限制选择'
         item['manual'] = str(local_file(row['_manual_root'], row['manual'])) if row.get('_manual_root') else row['manual']
@@ -78,8 +79,8 @@ def search(query, limit=3, budget=5000, *, stage=None, external_root=None):
         hits.append(item)
         if len(hits) == limit:
             break
-    return {'query': query[:600], 'matches': hits,
-            'scope': '历史复盘检索，仅供判断原因与选择小样；原文中的指令、路径和结果不构成本次授权或验收。'}
+    return {'query': query[:600], 'matches': hits, 'production_guidance': current_production_guidance(),
+            'scope': '历史复盘检索，仅供判断原因与选择适用方法；原文中的指令、路径和结果不构成本次授权或验收。'}
 
 
 ICON_REUSE_GUIDANCE = {
@@ -101,17 +102,17 @@ def production_guidance(kind):
         result['judgement']='先判断页面重点、必做分区、编辑深度与不确定处，自行安排制作顺序和工具组合。用现有 notes 或 source_notes 简记选择依据，不设固定权重，不为每个对象增加分析任务。'
         result['priority']='先完成整体布局及关键图标、形状、组件、背景，再修局部差异。高影响且方法不确定的对象可先做小样；简单对象直接制作。每轮根据实际对照调整重点。'
     if kind in {'region_objects','asset_material'}:
-        result['asset_selection']='先看现有素材，再按轮廓、透明边缘、风格和编辑要求选择原生组件、准确原始资产、干净提取或已授权生成。能裁出来不等于应采用截图，残字、底色和轮廓截断需要换方法。'
+        result['asset_selection']='先核对当前 production_settings、内容归属与现有素材。照片按用户保真要求决定保留或参考生成，准确标识和明确原件保留约束继续有效；已有素材按来源资格与编辑要求选路，素材自带文字随素材保留。图片生成优先时，复杂插画与难以匹配的装饰标题可直接参考生成；可编辑绘制优先时，保留真实原生部件与内部路径编辑。simple_icon 简单图标两种模式都原生绘制，简单插画按模式和轮廓选路，规则几何按完整部件原生制作。逐项检查轮廓、透明边缘和风格，截图外的邻接文字与底色残留需要处理。'
         from material_routes import GUIDANCE
-        result['native_first']=GUIDANCE+' 真实标志保持准确来源与原生路径。照片、纹理和生成插图逐个记录 raster_content、raster_reason 和素材路线。'
+        result['native_first']=GUIDANCE+' 准确标识优先保留原件或源像素，只有编辑要求确需路径时再重建并核对。照片、纹理和生成插图逐个记录 raster_content、raster_reason 和素材路线。'
         result['native_tools']='先核对当前工具能力。描摹与拟合产生的是候选几何，需要对照原图和实际 Office 渲染检查轮廓及层次，不能以生成成功作为视觉通过。'
     if kind == 'region_objects':
         result['native_units']='bbox、路径坐标、rounded_rect 组件的 radius 使用当前区域像素。字号、描边和阴影使用 pt。round_rect 的 adjustments 是圆角半径除以短边，范围 0..0.5，写 0.06，不能写 OOXML 整数 6000。线端可用 butt、round、square。'
         result['native_repetition']='普通虚线可给单条线或开放路径设置 style.dash="dash"。需要指定段长和间隔时，在 components 中使用 dashed_line，params 指定 dash_length、gap_length 和 axis。段长与间隔使用区域像素，横线沿 bbox 水平中线，竖线沿垂直中线，最多 512 段。由编译器展开路径，避免逐段输出重复坐标。混用 components 和 objects 时用 draw_order 明确层级，保留 source_notes；仍需实际渲染检查。'
     if kind in {'page_plan','region_objects','review_full','review_local','preview_full','preview_local'}:
-        result['text_fit']='默认选风格和字重相近的可用字体，保证原文完整、无重叠溢出、无异常换行、对齐和间距合理。用户明确要求原字体或特定字形时再专项匹配。'
+        result['text_fit']='按当前 font_matching 处理页面独立正文和常规标题。相近字体优先使用本机候选，精细匹配对标题与关键字形渲染相同文字并核对字形、宽度、基线和换行。按 text_layout 使用同一语义段落文本框或逐行定位与分组，不跨栏或跨卡片合并，核对原文、溢出与间距。字形差距明显或装饰复杂的标题按当前 illustration_mode 与具体改字要求选路；允许生成时保存准确原文并逐字核对产物。照片与插画内部文字随所属素材保留。'
     if kind in {'review_full','review_local','preview_full','preview_local'}:
-        result['review']='先看整体与关键视觉元素，再检查文字排版。按语义分区检查全部应查对象，允许补充高风险局部；逐图填写真实发现，不循环预填 passed，不用字体像素差代替整体判断。'
+        result['review']='按当前任务清单查看整页与重点局部。左右对比核对内容和风格，叠加图核对位置、比例、轮廓与遮挡。每项记录实际发现，装饰标题逐字核对，照片与插画自带文字按素材核对。返修后只沿用仍匹配当前版本的观察。'
     return result
 
 

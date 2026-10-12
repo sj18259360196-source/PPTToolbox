@@ -11,6 +11,8 @@ def binding(project, state, page):
     slide = assemble({**state, 'pages': [page]})['slides'][0]
     slide = copy.deepcopy(slide)
     files = {page['reference']}
+    from material_quality import sources
+    files.update(row['file'] for row in sources(slide.get('element_scope')))
     files.update(u['source']['asset'] for u in slide.get('element_scope', {}).get('units', []) if 'source' in u)
     for obj in walk_objects(slide['objects']):
         if obj.get('asset'):

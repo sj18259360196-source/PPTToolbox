@@ -25,7 +25,7 @@ def initialize(output:Path,inputs:list[Path],ratio:str|None=None):
         refs.append({'slide':i,'path':rel,'size':[iw,ih],'sha256':sha256(output/rel)})
     scene={'version':'1.0','title':'Reference rebuild','canvas':{'width':w,'height':h,'width_pt':960,'height_pt':960*h/w,'mapping':'uniform','background':'FFFFFF'},'slides':slides}
     write_json(output/'scene.json',scene);write_json(output/'input/references.json',refs);write_json(output/'evidence/review-regions.json',{'slides':[{'index':i,'regions':[]} for i in range(1,len(slides)+1)]})
-    (output/'TASK.md').write_text('''# 制作任务\n\n先查看input中的全部参考图，按Skill建立内容清单、关系表和对象清单。\nscene.json为空白分析模板，validate_scene在对象为空时会拒绝构建。\n参考图尺寸已读取，逻辑画布比例仍需按用户要求确认并统一映射。\n不得将本页整张参考图插入成品替代原生对象。\n''',encoding='utf-8')
+    (output/'TASK.md').write_text('''# 制作任务\n\n先查看 input 中的全部参考图，确认整页背景、分区、层级和各组件编辑要求。\n先读取当前 production_settings。页面独立文字保持原生，照片按用户保真要求决定保留或参考生成，准确身份和明确原件保留约束继续有效。已有素材按来源资格与编辑要求选路，素材内部文字保留原文。图片生成优先时，复杂插画与装饰标题可直接参考生成独立素材；可编辑绘制优先时，使用真实原生形状或路径并保留内部编辑。simple_icon 简单图标在两种模式下都原生绘制，简单插画按模式与轮廓选路，几何图形按完整部件原生制作。字体匹配与段落或逐行组织按当前设置执行。\nscene.json 是空白分析模板，validate_scene 在对象为空时会拒绝构建。\n参考图尺寸已读取，逻辑画布比例仍需按用户要求确认并统一映射。\n整页截图不得代替整页组件重建。\n''',encoding='utf-8')
     return scene
 
 def main():

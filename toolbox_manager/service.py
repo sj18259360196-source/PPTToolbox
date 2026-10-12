@@ -199,18 +199,21 @@ class Manager:
         raw=path.read_bytes()
         return {'entry':tool['entry'],'content':raw[:200000].decode('utf-8-sig',errors='replace'),'truncated':len(raw)>200000,'scope':'只读源代码，不执行。修改核心代码请在独立版本中进行并重新打包。'}
     def docs(self,pid=None):
+        from .prompt_modes import BRIEF_PATH
         p=self.package(pid);root=Path(p['path']);files=[]
         for q in [root/'SKILL.md',root/'README.md',root/'给模型的启动指令.txt',*sorted((root/'manager_docs').glob('*.md')),root/'toolbox/README.md',root/'toolbox/COMMANDS.md',*sorted((root/'references').glob('*.md'))]:
             if q.is_file() and not q.is_symlink():
                 rel=q.relative_to(root).as_posix();text=q.read_text(encoding='utf-8-sig')
                 title=next((line.lstrip('# ').strip() for line in text.splitlines() if line.startswith('# ')),q.stem)
                 with self.store.db() as c:r=c.execute('SELECT revision FROM docs WHERE package_id=? AND path=?',(p['id'],rel)).fetchone()
-                files.append({'path':rel,'title':title,'customized':bool(r),'editable':rel in {'SKILL.md','给模型的启动指令.txt'} or rel.startswith('references/'),'revision':r[0] if r else 0})
+                files.append({'path':rel,'title':title,'customized':bool(r),'editable':rel!=BRIEF_PATH and (rel in {'SKILL.md','给模型的启动指令.txt'} or rel.startswith('references/')),'revision':r[0] if r else 0})
         return files
     def document(self,path,pid=None):
         p=self.package(pid);entry=next((d for d in self.docs(p['id']) if d['path']==path),None)
         if not entry:raise ValueError('文档不在允许读取列表中')
         base=(Path(p['path'])/path).read_text(encoding='utf-8-sig')
+        from .prompt_modes import BRIEF_PATH, brief_document
+        if path==BRIEF_PATH:return brief_document(self,entry,base,p['id'])
         with self.store.db() as c:
             row=c.execute('SELECT * FROM docs WHERE package_id=? AND path=?',(p['id'],path)).fetchone()
             hist=c.execute('SELECT revision,updated FROM doc_history WHERE package_id=? AND path=? ORDER BY id DESC LIMIT 30',(p['id'],path)).fetchall()
@@ -413,7 +416,8 @@ class Manager:
     def register_apply(self,confirm_id):
         from .integrations import apply
         return apply(self,confirm_id)
-    def context(self,project=None):
+    def context(self,project=None,profile="full"):
+        if profile not in {"full", "production"}:raise ValueError("Unknown context profile")
         p=self.package()
         if not p['enabled']:raise ValueError('当前工具包已在管理器中停用')
         from .production_storage import locations, startup_prompt
@@ -426,7 +430,9 @@ class Manager:
             current=ProjectContext(self,root).snapshot()
         from .material_policy import effective
         from .illustration_guide import entry as illustration_entry
-        return {'agent_capabilities':{'illustration':illustration_entry(self)},'material_policy':effective(self,project),'active':p,'settings':self.settings(),'distribution':self.distribution(),'instance':self.instance(),'skill':self.document('SKILL.md')['content'] if (Path(p['path'])/'SKILL.md').is_file() else '',
+        from .production_settings import effective as production_effective
+        result = {'agent_capabilities':{'illustration':illustration_entry(self)},'material_policy':effective(self,project),'active':p,'settings':self.settings(),'distribution':self.distribution(),'instance':self.instance(),'skill':self.document('SKILL.md')['content'] if (Path(p['path'])/'SKILL.md').is_file() else '',
+            'production_settings':production_effective(self,project),
             'storage':locations(self),'project_context':current,'startup_prompt':startup_prompt(self)['text'],
             'learning':{'entry':'toolbox_learning','preferences':learning_preferences(self),
                         'task_experience_entry':'toolbox_retrospective',
@@ -438,6 +444,10 @@ class Manager:
             'runtime_instructions':'本管理配置优先将根工具箱 start/next/submit 等调用映射到 workflow.* 注册项，经 manager execute 执行；其他 ops/bench 使用对应工具 ID。原始 Skill 中直接 toolbox.py 的示例为核心用法，不代表已进入受管日志或受管开关。',
             'entry_argv':[sys.executable,str(self.root/'manager.py'),'--data-dir',str(self.data),'execute','--tool'],
             'scope':'用户覆盖通过 context/manual 生效；工具启停仅通过 execute 生效。直接运行旧脚本不会受此管理器约束。'}
+        if profile == 'production':
+            from .context_delivery import production_context
+            return production_context(self, result)
+        return result
     def icons(self,op,args=None,source='mcp',project_scope=None):
         from .project_activity import observe_call
         return observe_call(self,'icons.'+op,args,source,lambda:self._icons(op,args,source),project_scope)
@@ -553,6 +563,10 @@ class Manager:
                  'parameters':{'arg_count':len(args)},'usage_maintenance':args==['--help'],'output_directory':str(outdir),
                  'code':{k:v for k,v in version.items() if k!='file_hashes'},
                  'null_note':'Non-project CLI help/diagnostics have no workflow identity'}
+        from .call_metrics import fingerprint, finish as finish_metrics
+        import time
+        metric_began=time.perf_counter()
+        details['input_sha256']=fingerprint(args)
         self.store.event('tool.started','受管调用 '+tid,source='cli',details=details)
         try:
             from contextlib import nullcontext
@@ -573,11 +587,32 @@ class Manager:
             after=snapshot(project) if project else {}
             result={'call_id':call_id,'tool_id':tid,'command_status':status,'workflow_status':after.get('workflow_status'),'returncode':run.returncode,'stdout':run.stdout,'stderr':run.stderr,'output_directory':str(outdir)}
             if project:result['project_context']=ProjectContext(self,project).snapshot()
-            (outdir/'call.json').write_text(json.dumps({**details,'ended_at':stamp(),'command_status':status},ensure_ascii=False,indent=2),encoding='utf-8')
+            details.update(ended_at=stamp(),command_status=status,revision_after=after.get('revision'),returncode=run.returncode)
+            if status=='tool_failed':
+                try:
+                    value=json.loads(run.stdout)
+                    error=value.get('error',{}) if isinstance(value,dict) else {}
+                    details['error_code']=error.get('code') if isinstance(error,dict) else None
+                except (ValueError,TypeError):
+                    pass
+                details['error_code']=details.get('error_code') or 'exit_'+str(run.returncode)
+            finish_metrics(details,result,metric_began)
+            try:
+                (outdir/'call.json').write_text(json.dumps(details,ensure_ascii=False,indent=2),encoding='utf-8')
+            except OSError as exc:
+                # Dispatch already returned. Recording metrics must not invite replay.
+                result['metrics_warning']=str(exc)[:300]
             self.store.event('tool.finished','调用结束 '+tid,status='error' if status=='tool_failed' else 'waiting' if status=='action_required' else 'ok',source='cli',details={**details,'ended_at':stamp(),'revision_after':after.get('revision'),'returncode':run.returncode,'command_status':status})
             return result
         except Exception as e:
-            self.store.event('tool.finished','调用失败 '+tid,status='error',source='cli',details={**details,'ended_at':stamp(),'command_status':'outcome_unknown' if isinstance(e,subprocess.TimeoutExpired) else 'failed','error_type':type(e).__name__});raise
+            details.update(ended_at=stamp(),command_status='outcome_unknown' if isinstance(e,subprocess.TimeoutExpired) else 'failed',error_type=type(e).__name__,error_code=getattr(e,'code',type(e).__name__))
+            finish_metrics(details,None,metric_began)
+            try:
+                (outdir/'call.json').write_text(json.dumps(details,ensure_ascii=False,indent=2),encoding='utf-8')
+            except OSError:
+                pass
+            self.store.event('tool.finished','调用失败 '+tid,status='error',source='cli',details=details)
+            raise
     def graphics(self,op,args=None,source='mcp',project_scope=None):
         from .graphics import call
         from .project_activity import observe_call
@@ -609,7 +644,9 @@ class Manager:
             return call(self,op[7:],a)
         from .production_storage import startup_prompt
         from .folder_picker import pick_directory
+        from .production_settings import effective as production_effective
         routes={
+          'production.settings':lambda:production_effective(self,a.get('project')),
           'startup-prompt':lambda:startup_prompt(self,a),
           'storage.pick-directory':lambda:pick_directory(self,a),
           'storage.setup':lambda:self.open_setup(),

@@ -9,15 +9,22 @@ description: 管理PPT工具箱的Skill、工具与指令、插件、设置、�
 
 软件提供后台窗口、项目列表、工作台和受管调用日志，PPT 分析、制作与验收由 Agent 配合工具完成。启动、目录和迁移以[当前软件说明](../../references/current-desktop.md)为准。
 
+读取 `toolbox_production_settings` 或当前任务 `production_settings`，按实际值制作与续作。默认值、作用范围和过期任务见[制作设置](../../references/production-settings.md)。
+先看整页背景、分区和前后层次，再按同一组件计划选择路线。先读取当前 production_settings。图片生成优先按参考制作复杂插画、人物与装饰标题；可编辑绘制优先保留内部原生对象。简单线性、粗线条及少量规则部件构成的图标，两种模式都绘制为原生形状或路径。简单插画按模式和实际轮廓选路，已有合格独立素材可复用。照片按原件保留或参考生成要求处理，准确身份与明确保留约束继续有效。页面独立文字保持原生，素材自带文字随素材保留。装饰标题声明 asset_title 与准确可读原文，图片标题逐字核对准确原文，生成插画内嵌字查看实际产物，模糊字不猜写。内部编辑按项目绘制偏好及具体对象要求执行。
+
+生成决策使用 `content_category` 记录类别、编辑要求、参考和理由，无需先绘制或填写分数。多个独立小组件可用 `request.items` 合图生成，再按实际主体逐项裁切核对；`request_assets` 继续表示多个素材任务提交。失败项单独补做，完成结果先恢复文件和登记记录。完整字段见[素材规则](../../references/asset-policy.md)。查看全页与关键局部的左右图和叠图后再提交观察，旧项目已接受计划通过范围修订更新。
+
+新建参考图项目按[插画要求与素材验收](../../references/material-quality.md)保存原始要求并填写素材资格。截图清楚不能直接声明已有独立素材。每项分别验收独立性、边缘与参考保真，开放缺陷不得通过。保留合法照片裁切、白色标签、内部箭头和渐隐；旧合同通过正式范围修订启用新检查。
+
 先解析本Skill目录链接的真实目标，再从真实目录向上两层找到包根目录 `manager.py`，不要从未解析的Windows目录链接计算父目录。使用当前Python执行：
 
 ```text
-python "<真实根目录>/manager.py" --data-dir "<当前MCP使用的数据目录>" context
+python "<真实根目录>/manager.py" --data-dir "<当前MCP使用的数据目录>" context --profile production
 python "<真实根目录>/manager.py" --data-dir "<当前MCP使用的数据目录>" check
 python "<真实根目录>/manager.py" --data-dir "<当前MCP使用的数据目录>" serve
 ```
 
-MCP已配置时先用 `toolbox_context`，按需调用 `toolbox_search`、`toolbox_describe`、`toolbox_manual`。
+MCP已配置时先用 `toolbox_context(profile=production)`；制作调用设置 `response_detail=compact`，使用完整内联任务内容，按需调用 `toolbox_search`、`toolbox_describe`、`toolbox_manual`。
 运行路径按任务自动归类。需要表达决策、汇合或用户反馈后的返修时，在已有阶段打卡的 `flow` 中批量更新，优先使用 `step_types`，不足时每批补一到两个自定义节点。分支要接回合成、复查或交付；返修另建轮次，保留旧路径。只提交有依据的关系，推断和建议显式标明，不为绘图增加看图或制作重试。字段与示例见[项目运行路径](../../references/project-work-graph.md)。
 联网搜图、生图、上传必要参考局部，读取 `toolbox_material_policy` 或当前上下文的 `material_policy`。允许值是已保存的用户授权，不逐次询问；项目例外和用户当前明确限制优先。宿主未提供所需工具时说明能力缺失，不再要求用户同意同一操作。
 MCP未加载时先核对宿主注册的 command 和 args。独立安装通常使用随包 runtime/python.exe 与 portable.py；显式数据参数或 location.json 决定实例，不要求注册必须包含 manager.py 或 --data-dir，也不默认与旧软件共用数据。
@@ -61,4 +68,4 @@ context.active.path及distribution，不能凭同名Skill或版本号推断运�
 
 ## 1.26.7 插画方法直接入口
 
-少色分层插画先调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。
+简单分层插画或明确要求内部编辑时，按需调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](../../references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。

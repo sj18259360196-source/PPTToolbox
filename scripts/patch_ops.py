@@ -45,7 +45,8 @@ def patch_scene(source,spec,outdir):
     if not isinstance(changes,list) or not changes or not isinstance(allowed,list) or not allowed:raise ValueError('Nonempty allowed_ids and changes are required')
     requested_changes=copy.deepcopy(changes)
     changes=[normalize_scene_change(change) for change in changes]
-    scene=read_json(source);original=copy.deepcopy(scene);index={}
+    from scene_paths import load as load_scene
+    scene,scene_base=load_scene(source);original=copy.deepcopy(scene);index={}
     for slide in scene['slides']:
         for o in walk_objects(slide['objects']):index[(slide['id'],o['id'])]=o
     # IDs may repeat between slides. Permission entries use slide/object.
@@ -97,7 +98,7 @@ def patch_scene(source,spec,outdir):
             if o['kind']!='chart' or not isinstance(v,dict) or set(v)-{'series','categories','data_provenance'} or not {'series','data_provenance'}<=v.keys():raise ValueError('chart_data needs series and provenance, optional categories')
             o.update(v)
         else:raise ValueError('Unsupported bounded patch op: '+str(op))
-    issues=validate(scene,source.parent)
+    issues=validate(scene,scene_base,project_root=scene_base)
     if issues:raise ValueError('Patched scene invalid: '+'; '.join(issues[:12]))
     # Leaf-level equality plus group membership invariants protect untouched content.
     for s0,s1 in zip(original['slides'],scene['slides']):
@@ -109,13 +110,20 @@ def patch_scene(source,spec,outdir):
     for s in scene['slides']:
         if s.get('reference'):files.add(s['reference'])
         files.update(o['asset'] for o in walk_objects(s['objects']) if o['kind']=='image')
+        files.update(u['source']['asset'] for u in s.get('element_scope',{}).get('units',[]) if 'source' in u)
+        for obj in walk_objects(s['objects']):
+            files.update(obj['generation_decision'][field] for field in ('reference','drawing')
+                         if field in obj.get('generation_decision',{}))
     with staged_directory(outdir) as stage:
         for rel in files:
-            src=resolve_asset(source.parent,rel);dst=stage/rel
+            src=resolve_asset(scene_base,rel);dst=stage/rel
             if rel in {'scene.json','patch-report.json'}:raise ValueError('Dependency conflicts with patch output')
             dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+        scene=copy.deepcopy(scene);scene['version']='1.0';scene.pop('path_base',None)
         write_json(stage/'scene.json',scene)
         report={'status':'passed','scope':'Bounded scene edit, not a visual pass. Rebuild/render and review this new version.', 'source_sha256':sha256(source),'result_sha256':sha256(stage/'scene.json'),'allowed_ids':allowed,'changes':changes,'reason':spec['reason'],'all_prior_reviews_invalidated':True,'scene':'scene.json'}
+        from review_impact import compare as compare_impact
+        report['review_impact']=compare_impact(original,scene,scene_base,stage)
         if requested_changes!=changes:
             report['requested_changes']=requested_changes
             report['field_aliases_normalized']=True

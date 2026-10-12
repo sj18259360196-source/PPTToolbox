@@ -44,6 +44,20 @@ def dispatch(envelope, policy, root, wf):
     check_tree(policy.project)
     wf.set_managed_policy(policy)
     p = policy.project
+    production = envelope.get('production_settings')
+    if production and production.get('values') is not None and command != 'start':
+        from scripts.production_settings import snapshot
+        saved = snapshot(production['values'], production.get('revision',0), production.get('source','project'))
+        pending = production.get('pending')
+        from workflow_store import load
+        from workflow_production import affects_active
+        affected = pending and affects_active(load(p),saved,pending)
+        if affected and command in {'submit','validate_response','finish','advance','adopt'}:
+            from workflow_store import WorkflowError
+            raise WorkflowError('production_settings_changed',
+                'Saved production settings changed. Call rebuild_next to apply them and obtain the current task; existing assets are retained.')
+        if affected and command == 'next':
+            wf.apply_production_settings(p,saved,pending.get('scope','unfinished'),pending.get('selected_objects',[]))
     from toolbox_manager.contracts import LOCAL_COMMANDS, CALIBRATION_COMMANDS, SKILL_COMMANDS, ROUTE_COMMANDS
     if command in ROUTE_COMMANDS:
         from skill_routing import route_check, report
@@ -76,11 +90,20 @@ def dispatch(envelope, policy, root, wf):
             check_tree(scene.parent)
         candidate = policy.input(a["candidate"]) if a.get("candidate") else None
         return wf.start(p, refs, scene, candidate, a.get("ratio"), a.get("mapping", "uniform"),
-                        a.get("office", False), a.get("builder", "python"), a.get('in_place',False))
+                        a.get("office", False), a.get("builder", "python"), a.get('in_place',False),
+                        production_settings=production if production and production.get('values') is not None else None)
     if command == "submit":
         # Task-specific validation and path resolution run once under the writer lock.
-        return wf.submit(p, {k: a[k] for k in ("task_id", "token", "result")},
-                         expected_revision=a.get("base_revision"), return_next=a.get('return_next', False))
+        result = wf.submit(p, {k: a[k] for k in ("task_id", "token", "result")},
+                         expected_revision=a.get("base_revision"), return_next=a.get('return_next', False) and not (production and production.get('pending')))
+        if production and production.get('pending') and a.get('return_next') and result.get('submission',{}).get('state')=='accepted' and result.get('next_step',{}).get('state') != 'needs_revision':
+            try:
+                wf.apply_production_settings(p,saved,pending.get('scope','unfinished'),pending.get('selected_objects',[]))
+                result.update(wf.next_task(p))
+            except Exception as exc:
+                result['next_error']={'code':getattr(exc,'code','settings_application_failed'),'message':str(exc),
+                                      'hint':'Submission was accepted. Inspect status; do not replay it.'}
+        return result
     if command == "validate_response":
         return wf.validate_response(p, {k: a[k] for k in ("task_id", "token", "result")},
                                     expected_revision=a.get("base_revision"))
@@ -140,6 +163,7 @@ def main():
             result["validation_metrics"] = exc.validation_metrics
         if hasattr(exc, 'diagnostics'):
             result['error']['diagnostics']=exc.diagnostics
+            result['error']['not_checked']=getattr(exc,'not_checked',[])
         code = 2
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
     return code

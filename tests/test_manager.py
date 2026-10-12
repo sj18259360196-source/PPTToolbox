@@ -28,7 +28,11 @@ def package_bytes(version='1.5.0',name='ppt-reference-rebuild',files=None,manife
 
 def expected_tool_count():
     from toolbox_manager.contracts import LOCAL_COMMANDS, REQUEST_COMMANDS
-    return len(json.loads((ROOT/'toolbox/registry.json').read_text(encoding='utf-8'))['tools']) + len(WORKFLOWS) + len(LOCAL_COMMANDS) + len(REQUEST_COMMANDS) + len(ICON_SPECS) + len(GRAPHICS_SPECS)
+    ids={row['id'] for row in json.loads((ROOT/'toolbox/registry.json').read_text(encoding='utf-8'))['tools']}
+    ids.update('workflow.'+name for name in (*WORKFLOWS,*LOCAL_COMMANDS,*REQUEST_COMMANDS))
+    ids.update('icons.'+name for name in ICON_SPECS)
+    ids.update('graphics.'+name for name in GRAPHICS_SPECS)
+    return len(ids)
 
 
 def test_boot_real_catalog(manager):
@@ -85,9 +89,11 @@ def test_readonly_doc_cannot_save(manager):
     with pytest.raises(ValueError):manager.save_document('README.md','x',0)
 
 def test_custom_command_not_execute(manager,tmp_path):
+    defaults={row['id'] for row in manager.context()['instructions']}
     out=tmp_path/'not-created';r=manager.save_command({'title':'Command','body':f'touch {out}'})
     assert not out.exists();assert manager.context()['instructions'][0]['id']==r['id']
-    manager.save_command({'id':r['id'],'title':'Command','body':'x','revision':1,'enabled':False});assert not manager.context()['instructions']
+    manager.save_command({'id':r['id'],'title':'Command','body':'x','revision':1,'enabled':False})
+    assert {row['id'] for row in manager.context()['instructions']}==defaults
 
 def test_command_conflict(manager):
     r=manager.save_command({'title':'one','body':'text'})

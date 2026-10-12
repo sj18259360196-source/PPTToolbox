@@ -68,6 +68,15 @@ def declare(m,p,target):
 
 def response(m, p, payload, task=None):
     task = task or invoke(m, "next", p)["task"]
+    # Transport fixtures acknowledge preferences explicitly; this is not visual QA.
+    if task['kind'] in {'source_review','review_full','preview_full'} and 'production_review' not in payload:
+        from workflow_store import load
+        from workflow_production import review_template
+        settings = load(p).get('production_settings')
+        if settings:
+            payload = {**payload, 'production_review': review_template(settings)}
+            for row in payload['production_review']['checks'].values():
+                row.update(status='passed', note='SYNTHETIC transport assertion; no visual acceptance')
     return invoke(m, "submit", p, task_id=task["task_id"], token=task["token"],
                   base_revision=task["base_revision"], result=payload)
 

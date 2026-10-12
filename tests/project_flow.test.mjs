@@ -67,12 +67,24 @@ test('round and task ownership draws bounded groups while retaining cross-round 
  ];
  for(const width of [720,1100,1440]){
   const graph=layoutGraph(grouped,width);clearRoutes(graph);
-  assert.equal(graph.groups.length,3);assert.equal(graph.edges.length,6);
-  for(const g of graph.groups)for(const n of graph.nodes.filter(n=>n.group_id===g.id)){
+  assert.equal(graph.groups.length,2);assert.equal(graph.edges.length,6);
+  for(const g of graph.groups)for(const n of graph.nodes.filter(n=>n.round===g.round)){
    assert.ok(n.y>g.y+20&&n.y+n.height<g.y+g.height);
   }
-  assert.ok(graph.groups[2].y>graph.groups[1].y+graph.groups[1].height);
+  assert.ok(graph.groups[1].y>graph.groups[0].y+graph.groups[0].height);
  }
+});
+
+test('same-round terminal tasks share a row without merging records or dependencies',()=>{
+ const source=[{id:'root',round:5,after:[],group_id:'root-task'},
+  ...Array.from({length:5},(_,i)=>({id:'leaf'+i,round:5,after:['root'],group_id:'task'+i,task_ids:['task-'+i],title:'局部核对'}))];
+ const original=JSON.stringify(source),graph=layoutGraph(source,1440);
+ clearRoutes(graph);
+ assert.equal(graph.groups.length,1);assert.equal(graph.nodes.length,6);assert.equal(graph.edges.length,5);
+ assert.equal(new Set(graph.nodes.slice(1).map(n=>n.y)).size,1);
+ assert.equal(new Set(graph.nodes.map(n=>n.group_id)).size,6);
+ assert.equal(JSON.stringify(source),original);
+ assert.ok(graph.height<250);
 });
 
 function clearRoutes(layout){
