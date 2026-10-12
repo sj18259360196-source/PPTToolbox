@@ -6,7 +6,7 @@ import pytest
 from PIL import Image, ImageDraw
 
 from test_workflow import ref, respond, assertion
-from common import read_json
+from common import read_json, write_json, sha256
 from material_routes import validate_decision
 import workflow as wf
 from workflow_store import load, WorkflowError
@@ -38,8 +38,13 @@ def test_user_request_can_skip_drawing_but_requires_reference_and_reason():
     with pytest.raises(ValueError):validate_decision({**data,'basis':[]})
 
 
-def make_project(tmp_path):
+def make_project(tmp_path, *, legacy_policy=False):
     p=tmp_path/'project';wf.start(p,[ref(tmp_path)])
+    if legacy_policy:
+        # A historical low-similarity project predates requirement-bound material
+        # plans. New projects must retain and enforce the current quality gate.
+        state=load(p);state.pop('material_quality_policy')
+        write_json(p/'workflow/state.json',state)
     respond(p,{'regions':[{'id':'art','bbox':[0,0,640,360],'role':'diagram','summary':'SYNTHETIC illustration fixture'}]})
     (p/'assets').mkdir(exist_ok=True)
     (p/'assets/drawing.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="45" height="45" fill="red"/></svg>','utf-8')
@@ -69,8 +74,9 @@ def test_request_validation_is_atomic_and_requires_real_drawing(tmp_path):
     assert not load(p)['asset_jobs']
 
 
-def test_request_graph_and_two_crops_survive_scene_freeze_and_ppt_build(tmp_path):
-    p=make_project(tmp_path)
+@pytest.mark.parametrize('legacy_policy',[False,True])
+def test_request_graph_and_two_crops_survive_scene_freeze_and_ppt_build(tmp_path,legacy_policy):
+    p=make_project(tmp_path,legacy_policy=legacy_policy)
     respond(p,request())
     pending=projection(p);nodes=graph(pending)['nodes']
     assert [n['kind'] for n in nodes if n.get('route_job')]==['material','fidelity','generation','crop','compose']
@@ -98,6 +104,15 @@ def test_request_graph_and_two_crops_survive_scene_freeze_and_ppt_build(tmp_path
         decisions.append({'target_id':'icon'+str(i),'route':'generated','generation_considered':True,
             'reason':'Synthetic fallback decision fixture','remaining_risk':'Visual and Office review not run'})
     payload={'objects':objects,'source_notes':'Synthetic transparency/crop fixture','asset_decisions':decisions}
+    if not legacy_policy:
+        # The same old submission is rejected atomically for a newly created
+        # project until it supplies the current requirement-bound page plan.
+        task=wf.next_task(p);before=sha256(p/'workflow/state.json')
+        with pytest.raises(WorkflowError,match='requirement-bound page plan'):
+            respond(p,payload,task)
+        assert sha256(p/'workflow/state.json')==before
+        assert wf.next_task(p)['task']['id']==task['task']['id']
+        return
     respond(p,payload)
     nodes=graph(projection(p))['nodes']
     assert next(n for n in nodes if n.get('kind')=='crop')['status_label']=='裁剪已登记'
@@ -162,7 +177,7 @@ def test_project_observer_collects_generation_route_and_prompt_exposes_policy(pr
     assert any(n.get('kind')=='generation' for n in hub.snapshot(manager,key)['display_graph']['nodes'])
     from toolbox_manager.material_policy import effective
     policy=effective(manager,p)
-    assert policy['illustration_route']['default_basis']=='content_category'
+    assert policy['illustration_route']['default_basis']=='content_category_and_object_requirements'
     assert policy['illustration_route']['legacy_fallback']['threshold_pct']==75
     from toolbox_manager.production_storage import startup_prompt
     assert '75%' in startup_prompt(manager)['text']
