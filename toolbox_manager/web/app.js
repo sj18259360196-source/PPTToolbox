@@ -49,7 +49,7 @@ document.querySelector('#refresh-button').innerHTML=icon('updates');
 function toast(t,error=false){const e=document.querySelector('#toast');e.textContent=t;e.className=(error?'error ':'')+'visible';clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.className='',4500);}
 function modal(title,body,foot=''){document.querySelector('#dialog-content').innerHTML=`<div class="dialog-head"><h2>${esc(title)}</h2>${btn(icon('close'),'close','','icon-button')}</div><div class="dialog-body">${body}</div><div class="dialog-foot">${btn('关闭','close')}${foot}</div>`;if(!dialog.open)dialog.showModal();}
 async function reloadBoot(){boot=await api('boot');document.documentElement.dataset.theme=boot.settings.theme;document.querySelector('#side-version').textContent='版本 '+boot.version;document.querySelector('#footer-version').textContent='PPT Toolbox '+boot.version;}
-async function render(){
+async function render({resetScroll=false}={}){
  const rendering=++renderGeneration;
  stopWorkbench();stopPreparation();stopProjectDetails();stopGraphics();
  stopIcons();
@@ -69,6 +69,7 @@ async function render(){
   await mounts[route]();
   if(rendering===renderGeneration&&['settings','skills','tools','plugins','updates','logs'].includes(route))settingsNavigation();
  }catch(e){if(rendering===renderGeneration)main.innerHTML=`<div class="error-banner"><strong>当前操作无法完成</strong><p>${esc(e.message)}</p>${btn('重新连接','refresh')}</div>`;}
+ finally{if(resetScroll&&rendering===renderGeneration)window.scrollTo({top:0,left:0,behavior:'instant'});}
 }
 const settingsLinks=[['settings','常规与权限'],['settings?section=agent','制作 Agent 接入'],['skills','制作规则'],['tools','工具与指令'],['updates','软件与扩展包'],['plugins','插件来源'],['logs','日志']];
 function settingsNavigation(){
@@ -190,7 +191,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tr
 document.addEventListener('change',async e=>{const d=e.target.dataset;try{if(d.change==='toggle-tool'){await api('toggle',{kind:'tool',target:d.id,enabled:e.target.checked});items=await api('tools');paintToolList();await reloadBoot();toast('已更新受管工具启停');}if(d.change==='toggle-package'){await api('toggle',{kind:'package',package_id:d.id,enabled:e.target.checked});await render();toast('已更新管理器内启停，宿主配置未改动');}}catch(x){e.target.checked=!e.target.checked;toast(x.message,true);}});
 document.addEventListener('input',e=>{if(e.target.matches('#doc-editor,#setting-projects-directory,#setting-theme,#setting-log-size,#setting-python,#setting-powershell,#setting-exec,#setting-auto-approve,#setting-network,#setting-generation'))unsavedChanges=true;});
 window.addEventListener('beforeunload',e=>{if(unsavedChanges){e.preventDefault();e.returnValue='';}});
-window.addEventListener('hashchange',()=>{if(unsavedChanges){pendingNavigation=location.hash;history.replaceState(null,'',lastLocation);modal('更改尚未保存','<p>保存当前修改后继续，或放弃本次修改。</p>',btn('放弃并继续','discard-navigation')+btn('保存并继续','save-navigation','','primary'));return;}lastLocation=location.hash;render();});
+window.addEventListener('hashchange',()=>{if(unsavedChanges){pendingNavigation=location.hash;history.replaceState(null,'',lastLocation);modal('更改尚未保存','<p>保存当前修改后继续，或放弃本次修改。</p>',btn('放弃并继续','discard-navigation')+btn('保存并继续','save-navigation','','primary'));return;}lastLocation=location.hash;render({resetScroll:true});});
 new MutationObserver(()=>{if(['settings','skills','tools','plugins','updates','logs'].includes(route)&&!main.querySelector('.settings-navigation')&&main.querySelector('.page-head'))settingsNavigation();}).observe(main,{childList:true});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 render();
 startAgentLive();

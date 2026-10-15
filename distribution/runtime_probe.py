@@ -72,6 +72,14 @@ def probe(bundle):
     with ThreadPoolExecutor(max_workers=4) as pool:
         entrypoints = dict(pool.map(check_entry, python_tools))
     checks['native_tool_entrypoints'] = bool(entrypoints) and all(row['passed'] for row in entrypoints.values())
+    discovery_run = subprocess.run([sys.executable,'-B','-E','-P','-X','utf8',
+        str(bundle/'app/distribution/mcp_discovery_probe.py'),'--root',str(bundle/'app')],
+        capture_output=True,text=True,encoding='utf-8',timeout=30,
+        creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    if discovery_run.returncode:
+        raise ValueError('Packaged MCP discovery failed: '+discovery_run.stderr[-2000:])
+    discovery=json.loads(discovery_run.stdout)
+    checks['mcp_tool_discovery'] = discovery.get('status')=='passed' and discovery.get('tool_count',0)>0
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     key = Ed25519PrivateKey.generate()
     key.public_key().verify(key.sign(b'PPTToolbox runtime probe'), b'PPTToolbox runtime probe')
@@ -88,7 +96,7 @@ def probe(bundle):
         failed={k:v for k,v in entrypoints.items() if not v['passed']}
         raise ValueError('Packaged runtime checks failed: '+json.dumps({'checks':checks,'entries':failed}))
     return {"status": "passed", "bundle": str(bundle), "checks": checks,
-            "origins": origins, "entrypoints": entrypoints,
+            "origins": origins, "entrypoints": entrypoints, "mcp_discovery": discovery,
             "versions": {name: importlib.metadata.version(name)
                          for name in ("numpy", "scipy", "resvg-py", "shapely")},
             "scope": "Package-local imports and tiny native computations; no Office, UI, DB or host acceptance."}

@@ -161,7 +161,7 @@ def observe(manager, key):
         # Revisit evidence around old unbound failures, even outside the recent window.
         extra=[]
         for issue in state.get('activity',{}).get('issues',[]):
-            if issue.get('state')!='open' or issue.get('task_id') or issue.get('tool') not in {'workflow.start','workflow.submit','workflow.replace-scene'}:
+            if issue.get('state')!='open' or issue.get('task_id') or issue.get('tool') not in {'workflow.start','workflow.status','workflow.next','workflow.submit','workflow.replace-scene'}:
                 continue
             evidence=issue.get('evidence_id','').removeprefix('audit-')
             if not evidence.isdigit():continue
@@ -211,7 +211,10 @@ def observe(manager, key):
             'at': event['time'], 'task_id': detail.get('task_id'), 'task_kind': detail.get('task_kind'),
             'error_code':detail.get('error_code'), 'reason_code':detail.get('reason_code'),
             'message':safe_message(detail.get('error_message') or detail.get('error') or detail.get('reason') or ''),
-            'recovery':detail.get('recovery') or {}, 'evidence_id': 'audit-'+str(event['id'])}
+            'recovery':detail.get('recovery') or {}, 'evidence_id': 'audit-'+str(event['id']),
+            'acceptance_state':detail.get('acceptance_state'), 'failed_stage':detail.get('failed_stage'),
+            'failure_reason':detail.get('failure_reason'), 'submission':detail.get('submission'),
+            'checkpoint_receipt':detail.get('checkpoint_receipt')}
         calls[cid]['elapsed_seconds']=(detail.get('timings') or {}).get('through_worker_seconds')
     history = [{'at': e.get('at'), 'event': e.get('event'), 'detail': {k:v for k,v in e.get('detail',{}).items() if k in {'kind','id','reason','region_id','slide_id'}}}
                for e in workflow.get('history', [])[-25:]]
@@ -220,11 +223,18 @@ def observe(manager, key):
     from .project_status import reconcile, generation_routes
     activity = {'calls': list(calls.values())[-30:],
                 'generation_routes':generation_routes(workflow),
-                'issues':reconcile(state.get('activity',{}).get('issues',[]),list(calls.values())),
+                'issues':reconcile(state.get('activity',{}).get('issues',[]),list(calls.values()),
+                    task_contexts=[{'project':str(root),'project_id':workflow.get('project_id'),
+                        'task_id':e.get('detail',{}).get('id'),'revision_after':e.get('revision'),
+                        'at':e.get('at',''),'evidence_id':'workflow-'+str(e.get('revision'))}
+                        for e in workflow.get('history',[]) if e.get('event')=='task_issued']),
                 'history': history, 'workflow_status': workflow.get('status'),
                 'connection': {'state': connection['state'], 'connected_count': connection['connected_count']},
                 'task': {k:v for k,v in (workflow.get('active_task') or {}).items() if k in {'id','kind','target'}},
                 'file_scan_limited': limited}
+    activity['outcome_counts'] = {name:sum(1 for c in calls.values() if
+        (c.get('recovery') or {}).get('outcome')==name)
+        for name in ('accepted_next_failed','rejected','outcome_unknown','not_dispatched')}
     from .issue_assessment import assess
     activity['issues']=assess({**state,'activity':activity})['issues']
     from .visual_activity import project_visuals
@@ -267,7 +277,7 @@ def snapshot(manager, key):
     if summary.get('status') == 'ready':
         preferred = summary.get('recommended_ids', [])
         suggested.sort(key=lambda r: preferred.index(r['id']) if r['id'] in preferred else len(preferred))
-    from .project_status import graph
+    from .project_status import graph, production_summary
     from .issue_assessment import assess, handoff
     from scripts.project_flow import STEP_TYPES
     from .pptagent_metrics import project_status as assistant_status
@@ -275,6 +285,7 @@ def snapshot(manager, key):
     state={**state,'flow_lifecycle':lifecycle(manager,workflow),
            'work_graph':{**state.get('work_graph',{}),'nodes':hydrate(manager,root,state.get('work_graph',{}).get('nodes',[]))}}
     return {**state, 'project': key, 'path': str(root), 'workflow_status': workflow.get('status'),
+            'production_summary':production_summary(root, workflow, manager, key),
             'assistant':assistant_status(manager,key,state),
             'display_graph':graph(state), 'step_types':STEP_TYPES,
             'issue_view':assess(state), 'assistance_packet':handoff(state),
@@ -309,10 +320,11 @@ def checkpoint(manager, body):
     if set(values.get('used_experiences', [])) - known:
         raise ValueError('实际采用记录包含未知经验编号')
     record = journal.checkpoint(root, values)
-    from scripts.usage_store import record as usage_record, key as usage_key
     warnings = []
-    suggested = recommendations(manager, root, journal.load(root))
+    suggested = []
     try:
+        from scripts.usage_store import record as usage_record, key as usage_key
+        suggested = recommendations(manager, root, journal.load(root))
         for item in suggested:
             usage_record(manager.data/'usage',usage_key('checkpoint-recommendation',str(root),values['checkpoint_id'],item['id']),
                 'experience',item['id'],'retrieved',project=str(root),task='checkpoint:'+values['checkpoint_id'],
@@ -323,8 +335,22 @@ def checkpoint(manager, body):
                 evidence={'reason': values['result_summary'], 'level':'agent_reported_not_validated'})
     except Exception:
         warnings.append('打卡已保存，经验汇总暂未更新；采用记录仍保留在项目内')
-    return {**record, 'recommendations': suggested,
+    return {**record, 'state':'recorded', 'recorded':True, 'duplicate':bool(record.get('duplicate')),
+            'stage_revision_before':ensure['phase_revision'],
+            'stage_revision_after':record['revision'] if not record.get('duplicate') else ensure['phase_revision'],
+            'recommendations': suggested,
             'next_revision': record['revision'], 'warnings': warnings}
+
+
+def update_work_graph(manager, body):
+    """Display-only patch with the same project authorization as checkpoints."""
+    from .policy import authorize
+    root, row, _ = entry(manager, body['project'])
+    authorize(manager, root)
+    journal.ensure(root, row['project_id'], row['label'])
+    state = journal.update_graph(root, body['flow'], body['sequence'], source='agent')
+    return {'scope':'display_only', 'sequence':state['sequence'],
+            'work_graph':state['work_graph'], 'phase_revision':state['phase_revision']}
 
 
 def stage_context(manager, project):

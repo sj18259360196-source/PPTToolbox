@@ -110,7 +110,7 @@ def dispatch(envelope, policy, root, wf):
     if command == "revision_candidate":
         return wf.revision_candidate(p, a)
     if command == "revise":
-        return wf.revise(p, a["slide"], a.get("region"), a["reason"])
+        return wf.revise(p, a["slide"], a.get("region"), a["reason"], a.get("overlay_review", False))
     if command == "advance":
         return wf.advance(p, a.get("office"))
     if command == "handoff":
@@ -121,7 +121,7 @@ def dispatch(envelope, policy, root, wf):
         receipt = policy.input(a["receipt"]) if a.get("receipt") else None
         return wf.preview(p, receipt=receipt, timeout=a.get("timeout", 180))
     if command == "review-again":
-        return wf.review_again(p, a["task"], a["reason"])
+        return wf.review_again(p, a["task"], a["reason"], a.get("overlay_review", False))
     if command == "retry":
         return wf.retry(p, a["reason"])
     if command == "replace-candidate":

@@ -69,7 +69,7 @@ def result_contracts(root):
             "regions": array(obj({
                 "id": STRING, "bbox": array({"type": "integer"}, minItems=4, maxItems=4),
                 "role": {"enum": ["background", "header", "content", "diagram", "chart", "table", "photo", "decoration", "footer"]},
-                "summary": STRING, "local_review": BOOL,
+                "summary": STRING, "local_review": BOOL, "overlay_review": BOOL, "overlay_reason": STRING,
             }, ("id", "bbox", "role", "summary")), minItems=1),
             "notes": TEXT, "uncertainties": array(STRING), "element_scope": SCOPE,
         }, ("regions",)),
@@ -126,6 +126,8 @@ def result_contracts(root):
     contracts['editable_behavior']=copy.deepcopy(contracts['editable_behavior'])
     from scripts.edit_summary import TEST_SCHEMA
     contracts['editable_behavior']['properties']['edit_tests']=array(TEST_SCHEMA,maxItems=200)
+    from scripts.edit_evidence import REF
+    contracts['editable_behavior']['properties']['evidence_index']={'anyOf':[{'type':'null'},copy.deepcopy(REF)]}
     from scripts.material_quality import REVIEWS
     for variant in contracts['region_objects']['oneOf'][:2]:
         variant['properties']['material_reviews'] = copy.deepcopy(REVIEWS)
@@ -134,6 +136,9 @@ def result_contracts(root):
     from scripts.workflow_production import REVIEW_SCHEMA
     contracts['source_review']['properties']['production_review'] = copy.deepcopy(REVIEW_SCHEMA)
     contracts['review_full']['properties']['production_review'] = copy.deepcopy(REVIEW_SCHEMA)
+    from scripts.layered_review import REFINEMENT_SCHEMA
+    for kind in ('review_full','review_local'):
+        contracts[kind]['properties']['refinement_issues'] = copy.deepcopy(REFINEMENT_SCHEMA)
     contracts["preview_full"] = copy.deepcopy(contracts["review_full"])
     from scripts.review_components import OBJECT_CHECK_SCHEMA
     contracts["review_local"]["properties"]["object_checks"]=array(OBJECT_CHECK_SCHEMA)
@@ -176,12 +181,12 @@ def schemas(root):
         "revision_candidate": obj({**project, "run_id": STRING, "slide": STRING, "region": STRING,
             "base_revision": {"type": "integer", "minimum": 0}, "reason": STRING},
             ("project", "run_id", "slide", "region", "base_revision", "reason")),
-        "revise": obj({**project, "slide": STRING, "region": STRING, "reason": STRING},
+        "revise": obj({**project, "slide": STRING, "region": STRING, "reason": STRING, "overlay_review": BOOL},
                       ("project", "slide", "reason")),
     }
     for name in ('start','next','status','submit'):
         contracts[name]['properties']['response_detail']={'enum':['full','compact']}
-    from scripts.project_flow import PATCH_SCHEMA as FLOW_SCHEMA
+    from scripts.project_flow import FLOW_TRANSPORT_SCHEMA as FLOW_SCHEMA
     checkpoint = obj({'checkpoint_id':STRING, 'run_id':STRING,
         'expected_revision':{'type':'integer','minimum':0},
         'event':{'enum':['begin','transition','finish','replan','blocked','pause','resume']},

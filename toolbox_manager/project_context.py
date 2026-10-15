@@ -9,7 +9,43 @@ from .policy import plain_path, PolicyDenied
 
 DEFAULT_PROJECTS_ROOT = str(Path.home() / 'Documents' / 'PPTToolbox' / 'Projects')
 LAYOUT = {'inputs':'input','assets':'assets','versions':'runs','workflow':'workflow',
-          'delivery':'delivery','logs':'logs/tool-calls','handoff':'HANDOFF.md'}
+          'delivery':'delivery','logs':'logs/tool-calls','handoff':'HANDOFF.md',
+          'evidence':'evidence','temporary':'.tmp/codex'}
+
+
+def delivery_details(result, project):
+    """Expose existing final files and receipt scope without inferring visual acceptance."""
+    from .storage import digest
+    root=Path(project).resolve()
+    if not isinstance(result.get('delivery'),str):return result
+    folder=Path(result['delivery']).resolve()
+    if not folder.is_relative_to(root) or not folder.is_dir():return result
+    receipt=folder/'delivery.json'
+    if not receipt.is_file():
+        result['delivery_details_warning']='Delivery receipt unavailable; inspect the delivery directory.'
+        return result
+    try:
+        if receipt.stat().st_size>4*1024*1024:raise ValueError('Delivery receipt exceeds inspection limit')
+        data=json.loads(receipt.read_text(encoding='utf-8-sig'))
+        if not isinstance(data,dict):raise ValueError('Delivery receipt must be an object')
+        files=[]
+        for name in ['editable.pptx','delivery.json','edit-summary.json']:
+            path=(folder/name).resolve()
+            if not path.is_relative_to(root):raise ValueError('Delivery file leaves project')
+            if path.is_file():files.append({'file':path.relative_to(root).as_posix(),'sha256':digest(path.read_bytes())})
+        pptx=next((f for f in files if f['file'].endswith('/editable.pptx')),None)
+        if not pptx or pptx['sha256']!=data.get('pptx_sha256'):
+            raise ValueError('Final PPTX does not match the delivery receipt')
+        summary=next((f for f in files if f['file'].endswith('/edit-summary.json')),None)
+        if data.get('edit_summary') and (not summary or summary['sha256']!=data['edit_summary'].get('sha256')):
+            raise ValueError('Edit summary does not match the delivery receipt')
+        result['delivery_files']=files
+        result['acceptance_summary']={'receipt_status':data.get('status'),
+            'gate_status':(data.get('gate') or {}).get('status'),
+            'scope':'Recorded delivery gate only; original report scopes and edit limits remain authoritative.'}
+    except (OSError,ValueError,TypeError) as exc:
+        result['delivery_details_warning']=str(exc)
+    return result
 
 
 def toolbox_locations(manager):
@@ -42,6 +78,9 @@ class ProjectContext:
         result={'project_root':str(self.root),'project_id':None,'initialized':False,
                 'paths':{key:str(self.path(value)) for key,value in LAYOUT.items()},
                 'current_pptx':None,'current_scene':None,'current_run':None,'current_delivery':None}
+        from scripts.project_layout import CONTRACT, references
+        result['directory_contract'] = CONTRACT
+        if read_state and self.root.is_dir(): result['references'] = references(self.root)
         if read_state and self.path('workflow/state.json').is_file():
             state=json.loads(self.path('workflow/state.json').read_text(encoding='utf-8-sig'))
             run=state.get('run') or {}

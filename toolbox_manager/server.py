@@ -124,6 +124,10 @@ class Handler(BaseHTTPRequestHandler):
                 thumbnail = image(self.server.manager, a.get('project'))
                 self.reply(thumbnail or b'', status=200 if thumbnail else 204, mime='image/jpeg')
                 return
+            if u.path == '/api/project.layout':
+                from scripts.project_layout import audit
+                root = self.server.workbench.entry(a.get('project'))[0]
+                self.reply({'ok':True,'result':audit(root)});return
             if u.path in {'/api/project.gallery','/api/project.preview'}:
                 from .project_gallery import gallery,image
                 if u.path.endswith('.gallery'): self.reply({'ok':True,'result':gallery(self.server.manager,a.get('project'))})

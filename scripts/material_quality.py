@@ -277,31 +277,9 @@ def validate_reviews(scope, objects, result, project, *, output_root=None,
     return used
 
 
-def validate_edit_coverage(scene, result):
-    """Require per-material observations; actual PPTX picture edits are checked separately."""
-    if result.get('status') != 'passed':
-        return
-    tests = result.get('edit_tests', [])
-    for slide in scene['slides']:
-        scope = slide.get('element_scope') or {}
-        if not scope.get('material_contract'):
-            continue
-        for unit in material_units(scope):
-            if not unit['material_requirement']['independent']:
-                continue
-            roots = roots_for(scope, slide['objects'], unit['id'])
-            ids = {o['id'] for o in roots}
-            operations = {'material_move', 'material_resize', 'material_backgrounds'}
-            if any(o['kind'] == 'image' for o in walk_objects(roots)):
-                operations.add('material_replace')
-            current = [t for t in tests if t['slide_id'] == slide['id'] and t['object_id'] in ids]
-            if not operations <= {t['operation'] for t in current if t['status'] == 'passed' and t['scope'] == 'required'}:
-                raise ValueError('material_quality: independent material needs move, resize, backgrounds and applicable replacement tests')
-            if any(t['status'] != 'passed' for t in current if t['operation'] in operations):
-                raise ValueError('material_quality: unresolved material edit failure cannot pass')
-
-
-def validate_picture_coverage(scene, report):
+def edit_requirements(scene):
+    """Complete independent-material obligations shared by preparation and gates."""
+    rows = []
     for index, slide in enumerate(scene['slides'], 1):
         scope = slide.get('element_scope') or {}
         if not scope.get('material_contract'):
@@ -309,11 +287,37 @@ def validate_picture_coverage(scene, report):
         for unit in material_units(scope):
             if not unit['material_requirement']['independent']:
                 continue
-            names = {o['id'] for o in walk_objects(roots_for(scope, slide['objects'], unit['id']))
-                     if o['kind'] == 'image'}
-            if not names:
-                continue
-            for operation in ('image_move', 'image_resize', 'image_replace'):
-                if not any(r['slide'] == index and r['name'] in names
-                           for r in report['verified_actions'][operation]):
-                    raise ValueError('material_quality: attached PPTX lacks '+operation+' for '+unit['id'])
+            roots = roots_for(scope, slide['objects'], unit['id'])
+            pictures = [o['id'] for o in walk_objects(roots) if o['kind'] == 'image']
+            actions = ['material_move', 'material_resize', 'material_backgrounds']
+            if pictures:
+                actions.append('material_replace')
+            rows.append({'slide': index, 'slide_id': slide['id'], 'unit_id': unit['id'],
+                         'object_ids': [o['id'] for o in roots], 'picture_ids': pictures,
+                         'requirement_ids': list(unit['material_requirement'].get('requirement_ids', [])),
+                         'summary_actions': actions,
+                         'picture_actions': ['image_move', 'image_resize', 'image_replace'] if pictures else []})
+    return rows
+
+
+def validate_edit_coverage(scene, result):
+    """Require per-material observations; actual PPTX picture edits are checked separately."""
+    if result.get('status') != 'passed':
+        return
+    tests = result.get('edit_tests', [])
+    for requirement in edit_requirements(scene):
+        ids = set(requirement['object_ids']); operations = set(requirement['summary_actions'])
+        current = [t for t in tests if t['slide_id'] == requirement['slide_id'] and t['object_id'] in ids]
+        if not operations <= {t['operation'] for t in current if t['status'] == 'passed' and t['scope'] == 'required'}:
+            raise ValueError('material_quality: independent material needs move, resize, backgrounds and applicable replacement tests')
+        if any(t['status'] != 'passed' for t in current if t['operation'] in operations):
+            raise ValueError('material_quality: unresolved material edit failure cannot pass')
+
+
+def validate_picture_coverage(scene, report):
+    for requirement in edit_requirements(scene):
+        names = set(requirement['picture_ids'])
+        for operation in requirement['picture_actions']:
+            if not any(r['slide'] == requirement['slide'] and r['name'] in names
+                       for r in report['verified_actions'][operation]):
+                raise ValueError('material_quality: attached PPTX lacks '+operation+' for '+requirement['unit_id'])

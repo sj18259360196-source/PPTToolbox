@@ -1,5 +1,6 @@
 """Usage accounting. A read, citation, application and delivery are distinct facts."""
 import json
+import math
 import os
 import re
 import sqlite3
@@ -22,8 +23,33 @@ def test_record(details):
 
 def duration(details):
     try:
+        start, end = details['started_at'], details['ended_at']
+        if type(start) in (int, float) and type(end) in (int, float):
+            return max(0, end-start) if math.isfinite(start) and math.isfinite(end) else None
         return max(0, (datetime.fromisoformat(details['ended_at'])-datetime.fromisoformat(details['started_at'])).total_seconds())
     except (KeyError, TypeError, ValueError): return None
+
+
+def graphics_call(db, row, details, common):
+    """Project one outcome per operation, never lifecycle notifications or polling."""
+    action = row['action']
+    if action in {'graphics.started', 'graphics.preview_status', 'graphics.preview_cancel'}:
+        return
+    outcome = details.get('command_status') or row['status']
+    status = {'ok':'success', 'completed':'success', 'error':'failed', 'failed':'failed',
+              'timed_out':'timed_out', 'cancelled':'cancelled', 'interrupted':'interrupted',
+              'outcome_unknown':'unknown'}.get(outcome)
+    if status is None:
+        return  # Started/running is not a finished call.
+    event_key = 'graphics-call:'+action+':'+str(details.get('call_id') or row['id'])
+    inserted = insert(db, event_key, 'tool', action, 'call', status=status,
+                      duration=duration(details), **common)
+    if not inserted:
+        # A later terminal event may resolve an earlier unknown response. Never
+        # downgrade an observed terminal outcome or count its duplicate finally.
+        db.execute("UPDATE usage_events SET status=?,duration=COALESCE(?,duration),evidence=?,at=? "
+                   "WHERE event_key=? AND status='unknown' AND ?!='unknown'",
+                   (status, duration(details), json.dumps(common['evidence']), common['at'], event_key, status))
 
 
 def sync(manager):
@@ -36,6 +62,14 @@ def sync(manager):
         with sqlite3.connect(manager.store.path.as_uri()+'?mode=ro', uri=True) as audit:
             audit.row_factory = sqlite3.Row
             rows = audit.execute('SELECT * FROM events WHERE id>? ORDER BY id', (cursor,)).fetchall()
+            if not db.execute("SELECT 1 FROM meta WHERE key='graphics_projection_v2'").fetchone():
+                # Only derived graphics usage is rebuilt. Original audit events,
+                # user records and every other usage kind remain untouched.
+                db.execute("DELETE FROM usage_events WHERE event_key GLOB 'graphics-tool:*' "
+                           "AND kind='tool' AND entity GLOB 'graphics.*' AND json_extract(evidence,'$.audit_id') IS NOT NULL")
+                historical = audit.execute("SELECT * FROM events WHERE id<=? AND action LIKE 'graphics.%' ORDER BY id", (cursor,)).fetchall()
+                rows = [*historical, *rows]
+                db.execute("INSERT INTO meta VALUES('graphics_projection_v2','1')")
         for row in rows:
             d = json.loads(row['details'] or '{}')
             action, tid = row['action'], d.get('tool_id', '')
@@ -59,12 +93,11 @@ def sync(manager):
                 if metric and d.get('version') and row['status']=='ok' and not (action=='icons.inspect' and row['source']=='owner'):
                     insert(db, 'icon:'+str(row['id']), 'icon', d['version'], metric, **common)
             if action.startswith('graphics.'):
-                insert(db, 'graphics-tool:'+str(row['id']), 'tool', action, 'call',
-                       status='success' if row['status']=='ok' else 'failed', duration=duration(d), **common)
+                graphics_call(db, row, d, common)
             if action == 'mcp.read' and row['message']=='toolbox_describe' and d.get('target_id'):
                 insert(db, 'describe:'+str(row['id']), 'tool', d['target_id'], 'viewed', **common)
         if rows:
-            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('audit_cursor', str(rows[-1]['id'])))
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('audit_cursor', str(max(cursor, rows[-1]['id']))))
         # Successful recipe applications have stable application IDs. Outcome may be refined later.
         learning = manager.data/'learning/library.sqlite3'
         if learning.is_file():

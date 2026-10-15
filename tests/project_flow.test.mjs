@@ -2,7 +2,34 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../toolbox_manager/web/project-flow.js',import.meta.url),'utf8');
-const {projectGraph,compactQueries,layoutGraph,renderVisualActivity,edgeBadges,renderRelations,renderStageTimeline}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const {projectGraph,compactQueries,layoutGraph,renderVisualActivity,edgeBadges,renderRelations,renderStageTimeline,currentRound,renderProductionSummary}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+
+test('current round preserves cross-round dependencies and unknown rounds',()=>{
+ const rows=[{id:'old',round:1,after:[]},{id:'unrelated',round:1,after:[]},
+             {id:'new',round:2,after:['old']},{id:'unknown',after:[]}];
+ const before=JSON.stringify(rows),view=currentRound(rows);
+ assert.deepEqual(view.nodes.map(n=>n.id),['old','new','unknown']);
+ assert.equal(view.hidden_count,1);assert.equal(currentRound(rows,true).nodes,rows);
+ assert.equal(JSON.stringify(rows),before);
+ const legacy=[{id:'a',after:[]}];assert.equal(currentRound(legacy).nodes,legacy);
+});
+
+test('production display distinguishes candidate, missing delivery and unverified methods',()=>{
+ const html=renderProductionSummary({workflow_status:'awaiting_edit_check',formal_delivery:false,
+  candidate:{state:'matched',file:'runs/r/candidate.pptx'},delivery:{state:'missing',file:'delivery/r/editable.pptx'},
+  pending_task_kind:'editable_behavior',refinement_history:[{run_id:'r',issue_id:'edge',problem:'<unsafe>',
+   improved:false,decision:'change_method',method_id:'generate'}]});
+ assert.match(html,/当前版本尚未完成正式交付/);assert.match(html,/文件缺失/);
+ assert.match(html,/实施未核验/);assert.match(html,/&lt;unsafe&gt;/);assert.doesNotMatch(html,/<unsafe>/);
+});
+
+test('long registered graph renders with all dependencies',()=>{
+ const rows=Array.from({length:256},(_,i)=>({id:'n'+i,title:'Step '+i,round:Math.floor(i/64)+1,
+  after:i?['n'+(i-1)]:[],status:'observed'}));
+ const view=currentRound(rows),graph=layoutGraph(view.nodes,1000);
+ assert.equal(graph.nodes.length,256);assert.equal(graph.edges.length,255);
+ assert.equal(new Set(graph.nodes.map(n=>n.id)).size,256);
+});
 
 test('consecutive successful status queries condense with complete records and expandable graph',()=>{
  const rows=[{id:'q1',group_id:'t',source:'pptagent',title:'查询一',status:'observed',tools:['workflow.status'],evidence_ids:['audit-1'],after:[]},
@@ -151,7 +178,7 @@ test('bounded mixed dependencies remain inside the canvas at desktop widths',()=
  for(const width of [720,1100,1440]){
   const layout=layoutGraph(mixed,width);clearRoutes(layout);assert.equal(layout.edges.length,mixed.reduce((n,x)=>n+x.after.length,0));
  }
- assert.throws(()=>layoutGraph(Array.from({length:129},(_,i)=>({id:'limit'+i,after:[]}))),/上限/);
+ assert.throws(()=>layoutGraph(Array.from({length:513},(_,i)=>({id:'limit'+i,after:[]}))),/上限/);
  assert.deepEqual(layoutGraph([]).edges,[]);
 });
 test('layout rejects cycles and missing nodes without hanging',()=>{

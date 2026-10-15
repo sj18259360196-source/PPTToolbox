@@ -33,6 +33,29 @@ def apply(project, settings, scope='unfinished', selected_objects=None):
         old = state.get('production_settings')
         if scope == 'unfinished' and old and old.get('revision') == current['revision'] and old.get('effective_sha256') == current['effective_sha256']:
             return wf.brief(state)
+        from production_settings import defaults
+        baseline = (old or {}).get('values') or defaults()
+        changed_preferences = {k for k,v in values.items() if baseline.get(k) != v}
+        if not selected_objects and 'overlay_checking' in values and changed_preferences <= {'overlay_checking'}:
+            # Review-only preferences do not discard plans, fragments or materials.
+            state['production_settings'] = current
+            state['review_policy'] = 'layered-review/3'
+            for page in state['pages']:
+                # Existing source-review signatures include page production settings.
+                # Keep that content contract unchanged; review settings are independent.
+                page.setdefault('production_settings', copy.deepcopy(old))
+                page['review_settings'] = current
+            run = state.get('run')
+            if run and state['status'] != 'delivered':
+                run['review_policy'] = state['review_policy']
+                run['reviews'] = {k:v for k,v in run['reviews'].items() if not k.startswith(('full:','local:'))}
+                for key in ('gate','review','reused_observations','overlay_checks','preview'):
+                    run.pop(key,None)
+            wf._cancel(state,'overlay_checking_changed')
+            if state['status'] != 'delivered' and run:
+                state['status'] = 'ready_to_continue'
+            save(Path(project),state,'overlay_settings_applied',{'settings_revision':current['revision'],'changed_fields':sorted(changed_preferences),'geometry_preserved':True})
+            return {**wf.brief(state),'production_settings_applied':current,'affected_pages':[],'review_only':True}
         selected = {}
         for item in selected_objects:
             if not isinstance(item, dict) or not item.get('slide_id') or not item.get('region_id'):
@@ -90,6 +113,9 @@ def apply(project, settings, scope='unfinished', selected_objects=None):
                     job['status'] = 'cancelled'
             affected.append(page['id'])
         state['production_settings'] = current
+        if 'overlay_checking' in values:
+            state['review_policy']='layered-review/3'
+            for page in state['pages']:page['review_settings']=current
         if affected:
             wf._invalidate_run(state, 'production_settings_changed')
         else:
@@ -122,6 +148,8 @@ def review_required(settings):
 def affects_active(state, settings, pending):
     """Defer unrelated preference changes until the current task completes."""
     task = state.get('active_task')
+    if set(pending.get('changed_fields',[])) <= {'overlay_checking'}:
+        return not task or task['kind'] in {'review_full','review_local','preview_full','preview_local'}
     if not task:
         return True
     target = task['target']

@@ -1,9 +1,9 @@
 const stages=[['intake','接单与确认'],['plan','确定方案'],['production','制作 PPT'],['revision','整理与修订'],['delivery','交付']];
-const labels={planned:'待执行',running:'进行中',done:'已完成',observed:'调用已完成',blocked:'等待处理',paused:'已暂停',skipped:'已跳过',replaced:'已调整路径',failed:'执行失败',outcome_unknown:'结果待确认'};
+const labels={planned:'待执行',running:'进行中',done:'已完成',observed:'调用已完成',recovered:'失败后已恢复',blocked:'等待处理',paused:'已暂停',skipped:'已跳过',replaced:'已调整路径',failed:'执行失败',outcome_unknown:'结果待确认'};
 const stateLabel=node=>node.status_label||labels[node.status];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const relationLabels={dependency:'依赖',sequence:'先后',decision:'决策',merge:'汇合',revision:'返修',suggested:'建议',grouping:'归属',fork:'并行'};
-const exitLabels={accepted:'本版本已认可',awaiting_feedback:'等待用户反馈',running:'执行中',failed:'失败待处理',unknown:'结果待核对',skipped:'已跳过',replaced:'已替换',relation_pending:'后续关系待确认',merged:'已汇合',cancelled:'已取消'};
+const exitLabels={accepted:'本版本已认可',awaiting_feedback:'等待用户反馈',running:'执行中',failed:'失败待处理',recovered:'失败后已恢复',unknown:'结果待核对',skipped:'已跳过',replaced:'已替换',relation_pending:'后续关系待确认',merged:'已汇合',cancelled:'已取消'};
 const basisLabels={recorded:'记录依据',agent:'Agent 登记',inferred:'Agent 推断',suggested:'预设建议'};
 export function edgeInfo(node,parent){
  const link=(node.links||[]).find(l=>l.from===parent)||{};
@@ -62,6 +62,30 @@ export function projectGraph(state){
  return nodes;
 }
 
+export function currentRound(nodes,expanded=false){
+ if(expanded)return {nodes,hidden_count:0};
+ const rounds=nodes.map(n=>n.round).filter(Number.isInteger);
+ if(!rounds.length)return {nodes,hidden_count:0};
+ const latest=Math.max(...rounds),keep=new Set(nodes.filter(n=>!Number.isInteger(n.round)||n.round===latest).map(n=>n.id));
+ const byId=new Map(nodes.map(n=>[n.id,n]));
+ const queue=[...keep];
+ for(let i=0;i<queue.length;i++)for(const parent of byId.get(queue[i])?.after||[]){if(!keep.has(parent)){keep.add(parent);queue.push(parent);}}
+ const selected=nodes.filter(n=>keep.has(n.id));
+ return {nodes:selected,hidden_count:nodes.length-selected.length};
+}
+
+export function renderProductionSummary(summary){
+ if(!summary)return '';
+ const labels={matched:'文件哈希一致',changed:'文件已变化',missing:'文件缺失',unavailable:'文件不可读',unverified:'尚未核验',receipt_unavailable:'交付回执不可读'};
+ const statuses={delivered:'已记录交付',awaiting_revision:'等待返修',awaiting_visual_review:'等待视觉核对',awaiting_edit_check:'等待编辑验证',awaiting_source_review:'等待原文核对',awaiting_analysis:'等待分析',awaiting_asset_generation:'等待素材生成',awaiting_office:'等待 Office 验证',ready_to_deliver:'等待正式交付'};
+ const tasks={editable_behavior:'编辑行为验证',reproducibility:'复现验证',review_full:'整页视觉核对',review_local:'局部视觉核对',office_render:'Office 渲染',source_review:'原文核对',asset_material:'素材制作',page_plan:'页面规划',region_objects:'区域制作'};
+ const decisions={continue:'继续当前方法',change_method:'换方法',accept_difference:'记录接受差异',unresolved:'尚未解决'};
+ const feedback=summary.user_acceptance||{},feedbackLabels={not_recorded:'尚未登记当前版本的反馈',version_changed:'原反馈属于已变化的版本',unavailable:'反馈暂时无法核对'};
+ const file=(title,row)=>`<p>${title}　${row?esc(labels[row.state]||row.state)+' · '+esc(row.file):'尚未登记'}</p>`;
+ const history=(summary.refinement_history||[]).map(row=>`<li>${esc(row.run_id)} · ${esc(row.issue_id)} · ${esc(row.problem)}<br>改善记录　${row.improved?'Agent 记录有改善':'Agent 记录无改善'} · ${esc(decisions[row.decision]||row.decision)}${row.method_id?'<br>方法声明　'+esc(row.method_id)+' · 实施未核验':''}</li>`).join('');
+ return `<section class="flow-visual"><strong>成品与剩余检查</strong>${file('当前候选',summary.candidate)}${file('交付文件',summary.delivery)}<p>${summary.formal_delivery?'当前版本已正式交付':'当前版本尚未完成正式交付'} · ${esc(statuses[summary.workflow_status]||'状态待核对')}${summary.pending_task_kind?' · 当前待办 '+esc(tasks[summary.pending_task_kind]||'任务待核对'):''}</p><p>用户反馈　${feedback.state==='recorded'?esc(feedback.reply):esc(feedbackLabels[feedback.state]||'尚未登记当前版本的反馈')}</p><p class="small muted">文件哈希一致不代表视觉或编辑验收通过。</p>${history?`<details><summary>返工缺陷与改善记录</summary><ul>${history}</ul>${summary.refinement_history_limited?'<p>这里只展示最近 100 条，完整记录保留在项目内。</p>':''}<p class="small muted">旧版没有这些历史字段时，请查看原工作流结果。</p></details>`:''}</section>`;
+}
+
 // Condense consecutive status polling only. Never condense across a work step or
 // a branch boundary, and keep every original record available on expansion.
 export function compactQueries(nodes,expanded=false){
@@ -96,7 +120,7 @@ export function compactQueries(nodes,expanded=false){
 }
 
 export function layoutGraph(nodes,available=600){
- if(nodes.length>128)throw Error('工作图步骤超过显示上限');
+ if(nodes.length>512)throw Error('工作图步骤超过显示上限');
  const byId=new Map(nodes.map(n=>[n.id,{...n,after:[...(n.after||[])]}]));
  if(byId.size!==nodes.length)throw Error('工作图步骤编号重复');
  for(const n of byId.values())if(n.after.some(id=>!byId.has(id)||id===n.id))throw Error('工作图连接需要核对');
@@ -261,9 +285,9 @@ export function renderStageTimeline(state,nodes){
 }
 
 export function mountProjectFlow(root,options={}){
- let state={},selected=null,zoom=1,fit=true,last='',disposed=false,lastWidth=0,resizeFrame,queriesExpanded=true;
+ let state={},selected=null,zoom=1,fit=true,last='',disposed=false,lastWidth=0,resizeFrame,queriesExpanded=true,historyExpanded=false;
  const marker='flow-arrow-'+Math.random().toString(36).slice(2);
- root.innerHTML=`<div class="flow-toolbar"><p class="small muted">同轮任务横向排列；箭头标签说明关系，同排不代表并行</p><div class="actions"><button data-flow-queries>折叠查询记录</button><button data-flow-zoom="out" aria-label="缩小工作图">−</button><button data-flow-zoom="fit">适应宽度</button><button data-flow-zoom="in" aria-label="放大工作图">＋</button></div></div><div class="flow-legend" aria-label="路径颜色"></div><div class="flow-viewport" tabindex="0" aria-label="项目运行流程图"><div class="flow-space"><div class="flow-canvas"></div></div></div><div class="flow-detail" role="status"></div>`;
+ root.innerHTML=`<div class="flow-toolbar"><p class="small muted">同轮任务横向排列；箭头标签说明关系，同排不代表并行</p><div class="actions"><button data-flow-history>展开历史轮次</button><button data-flow-queries>折叠查询记录</button><button data-flow-zoom="out" aria-label="缩小工作图">−</button><button data-flow-zoom="fit">适应宽度</button><button data-flow-zoom="in" aria-label="放大工作图">＋</button></div></div><div class="flow-legend" aria-label="路径颜色"></div><div class="flow-viewport" tabindex="0" aria-label="项目运行流程图"><div class="flow-space"><div class="flow-canvas"></div></div></div><div class="flow-detail" role="status"></div>`;
  const viewport=root.querySelector('.flow-viewport'),space=root.querySelector('.flow-space'),canvas=root.querySelector('.flow-canvas'),detail=root.querySelector('.flow-detail');
  const visualPanel=document.createElement('div');visualPanel.className='flow-visual-container';root.prepend(visualPanel);
  const legend=root.querySelector('.flow-legend');
@@ -290,7 +314,7 @@ export function mountProjectFlow(root,options={}){
  }
  function paint(){
   if(disposed)return;
-  visualPanel.innerHTML=renderVisualActivity(state.activity?.visual);
+  visualPanel.innerHTML=renderProductionSummary(state.production_summary)+renderVisualActivity(state.activity?.visual)+(state.last_graph_update?.state==='rejected'?'<p class="flow-visual-warning" role="status">阶段记录已保存，工作图未更新。'+(state.last_graph_update.diagnostics||[]).map(d=>esc(d.message)).join('；')+'</p>':'');
   const grouped=state.flow_view==='stages';
   root.querySelector('.flow-toolbar').hidden=grouped;
   if(grouped){
@@ -307,7 +331,7 @@ export function mountProjectFlow(root,options={}){
 
   const focusId=canvas.contains(document.activeElement)?document.activeElement?.dataset.flowNode:null;
   lastWidth=viewport.clientWidth;
-  try{graph=layoutGraph(compactQueries(projectGraph(state),queriesExpanded),Math.max(240,lastWidth-12));}
+  try{graph=layoutGraph(compactQueries(currentRound(projectGraph(state),historyExpanded).nodes,queriesExpanded),Math.max(240,lastWidth-12));}
   catch(e){canvas.innerHTML='';space.style.height='0';detail.textContent=e.message;graph=null;return;}
   canvas.style.position='';
   canvas.style.width=graph.width+'px';canvas.style.height=graph.height+'px';
@@ -319,6 +343,7 @@ export function mountProjectFlow(root,options={}){
   if(focusId)[...canvas.querySelectorAll('[data-flow-node]')].find(el=>el.dataset.flowNode===focusId)?.focus({preventScroll:true});
  }
  root.addEventListener('click',event=>{
+  const history=event.target.closest('[data-flow-history]');if(history){historyExpanded=!historyExpanded;history.textContent=historyExpanded?'折叠历史轮次':'展开历史轮次';paint();return;}
   const queries=event.target.closest('[data-flow-queries]');if(queries){queriesExpanded=!queriesExpanded;queries.textContent=queriesExpanded?'折叠查询记录':'展开查询记录';paint();return;}
   const destination=event.target.closest('[data-flow-action]')?.dataset.flowAction;
   if(destination){options.onAction?.(destination,graph?.nodes.find(n=>n.id===selected));return;}
@@ -328,5 +353,5 @@ export function mountProjectFlow(root,options={}){
   resize();
  });
  const observer=new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>{if(disposed)return;if(Math.abs(viewport.clientWidth-lastWidth)>2)paint();else resize();});});observer.observe(viewport);
- return {update(next){state=next;const signature=JSON.stringify([projectGraph(next),next.activity?.visual]);if(signature!==last){last=signature;paint();}},dispose(){disposed=true;observer.disconnect();cancelAnimationFrame(resizeFrame);}};
+ return {update(next){state=next;const signature=JSON.stringify([projectGraph(next),next.activity?.visual,next.last_graph_update,next.production_summary]);if(signature!==last){last=signature;paint();}},dispose(){disposed=true;observer.disconnect();cancelAnimationFrame(resizeFrame);}};
 }

@@ -18,7 +18,12 @@ from common import sha256, write_json
 CONTRACTS = {
     'gradient.stop': {'required':['op','slide','name','index','property','expected','value'], 'kind':'gradient'},
     'gradient.angle': {'required':['op','slide','name','expected','value'], 'kind':'gradient'},
-    'text.set': {'required': ['op', 'slide', 'name', 'text'], 'kind': 'text'},
+    'text.set': {'required': ['op', 'slide', 'name', 'text'], 'optional':['font_size_pt'], 'kind': 'text'},
+    'picture.transform': {'required':['op','slide','name','units','expected','value','aspect_ratio'], 'kind':'picture',
+        'units':'slide_points; one unrotated/unflipped group supported; nonuniform group scales require zero picture rotation'},
+    'picture.replace': {'required':['op','slide','name','image','image_sha256','expected_sha256','crop_policy','fit_policy'],
+        'kind':'picture', 'method':'package relationship replacement followed by Office save/reopen',
+        'limits':'PNG/JPEG source-directory-relative images only; fit_policy stretch is explicit'},
     'shape.fill': {'required': ['op', 'slide', 'name', 'color'], 'kind': 'shape'},
     'table.cell': {'required': ['op', 'slide', 'name', 'row', 'column', 'text'], 'kind': 'table'},
     'picture.crop': {'required': ['op', 'slide', 'name', 'edge', 'points'], 'kind': 'picture',
@@ -33,7 +38,8 @@ def validate_operations(operations):
     for op in operations:
         if not isinstance(op, dict) or op.get('op') not in CONTRACTS:
             raise ValueError('Supported operations: '+', '.join(CONTRACTS))
-        if set(op) != set(CONTRACTS[op['op']]['required']):
+        required=set(CONTRACTS[op['op']]['required'])
+        if not required.issubset(op) or set(op)-required-set(CONTRACTS[op['op']].get('optional',[])):
             raise ValueError('Missing or irrelevant fields for '+op['op'])
         if type(op['slide']) is not int or op['slide'] < 1:
             raise ValueError('slide must be a positive 1-based integer')
@@ -46,6 +52,21 @@ def validate_operations(operations):
         for k in ('row', 'column'):
             if k in op and (type(op[k]) is not int or op[k] < 1):
                 raise ValueError(k+' must be a positive 1-based integer')
+        if 'font_size_pt' in op and (type(op['font_size_pt']) not in (int,float) or not math.isfinite(op['font_size_pt']) or not 0<op['font_size_pt']<=400):
+            raise ValueError('font_size_pt must be finite and in (0,400]')
+        if op['op']=='picture.transform':
+            if op['units']!='slide_points' or op['aspect_ratio'] not in {'preserve','free'}:raise ValueError('Explicit slide_points and aspect_ratio preserve/free required')
+            for field in ['expected','value']:
+                v=op[field]
+                if not isinstance(v,dict) or set(v)!={'left','top','width','height','rotation'}:raise ValueError('Picture geometry requires left/top/width/height/rotation')
+                if any(type(n) not in (int,float) or not math.isfinite(n) or abs(n)>100000 for n in v.values()):raise ValueError('Picture geometry must be finite bounded points')
+                if v['width']<=0 or v['height']<=0 or not 0<=v['rotation']<360:raise ValueError('Positive picture dimensions and rotation [0,360) required')
+            if op['aspect_ratio']=='preserve' and abs(op['expected']['width']/op['expected']['height']-op['value']['width']/op['value']['height'])>1e-6:raise ValueError('Picture transform violates preserved aspect ratio')
+        if op['op']=='picture.replace':
+            if not isinstance(op['image'],str) or not op['image'] or Path(op['image']).is_absolute() or Path(op['image']).drive or '..' in Path(op['image']).parts:raise ValueError('Replacement image must be source-directory relative')
+            for field in ['image_sha256','expected_sha256']:
+                if not isinstance(op[field],str) or not re.fullmatch('[0-9a-f]{64}',op[field]):raise ValueError('Replacement needs lowercase SHA-256')
+            if op['crop_policy'] not in {'preserve','reset'} or op['fit_policy']!='stretch':raise ValueError('crop_policy preserve/reset and explicit fit_policy stretch required')
         if op['op']=='picture.crop':
             if op['edge'] not in {'left','top','right','bottom'}:
                 raise ValueError('edge must be left/top/right/bottom')
@@ -68,6 +89,9 @@ def validate_operations(operations):
         if key in seen:
             raise ValueError('Duplicate sample edit target')
         seen.add(key)
+    kinds={op['op'] for op in operations}
+    if 'picture.crop' in kinds and kinds & {'picture.transform','picture.replace'}:
+        raise ValueError('Run picture.crop and picture transform/replace in separate calls with separate output copies')
     return operations
 
 
@@ -139,6 +163,7 @@ def apply_edit(shape, op):
                 stop.Position=float(op['value'])
     elif op['op'] == 'text.set':
         shape.TextFrame.TextRange.Text = op['text']
+        if 'font_size_pt' in op:shape.TextFrame.TextRange.Font.Size=float(op['font_size_pt'])
     elif op['op'] == 'shape.fill':
         shape.Fill.Solid()
         shape.Fill.ForeColor.RGB = rgb(op['color'])
@@ -182,26 +207,36 @@ def execute(source, outdir, operations, application_factory=None):
         from win32com.client import Dispatch
         application_factory = lambda: Dispatch('PowerPoint.Application')
     source_hash = sha256(source)
-    app = application_factory()
+    package_ops=[op for op in operations if op['op'] in {'picture.transform','picture.replace'}]
+    package_checks=[]
+    app = None
     outdir.mkdir(parents=True, exist_ok=False)
     copy = outdir/'edited-copy.pptx'
     receipt = {'format': 'ppt-edit-readback/1', 'status': 'failed', 'renderer': 'Microsoft PowerPoint',
                'source': str(source), 'source_sha256': source_hash, 'checks': [], 'renders': [],
                'scope': 'explicit sampled operations only; see checks for gradient properties', 'visual_status': 'not_run',
                'longer_text_layout': 'not_assessed', 'all_objects_tested': False}
+    receipt['process_policy'] = 'Close only this call-owned new copy; never Quit shared PowerPoint or close source/user decks'
     deck = None
     try:
-        shutil.copyfile(source, copy)
+        if package_ops:
+            from material_edit_review import edit_picture_package
+            package_checks=edit_picture_package(source,copy,package_ops)
+        else:
+            shutil.copyfile(source, copy)
+        app=application_factory()
         deck = app.Presentations.Open(str(copy), 0, 0, 0)
         # Resolve all edits and reject no-ops before modifying the copy.
         targets = []
         for op in operations:
+            if op in package_ops:continue
             shape = find_shape(deck.Slides.Item(op['slide']).Shapes, op['name'])
             before = read_value(shape, op)
             if op['op'].startswith('gradient.'):
                 prior=rgb(op['expected']) if op.get('property')=='color' else float(op['expected'])
                 if abs(before-prior)>0.0001: raise ValueError('Stale gradient expectation: '+op['name'])
-            if values_match(op,before):
+            size_change='font_size_pt' in op and abs(float(shape.TextFrame.TextRange.Font.Size)-op['font_size_pt'])>.05
+            if values_match(op,before) and not size_change:
                 raise ValueError('Sample must change the existing value: '+op['name'])
             targets.append((shape, op, before))
         for shape, op, before in targets:
@@ -216,7 +251,11 @@ def execute(source, outdir, operations, application_factory=None):
             receipt['checks'].append({'operation': op, 'kind': CONTRACTS[op['op']]['kind'],
                                       'before': before, 'expected': expected(op), 'actual': actual,
                                       'matches': values_match(op,actual)})
-            if op['op']=='text.set' and len(expected(op))>len(before):
+            if 'font_size_pt' in op:
+                size=float(shape.TextFrame.TextRange.Font.Size)
+                receipt['checks'][-1].update(actual_font_size_pt=size,font_size_matches=abs(size-op['font_size_pt'])<=.05)
+                receipt['checks'][-1]['matches'] &= receipt['checks'][-1]['font_size_matches']
+            if op['op']=='text.set' and (len(expected(op))>len(before) or 'font_size_pt' in op):
                 receipt['checks'][-1]['longer_text_layout']=text_layout(shape)
         layouts=[c['longer_text_layout']['status'] for c in receipt['checks'] if 'longer_text_layout' in c]
         if layouts:
@@ -235,6 +274,11 @@ def execute(source, outdir, operations, application_factory=None):
         deck = None
         if sha256(source) != source_hash:
             raise RuntimeError('Source changed; do not reuse this evidence')
+        if package_ops:
+            from material_edit_review import verify_picture_package_edits
+            verified=verify_picture_package_edits(source,copy,package_checks,operations,office_saved=True)
+            receipt['checks'].extend(verified['checks'])
+            receipt['picture_preservation']=verified['preservation']
         receipt.update(edited_file=copy.name, edited_sha256=sha256(copy))
         receipt['status'] = 'passed' if all(c['matches'] for c in receipt['checks']) else 'failed'
         receipt['content_readback_status']=receipt['status']
@@ -268,18 +312,41 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest='command', required=True)
     sub.add_parser('describe')
+    plan = sub.add_parser('plan')
+    plan.add_argument('--pptx', type=Path, required=True)
+    plan.add_argument('--outdir', type=Path, required=True)
+    plan.add_argument('--operations', type=Path)
+    plan.add_argument('--previous', type=Path)
+    plan.add_argument('--reuse-unchanged-slides', action='store_true')
     for command in ('validate', 'run'):
         c = sub.add_parser(command)
-        c.add_argument('--operations', type=Path, required=True)
+        group = c.add_mutually_exclusive_group(required=True)
+        group.add_argument('--operations', type=Path)
         if command == 'run':
-            c.add_argument('--pptx', type=Path, required=True)
+            group.add_argument('--plan', type=Path)
+            c.add_argument('--pptx', type=Path)
             c.add_argument('--outdir', type=Path, required=True)
     a = p.parse_args()
     try:
         if a.command == 'describe':
             result = {'operations': CONTRACTS, 'index_base': 1, 'additional_fields': False,
+                      'runner': {'plan': 'plan --pptx PPTX --outdir NEW_DIR [--operations JSON] [--previous edit-run.json] [--reuse-unchanged-slides]',
+                                 'run': 'run --plan edit-plan.json --outdir NEW_DIR',
+                                 'defaults': 'One text, shape fill, table cell and picture transform when available. Explicit operations override samples.',
+                                 'reuse': 'Exact candidate by default; opt-in unchanged-slide equivalence checks every shared package part. Old receipts retain original candidate binding; visual and formal delivery review remain required.'},
                       'limits': 'Sample only; chart edits and visual layout require separate checks.'}
+        elif a.command == 'plan':
+            from edit_runner import prepare
+            result = prepare(a.pptx, a.outdir, json.loads(a.operations.read_text(encoding='utf-8-sig')) if a.operations else None, a.previous,
+                             reuse_unchanged_slides=a.reuse_unchanged_slides)
+        elif a.command == 'run' and a.plan:
+            if a.pptx:
+                raise ValueError('--plan already binds the candidate; omit --pptx')
+            from edit_runner import run
+            result = run(a.plan, a.outdir)
         else:
+            if a.command == 'run' and not a.pptx:
+                raise ValueError('Legacy run --operations requires --pptx')
             ops = validate_operations(json.loads(a.operations.read_text(encoding='utf-8-sig')))
             result = {'status': 'validated', 'operations': ops} if a.command == 'validate' else execute(a.pptx, a.outdir, ops)
         print(json.dumps(result, ensure_ascii=False, indent=2))

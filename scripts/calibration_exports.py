@@ -60,6 +60,8 @@ def track(project, destination, pages):
 
 def cli_export(tool, args):
     """Read fixed registered flags only, never execute caller-provided code."""
+    if tool == 'office.edit-readback' and args[:1] != ['run']:
+        return None
     values = {}
     i = 0
     while i < len(args):
@@ -67,11 +69,16 @@ def cli_export(tool, args):
         flag, separator, inline = raw.partition(":")
         if raw.startswith("--"):
             flag, separator, inline = raw.partition("=")
-        if flag.lower() in {"-pptx", "--pptx", "-outputdir", "--outdir", "--operations"}:
+        if flag.lower() in {"-pptx", "--pptx", "-outputdir", "--outdir", "--operations", "--plan"}:
             values[flag.lower().lstrip("-")] = inline if separator else args[i+1]
             i += 1 if separator else 2
         else:
             i += 1
+    if tool == 'office.edit-readback' and 'plan' in values:
+        from edit_runner import load_plan
+        plan = load_plan(values['plan'], check_environment=False)
+        pages = {c['operation']['slide'] for c in plan['cases'] if not c['reuse']}
+        return (Path(values['outdir'])/'changed', len(pages)) if pages else None
     if tool not in {"office.render", "office.edit-readback"} or "pptx" not in values:
         return None
     from pptx import Presentation

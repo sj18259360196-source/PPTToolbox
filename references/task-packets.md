@@ -66,7 +66,7 @@ candidate提交真实PPTX文件。office_render提交真实收据路径，程序
 
 ## review_full与review_local
 
-新任务查看当前全页与关键局部的左右图和叠图，按 must_view_files 与 review_bundle.required_view_files 覆盖实际必看文件。继续核对生成标题、插画内字及照片裁切在页面中的实际效果；逐字核对记录按前述 source_review 契约提交。
+新任务查看全页与关键局部左右图，叠图按 overlay_check、must_view_files 与 review_bundle.required_view_files 执行；optional_view_files 可按定位需要查看。继续核对生成标题、插画内字及照片裁切在页面中的实际效果；逐字核对记录按前述 source_review 契约提交。
 
 全页检查分别填写visual_full、raster_scope、text_geometry，避免一个总体通过掩盖其中未执行项。实际图像路径必须出现在viewed_files。局部任务需要填写该区域的观察，若涉及关系，逐个填写relationships中的object_id及note。没有适用局部或连接时由程序推导不适用，模型不能用不适用跳过已声明对象。
 

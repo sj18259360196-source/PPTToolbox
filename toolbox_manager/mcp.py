@@ -3,11 +3,13 @@ from __future__ import annotations
 import contextlib,copy,json,sys,os
 from .service import Manager
 from . import VERSION
-from scripts.project_flow import PATCH_SCHEMA as FLOW_SCHEMA
+from scripts.project_flow import FLOW_TRANSPORT_SCHEMA as FLOW_SCHEMA, PATCH_SCHEMA
 
 def schema(p=None,required=()):return {'type':'object','properties':p or {},'required':list(required),'additionalProperties':False}
 S={'type':'string'}
 TOOLS=[
+ ('toolbox_update_work_graph','Repair only display graph metadata. Read toolbox_project_activity for the current sequence. Never advances a production stage or replays a PPT task.',
+  schema({'project':S,'sequence':{'type':'integer','minimum':0},'flow':PATCH_SCHEMA},['project','sequence','flow'])),
  ('toolbox_production_settings','Read saved production preferences, workflow-applied values and pending formal revision scope. This read-only tool never changes owner settings or permissions.',schema({'project':S})),
  ('toolbox_project_activity','Read registered project work chain, current stage revision, observed calls and stage recommendations. Read before a checkpoint retry after a version conflict.',schema({'project':S},['project'])),
  ('toolbox_checkpoint','Register an explicit major-stage declaration. Begin intake, transition through plan/production/revision/delivery, then finish with delivery files. Ordinary tool calls need no progress report. Reuse checkpoint_id for retries. used_experiences records actual adoption only. Optional flow contains node patches (id, title for new nodes, after predecessor IDs, status); software lays out the graph. No per-tool reporting.',
@@ -17,7 +19,7 @@ TOOLS=[
     'artifact_refs':{'type':'array','items':S,'maxItems':30},'blocker':{'type':['string','null']},
     'used_experiences':{'type':'array','items':S,'maxItems':20},'declared_at':S,'flow':FLOW_SCHEMA},
     ['project','checkpoint_id','run_id','expected_revision','event','result_summary'])),
- ('toolbox_project_inspect','Read identity, current-task contract, required views, scene preflight, call metrics (calls), edit limits (edits), or revision impact advice (impact). Impact compares before_scene/scene or the latest frozen runs. Never changes tasks or approves viewing.',schema({'project':S,'action':{'enum':['identity','views','scene','contract','calls','edits','impact']},'scene':S,'before_scene':S,'changed_assets':{'type':'array','maxItems':100,'items':S},'scan_crops':{'type':'boolean'},'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':20},'changes':{'type':'array','maxItems':100,'items':schema({'object_id':S,'set':{'type':'object'}},['object_id','set'])}},['project'])),
+ ('toolbox_project_inspect','Read identity, current-task contract, a pinned submission draft (submission), required views, scene preflight, call metrics (calls), complete historical response facts by call_id (response), edit limits (edits), or revision impact advice (impact). Never changes tasks or approves viewing. Submission drafts include blocked batch entries; author each observation or omit unfinished entries.',schema({'project':S,'action':{'enum':['identity','views','scene','contract','submission','calls','edits','impact','layout','response']},'call_id':S,'scene':S,'before_scene':S,'changed_assets':{'type':'array','maxItems':100,'items':S},'scan_crops':{'type':'boolean'},'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':20},'changes':{'type':'array','maxItems':100,'items':schema({'object_id':S,'set':{'type':'object'}},['object_id','set'])}},['project'])),
  ('toolbox_material_policy','读取全局或当前项目的素材持久授权。允许范围内无需重复询问；宿主能力和当前用户限制仍适用。',schema({'project':S})),
  ('toolbox_call_status','读取当前 MCP 连接正在处理的调用和耗时；不重试、不终止写入。',schema()),
  ('toolbox_runtime_check','检查指定 Python 工具的正式受管启动入口，只执行 --help，保留调用日志，不制作 PPT。',
@@ -85,6 +87,9 @@ class MCP:
         ]
     def call(self,name,args,rpc_id=None):
         m=self.manager
+        if name=='toolbox_update_work_graph':
+            from .project_hub import update_work_graph
+            return update_work_graph(m,args)
         if name=='toolbox_checkpoint':
             from .project_hub import checkpoint
             return checkpoint(m,args)
@@ -126,7 +131,8 @@ class MCP:
                 if name=='rebuild_start' and not self.current_project['initialized']:
                     from pathlib import Path
                     args={**args,'in_place':Path(args['project']).is_dir()}
-            result=m.execute_workflow(name[len('rebuild_'):],args,source='mcp',rpc_id=rpc_id)
+            from .submission import defaults
+            result=m.execute_workflow(name[len('rebuild_'):],defaults(name[len('rebuild_'):],args),source='mcp',rpc_id=rpc_id)
             if self.current_project is not None:
                 self.current_project=refresh(m,self.current_project)
                 result['project_context']=self.current_project
@@ -164,7 +170,7 @@ class MCP:
             phase = stage_context(m,self.current_project['project_root']) if self.current_project else None
             project = (self.current_project or {}).get('project_root')
             read_state = not project or can_read(m,project)
-            return {**m.context(profile=args.get('profile','full')),'project_context':self.current_project,
+            return {**m.context(profile=args.get('profile','production')),'project_context':self.current_project,
                     'stage_context':phase,
                     'connection_diagnostics':connection_diagnostics(m,self.current_project,initialized=self.ready,
                         client=self.client_info,active_call=self.active_call),
@@ -219,7 +225,7 @@ class MCP:
         if rid is None:return None
         if not self.ready:return err(-32002,'Initialize first')
         if method=='ping':return ok({})
-        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_fit_gradient','graphics_analyze','graphics_material_recipe','graphics_audit_sources','graphics_scene_preflight','graphics_select_versions'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
+        if method=='tools/list':return ok({'tools':[{'name':n,'description':d,'inputSchema':s,'annotations':{'readOnlyHint':n not in {'toolbox_checkpoint','toolbox_update_work_graph','toolbox_verify_connection','toolbox_retrospective','toolbox_usage'} and (not n.startswith(('rebuild_','icons_','graphics_')) or n in {'icons_search','icons_inspect','icons_stats','icons_providers','icons_fragment','graphics_inspect','graphics_validate','graphics_preview','graphics_preview_status','graphics_fit_gradient','graphics_analyze','graphics_material_recipe','graphics_audit_sources','graphics_scene_preflight','graphics_select_versions'}) or n in {'rebuild_status','rebuild_validate_response','rebuild_calibrate_report','rebuild_route_report'},'destructiveHint':n in {'rebuild_submit','rebuild_revise','rebuild_adopt'},'openWorldHint':False}} for n,d,s in self.specs()]})
         if method=='tools/call':
             try:
                 params=req.get('params',{});name=params['name'];args=params.get('arguments',{})
@@ -244,8 +250,8 @@ class MCP:
                 response={'content':[{'type':'text','text':json.dumps(r,ensure_ascii=False,allow_nan=False)}]}
                 if isinstance(r,dict):
                     response['structuredContent']=r
-                    response['isError']=(r.get('command_status') in {'failed','tool_failed','invalid_arguments','permission_denied','outcome_unknown'}
-                                         or (r.get('recovery') or {}).get('outcome')=='accepted_next_failed')
+                    from .submission import exit_code
+                    response['isError']=bool(exit_code(r))
                 return ok(response)
             except Exception as e:return ok({'isError':True,'content':[{'type':'text','text':str(e)}]})
         return err(-32601,'Method not found')
@@ -291,6 +297,7 @@ def run(data_dir):
             if line is None:
                 closing=True
                 continue
+            req=None
             try:
                 from .payload_transport import oversized_rpc
                 rejected = oversized_rpc(line)
@@ -320,7 +327,9 @@ def run(data_dir):
                     emit(rejected)
                     continue
                 req=json.loads(line)
-                if not isinstance(req,dict):raise ValueError('Request must be object')
+                if not isinstance(req,dict):
+                    emit({'jsonrpc':'2.0','id':None,'error':{'code':-32600,'message':'Request must be object'}})
+                    continue
                 if active is not None and req.get('method')=='tools/call':
                     if req.get('params',{}).get('name')=='toolbox_call_status':
                         value=m.call('toolbox_call_status',{})
@@ -334,6 +343,17 @@ def run(data_dir):
                     m.active_call={'tool':req.get('params',{}).get('name'),'started':time.monotonic()}
                     active=threading.Thread(target=handle,args=(req,),daemon=True);active.start();r=None
                 else:r=m.handle(req)
-            except Exception:r={'jsonrpc':'2.0','id':None,'error':{'code':-32700,'message':'Parse error'}}
+            except json.JSONDecodeError:
+                r={'jsonrpc':'2.0','id':None,'error':{'code':-32700,'message':'Parse error'}}
+            except Exception as exc:
+                r={'jsonrpc':'2.0','id':req.get('id') if isinstance(req,dict) else None,
+                   'error':{'code':-32603,'message':'Internal MCP error; inspect logs',
+                            'data':{'error_type':type(exc).__name__}}}
+                try:
+                    m.manager.store.event('mcp.error','Internal MCP request failure',source='mcp',status='error',
+                        details={'method':req.get('method') if isinstance(req,dict) else None,
+                                 'error_type':type(exc).__name__,'message':str(exc)})
+                except Exception:
+                    pass  # Logging failure must not suppress the correlated protocol error.
             if r is not None:emit(r)
     finally:m.activity.close()

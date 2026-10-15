@@ -218,6 +218,12 @@ def checkpoint(root, body):
                'artifact_refs', 'next_action', 'blocker', 'used_experiences', 'declared_at', 'flow'}
     if not isinstance(body, dict) or set(body) - allowed:
         raise ValueError('存在未知打卡字段')
+    if 'flow' in body:
+        if __package__:
+            from .project_flow import validate_transport
+        else:
+            from project_flow import validate_transport
+        validate_transport(body['flow'])
     for name in ['checkpoint_id', 'run_id', 'event', 'result_summary']:
         if not isinstance(body.get(name), str) or not body[name].strip() or len(body[name]) > (1500 if name == 'result_summary' else 128):
             raise ValueError('打卡缺少有效字段 ' + name)
@@ -280,10 +286,19 @@ def checkpoint(root, body):
         changes = {'phase': phase, 'phase_revision': revision, 'checkpoints': state['checkpoints'] + [record]}
         if 'flow' in body:
             if __package__:
-                from .project_flow import merge
+                from .project_flow import merge, GraphValidationError
             else:
-                from project_flow import merge
-            changes['work_graph'] = merge(state.get('work_graph'), body['flow'], source='agent', at=record['received_at'])
+                from project_flow import merge, GraphValidationError
+            try:
+                changes['work_graph'] = merge(state.get('work_graph'), body['flow'], source='agent', at=record['received_at'])
+                graph_result = {'state':'applied','diagnostics':[]}
+            except GraphValidationError as exc:
+                graph_result = {'state':'rejected','diagnostics':exc.diagnostics,
+                                'next_action':'Repair the display graph separately with the current sequence; do not replay production.'}
+        else:
+            graph_result = {'state':'not_requested','diagnostics':[]}
+        record['graph_update'] = graph_result
+        changes['last_graph_update'] = graph_result
         _commit(root, state, changes, 'checkpoint.' + event, 'agent', record, body['checkpoint_id'])
         return {**record, 'recorded': True, 'tool_execution': 'separate_observation', 'summary': 'queued'}
 
@@ -299,7 +314,8 @@ def update_graph(root, patches, expected_sequence, source='pptagent'):
         if not state or type(expected_sequence) is not int or state.get('sequence') != expected_sequence:
             raise ValueError('项目记录已变化，请重新读取后更新工作图')
         graph = merge(state.get('work_graph'), patches, source=source, at=now())
-        return _commit(root, state, {'work_graph': graph}, 'project.work_graph', source,
+        return _commit(root, state, {'work_graph': graph,
+                       'last_graph_update':{'state':'applied','diagnostics':[]}}, 'project.work_graph', source,
                        {'updated_nodes': [p['id'] for p in patches]})
 
 

@@ -3,6 +3,35 @@ from __future__ import annotations
 
 import copy
 import re
+import json
+
+MAX_GRAPH_NODES = 256
+FLOW_TRANSPORT_SCHEMA = {'type':'array','minItems':1,'maxItems':64,
+                         'items':{'type':'object','maxProperties':32}}
+
+
+class GraphValidationError(ValueError):
+    """A bounded submitted graph is invalid; project state failures are separate."""
+    def __init__(self, message, diagnostics=None):
+        super().__init__(message)
+        self.diagnostics = diagnostics or [{'code':'invalid_work_graph','message':message}]
+
+
+def validate_transport(patches):
+    from jsonschema import Draft202012Validator
+    if list(Draft202012Validator(FLOW_TRANSPORT_SCHEMA).iter_errors(patches)):
+        raise ValueError('工作图提交须为最多 64 项的对象数组')
+    def bounded(value, depth=0):
+        if depth > 8:
+            raise ValueError('工作图字段嵌套过深')
+        if isinstance(value, (dict, list)):
+            if len(value) > 64:
+                raise ValueError('工作图字段条目过多')
+            for item in (value.values() if isinstance(value, dict) else value):
+                bounded(item, depth+1)
+    bounded(patches)
+    if len(json.dumps(patches,ensure_ascii=False,allow_nan=False).encode('utf-8')) > 65536:
+        raise ValueError('工作图单次提交超过 64 KiB')
 
 STATUSES = ('planned', 'running', 'done', 'observed', 'blocked', 'paused', 'skipped', 'replaced', 'failed', 'outcome_unknown')
 STAGES = ('intake', 'plan', 'production', 'revision', 'delivery')
@@ -81,18 +110,20 @@ def merge(previous, patches, *, source, at):
     from jsonschema import Draft202012Validator
     errors = list(Draft202012Validator(PATCH_SCHEMA).iter_errors(patches))
     if errors:
-        raise ValueError('工作图字段无效，请提供步骤编号及变更内容')
+        rows = [{'code':'invalid_work_graph','path':'/flow/'+ '/'.join(str(p) for p in e.absolute_path),
+                 'constraint':e.validator,'message':e.message[:500]} for e in errors[:20]]
+        raise GraphValidationError('工作图字段无效，请提供步骤编号及变更内容', rows)
     identifiers = [p['id'] for p in patches]
     if len(set(identifiers)) != len(identifiers):
-        raise ValueError('同一次更新不能重复提交步骤编号')
+        raise GraphValidationError('同一次更新不能重复提交步骤编号')
     nodes = {n['id']: copy.deepcopy(n) for n in (previous or {}).get('nodes', [])}
     for patch in patches:
         identifier = patch['id']
         template = next((t for t in STEP_TYPES if t['id']==patch.get('kind')), {})
         if identifier not in nodes and not patch.get('title', '').strip() and not template:
-            raise ValueError('新增步骤需要 title')
+            raise GraphValidationError('新增步骤需要 title')
         if 'title' in patch and not patch['title'].strip():
-            raise ValueError('步骤名称不能为空')
+            raise GraphValidationError('步骤名称不能为空')
         node = nodes.get(identifier, {'id': identifier, 'status': 'planned', 'after': []})
         if template:
             node.setdefault('title', template['title'])
@@ -102,24 +133,24 @@ def merge(previous, patches, *, source, at):
         node.update(copy.deepcopy(patch))
         node.update(source=source, updated_at=at)
         nodes[identifier] = node
-    if len(nodes) > 64:
-        raise ValueError('每个项目的工作图最多保留 64 个步骤')
+    if len(nodes) > MAX_GRAPH_NODES:
+        raise GraphValidationError(f'每个项目的工作图最多保留 {MAX_GRAPH_NODES} 个步骤')
     # Check the complete merged graph, including references from untouched nodes.
     for node in nodes.values():
         if node['id'] in node['after'] or any(p not in nodes for p in node['after']):
-            raise ValueError('前置步骤不存在或连接到了自身')
+            raise GraphValidationError('前置步骤不存在或连接到了自身')
         parents = [link['from'] for link in node.get('links', [])]
         if len(parents)!=len(set(parents)) or any(p not in node['after'] for p in parents):
-            raise ValueError('连线说明必须唯一且对应 after 中的前置步骤')
+            raise GraphValidationError('连线说明必须唯一且对应 after 中的前置步骤')
         if node.get('join_policy') in {'all','any'} and (len(node['after'])<2 or
                 any(link.get('relation')!='merge' for link in node.get('links',[])) or len(parents)!=len(node['after'])):
-            raise ValueError('汇合条件需要至少两个明确标为 merge 的前置分支')
+            raise GraphValidationError('汇合条件需要至少两个明确标为 merge 的前置分支')
     pending = {identifier: set(node['after']) for identifier, node in nodes.items()}
     visited = set()
     while pending:
         ready = [identifier for identifier, parents in pending.items() if parents <= visited]
         if not ready:
-            raise ValueError('工作图存在循环；返工请新增步骤并保留旧路径')
+            raise GraphValidationError('工作图存在循环；返工请新增步骤并保留旧路径')
         for identifier in ready:
             visited.add(identifier)
             pending.pop(identifier)

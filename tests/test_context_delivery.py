@@ -14,6 +14,17 @@ from toolbox_manager.validation_errors import ContractError
 from common import sha256, read_json
 
 
+def test_reviewed_bootstrap_matches_packaged_documents():
+    from test_managed_rebuild import ROOT
+    from toolbox_manager.storage import digest
+    manifest=read_json(ROOT/'assets/context-bootstrap.json')
+    assert manifest['format']=='ppt-context-bootstrap/1'
+    for relative,expected in manifest['sources'].items():
+        # Match Manager.document's text digest, including BOM/newline normalization.
+        actual=digest((ROOT/relative).read_text(encoding='utf-8-sig'))
+        assert actual==expected, 'Reviewed bootstrap digest needs explicit review after bundled document changes: '+relative
+
+
 def test_production_preserves_all_policy_and_skill_fields(runtime):
     m, _, _ = runtime
     full=m.context(); compact=m.context(profile='production')

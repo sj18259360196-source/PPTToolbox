@@ -47,8 +47,11 @@ def test_checkpoint_flow_is_atomic_and_idempotent(project):
     assert state['work_graph']['nodes'][0]['title']=='制作计划'
     assert journal.checkpoint(root,body)['duplicate'] is True
     assert journal.load(root)['sequence']==state['sequence']
-    with pytest.raises(ValueError):check(root,event='transition',stage='plan',flow=[{'id':'plan','after':['compose']}])
-    assert journal.load(root)['phase_revision']==state['phase_revision']
+    _,receipt=check(root,event='transition',stage='plan',flow=[{'id':'plan','after':['compose']}])
+    assert receipt['graph_update']['state']=='rejected'
+    after=journal.load(root)
+    assert after['phase_revision']==state['phase_revision']+1
+    assert after['work_graph']==state['work_graph']
 
 
 def test_resident_graph_updates_only_selected_project_display(project):

@@ -135,7 +135,11 @@ def prepare_generation(project:Path,outdir:Path):
                 'generation_decision':request.get('generation_decision'),
                 'host_call':{'required':'Actual available image-generation/edit tool','model':None,'tool_schema':'Discover through host; never assume a model or API payload'},
                 'instructions':'View and pass the reference crop to the real authorized host image tool, then save the actual returned PNG. Keep page text and external labels/connectors separate. Preserve only the current material title/embedded text allowed by its text_contract; do not erase photo text or invent unreadable characters. Then run generation-ingest. Model identity comes from the real tool. No new external upload permission is implied.',
-                'visual_review_status':'not_run'}
+                'visual_review_status':'not_run',
+                'recommended_material_directory':str(project.resolve()/'assets/generated'/packet['task_id']),
+                'input_protection':{'reference_files':'immutable; never overwrite these paths',
+                    'candidate_policy':'save each host result under a new filename in the recommended directory',
+                    'adoption':'submit the actual candidate through the current task; never edit tracked_inputs'}}
         if batch_items:
             result['format']='ppt-generation-handoff/1.4'
             result['items']=batch_items

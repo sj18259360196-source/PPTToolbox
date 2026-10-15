@@ -401,3 +401,22 @@ def test_provider_change_does_not_send_key_to_previous_endpoint(project,monkeypa
     monkeypatch.setattr(pptagent,'build_opener',lambda *args:pytest.fail('Stale request must not reach network'))
     with pytest.raises(ValueError,match='设置已变化'):
         pptagent.request_summary(manager,old,{'evidence_ids':[],'recommendations':[]})
+
+
+def test_r4_saved_checkpoint_survives_recommendation_failure_and_duplicate(project, monkeypatch):
+    manager,root,key=project
+    manager.authorize_project(root,[])
+    state=journal.load(root)
+    body={'project':key,'checkpoint_id':'r4-save','run_id':state['run_id'],'expected_revision':0,
+          'event':'begin','stage':'intake','result_summary':'Synthetic checkpoint','next_action':'Inspect'}
+    def fail(*args):raise OSError('controlled recommendation failure')
+    monkeypatch.setattr(hub,'recommendations',fail)
+    result=hub.checkpoint(manager,body)
+    assert result['recorded'] and not result['duplicate'] and result['warnings']
+    assert (result['stage_revision_before'],result['stage_revision_after']) == (0,1)
+    duplicate=hub.checkpoint(manager,body)
+    assert duplicate['recorded'] and duplicate['duplicate']
+    assert (duplicate['stage_revision_before'],duplicate['stage_revision_after']) == (1,1)
+    assert len(journal.load(root)['checkpoints']) == 1
+    with pytest.raises(ValueError,match='不同内容'):
+        hub.checkpoint(manager,{**body,'result_summary':'changed'})

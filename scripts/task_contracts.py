@@ -20,6 +20,12 @@ def constraints(kind, context):
             'observations': 'Name the affected text/object/region and actual difference. Unresolved visible defects require needs_changes.',
             'identity': 'Keep task_id, token and base_revision from this task. Do not replay an accepted submission.',
         }
+        if kind in {'review_full','review_local','preview_full','preview_local'}:
+            from layered_review import REFINEMENT_SCHEMA
+            result['overlay_check'] = context.get('overlay_check')
+            result['refinement_issues_schema'] = REFINEMENT_SCHEMA
+            result['refinement_rule'] = context.get('refinement_rule')
+            result['refinement_history'] = context.get('refinement_history',{})
         if context.get('production_settings'):
             from workflow_production import REVIEW_SCHEMA, review_required
             result['production_settings'] = context['production_settings']
@@ -50,6 +56,10 @@ def constraints(kind, context):
                 'scope': 'These are explicit spot checks, not proof of complete source coverage. Inspect the original independently; do not copy candidate text as evidence. Tables remain part of the source review.',
             }
         if kind == 'editable_behavior':
+            from edit_evidence import SCHEMA, REF
+            result['evidence_index_schema']=SCHEMA
+            result['evidence_index_reference_schema']=REF
+            result['evidence_index_rule']='Optional hash-bound project-relative edit-evidence-index/1 reference. Register every current-case check and historical failure. Only an actual receipt check with matching target/action and verified input/output/render hashes may supersede that same check. Derived inputs require a receipt-linked chain from the candidate. Content readback and longer-text layout are separate checks; visual review remains separate.'
             result['required_action_kinds'] = context.get('required_edit_actions', [])
             result['additional_checks'] = [
                 'Move intended groups together and reopen the copy.',
@@ -62,7 +72,8 @@ def constraints(kind, context):
     if kind == 'page_plan':
         from element_scope import SCOPE
         from material_quality import CONTRACT, REQUIREMENT
-        return {'element_scope_schema': SCOPE,
+        return {'overlay_region_contract': 'Set overlay_review=true and a concrete overlay_reason for precise placement or owner-required high precision; this also requires local review. Do not mark all artwork precise by default.',
+                'element_scope_schema': SCOPE,
                 'production_settings':context.get('production_settings'),
                 'production_instructions':context.get('production_settings_instructions',[]),
                 'preserved_regions':context.get('settings_preserved_regions',[]),
@@ -163,7 +174,15 @@ def constraints(kind, context):
 
 def examples(kind, context):
     if kind != 'region_objects':
-        return {}
+        if kind not in {'page_plan','source_review','asset_material','review_full','editable_behavior'}:
+            return {}
+        return {'instructions':'使用当前 response.template.json 的字段结构。这里列出的编号来自当前任务；原文、观察、来源和验收结论须实际核对后填写。',
+                'constraints':constraints(kind,context),
+                'current_ids':{
+                    'text_object_ids':[o['id'] for o in context.get('text_and_tables',[]) if o['kind']=='text'],
+                    'scope_unit_ids':[u['id'] for u in (context.get('element_scope') or {}).get('units',[])],
+                    'sheet_item_ids':[i['id'] for i in context.get('request',{}).get('items',[])],
+                    'required_edit_actions':context.get('required_edit_actions',[])}}
     available = context.get('available_assets', [])
     actual = available[-1]['asset'] if available else '<先asset-add取得真实asset路径>'
     w, h = context['local_size']

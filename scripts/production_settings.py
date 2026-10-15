@@ -5,6 +5,10 @@ import hashlib
 import json
 
 DEFINITIONS = [
+    {'key': 'overlay_checking', 'label': '叠图检查', 'default': 'standard', 'control': 'switch',
+     'description': '每页首次全页校验查看叠图。之后用于精确定位、指定区域和大幅布局变化。频繁检查会增加审查工作，具体元素的精度要求保持独立。',
+     'options': [{'value': 'standard', 'label': '标准检查', 'description': '首次全页必查，之后按需使用。'},
+                 {'value': 'frequent', 'label': '频繁叠图检查', 'description': '每个新版本的全页和必查局部都查看叠图，未变化的有效观察可复用。'}]},
     {'key': 'illustration_mode', 'label': '插画制作', 'default': 'generate_first',
      'description': '简单图标继续使用原生对象。复杂插画按所选方式制作，具体对象要求优先。',
      'options': [{'value': 'generate_first', 'label': '图片生成优先', 'description': '复杂插画优先生成独立高清素材，需要透明时保留真实透明底。'},
@@ -28,7 +32,8 @@ def defaults():
 def validate_values(values, partial=False):
     if not isinstance(values, dict) or values.keys() - DEFAULTS.keys():
         raise ValueError('Unknown production setting fields')
-    if not partial and values.keys() != DEFAULTS.keys():
+    # Read historical three-field snapshots without changing their evidence hash.
+    if not partial and values.keys() not in (DEFAULTS.keys(), DEFAULTS.keys() - {'overlay_checking'}):
         raise ValueError('All production setting fields are required')
     for row in DEFINITIONS:
         if row['key'] in values and values[row['key']] not in [item['value'] for item in row['options']]:
@@ -49,7 +54,11 @@ def instructions(values):
     text = ('同一语义段落优先放入同一原生文本框，以 paragraphs 和 runs 表达局部样式。截图自然换行不自动拆框。'
             if values['text_layout'] == 'paragraph' else
             '按参考行位组织原生文本框，并按语义段落分组。检查各行和整体移动后的溢出与对齐。')
-    return [illustration, '简单线性、粗线条和少量规则形状组成的图标始终原生绘制，页面背景与主体分开。具体对象的最新明确要求优先。', font, text,
+    overlay = ('每个新版本的全页和必查局部查看叠图，未变化的有效观察可复用。'
+               if values.get('overlay_checking') == 'frequent' else
+               '每页首次正式全页校验查看叠图，检查移位、比例和大幅偏差。之后按需用于精确定位、指定高要求区域和大幅布局变化。')
+    return [illustration, '简单线性、粗线条和少量规则形状组成的图标始终原生绘制，页面背景与主体分开。具体对象的最新明确要求优先。', font, text, overlay,
+            '叠图重影须回到左右图确认具体缺陷。截图噪声、抗锯齿和要求允许的生成纹理差异不单独触发返修。每次返修说明对象、问题与预期改善；同一问题连续两轮无改善时选择换方法、接受允许差异或保留未解决状态，没有新缺陷就停止追加检查。',
             '独立标题、标注与可单独移动的项目保留独立对象。禁止跨栏、跨卡片、跨语义区域合并，表格图表保留结构。',
             '制作偏好不授予素材服务、上传、付费或文件权限。保留原件与身份准确要求继续按具体对象执行。']
 

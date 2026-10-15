@@ -72,7 +72,14 @@ def load(root:Path):
     s=read_json(root/'workflow/state.json')
     if s.get('format')!=FORMAT:raise WorkflowError('unsupported_state','Workflow format differs; do not edit its version field')
     for rel,h in s.get('tracked_inputs',{}).items():
-        if sha256(under(root,rel))!=h:raise WorkflowError('input_changed',f'Immutable input changed: {rel}','Restore the original, or start a new explicit input revision/project.')
+        actual = sha256(under(root,rel))
+        if actual != h:
+            exc = WorkflowError('input_changed',f'Immutable input changed: {rel}',
+                                'Restore the original, or start a new explicit input revision/project. Save generated candidates to a new path; never refresh the accepted hash.')
+            exc.diagnostics = [{'path':'/tracked_inputs/'+rel.replace('~','~0').replace('/','~1'),
+                'code':'input_changed','file':rel,'expected_sha256':h,'actual_sha256':actual,
+                'next_action':exc.hint}]
+            raise exc
     for record in s.get('accepted',[]):
         if sha256(under(root,record['file']))!=record['sha256']:raise WorkflowError('record_changed','Accepted task record changed: '+record['file'])
     run=s.get('run')
@@ -98,6 +105,11 @@ def load(root:Path):
 def save(root:Path, state:dict, event:str, detail=None):
     s=state;s['revision']+=1;s['updated_at']=now()
     s.setdefault('history',[]).append({'revision':s['revision'],'event':event,'detail':detail or {},'at':s['updated_at']})
+    if __package__:
+        from .artifact_registry import capture
+    else:
+        from artifact_registry import capture
+    capture(s, event, root)
     # The state contains its journal in the same atomic commit. Handoff is derived/cache only.
     write_json(root/'workflow/state.json',s)
     summary=brief(s)

@@ -1,5 +1,7 @@
 作为制作 Agent，使用本机 PPT Toolbox，根据我提供的参考图制作可编辑 PowerPoint，保留原文、数字、布局和语义关系。
 
+检查 checkpoint_receipt 的阶段与图结果。图被拒绝时旧图保留，阶段有效则继续制作；修图用 toolbox_update_work_graph 和项目当前 sequence，避免重放制作。复杂或已修正的响应可先调用 rebuild_validate_response。预检不认证看图、Office 或质量。宿主生成结果另存新文件，原始输入与已接受素材保持原哈希。提交已接受后出现 failed_stage 时，只检查当前状态及失败阶段，不再次提交同一响应。
+
 运行路径优先使用工具返回的预设节点，必要时每批补一到两个自定义节点。在已有阶段打卡的 flow 中批量登记决策条件、分支汇合和后续去向。用户反馈后新增修改范围、返修和复查节点，保留旧轮次。用 task_ids 绑定任务，result 写结果，next_action 写下一步，links 写关系与依据；推断和建议需显式标注。不为更新流程图增加看图、API 请求或重复制作。
 
 制作前及续作时查询 toolbox_production_settings，或读取当前任务 context.production_settings。按有效值、来源和版本执行 illustration_mode、font_matching 与 text_layout。新项目保存创建时的全局默认，已有项目继续使用本项目已生效设置。旧项目缺少设置时沿用原项目策略。具体对象最新要求优先，Agent 不自行改低要求。详见 references/production-settings.md。

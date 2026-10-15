@@ -19,7 +19,7 @@ def manager(tmp_path):
 
 
 def test_canonical_validation_hash_and_definitions_are_isolated():
-    assert pure.defaults() == {'illustration_mode': 'generate_first', 'font_matching': 'similar', 'text_layout': 'paragraph'}
+    assert pure.defaults() == {'illustration_mode': 'generate_first', 'font_matching': 'similar', 'text_layout': 'paragraph', 'overlay_checking':'standard'}
     assert pure.snapshot(pure.defaults())['effective_sha256'] == pure.snapshot(dict(reversed(list(pure.defaults().items()))))['effective_sha256']
     for values in ({}, {**pure.defaults(), 'font_matching': 'unknown'}, {**pure.defaults(), 'quality': 'low'}):
         with pytest.raises(ValueError):

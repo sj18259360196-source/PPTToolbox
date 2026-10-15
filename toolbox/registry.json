@@ -4,6 +4,16 @@
   "single_entry": "toolbox.py",
   "tools": [
     {
+      "id": "project.layout.audit",
+      "title": "检查项目目录与原始参考图",
+      "kind": "python",
+      "entry": "scripts/project_layout.py",
+      "inputs": "--project project_root",
+      "outputs": "目录合同、原图问题和当前场景显式依赖检查",
+      "manuals": ["references/project-layout.md"],
+      "limitations": "只读检查，不移动文件、不执行生成脚本、不代表视觉验收。"
+    },
+    {
       "id": "experience.search",
       "title": "按当前症状检索重建经验",
       "kind": "python",
@@ -66,13 +76,14 @@
       "title": "PowerPoint 副本编辑保存重开读回",
       "kind": "python",
       "entry": "scripts/office_edit.py",
-      "inputs": "describe | validate --operations JSON | run --operations JSON --pptx PPTX --outdir NEW_DIR",
-      "outputs": "新副本、文字/填充/表格/图片裁切的保存重开读回记录与抽查页渲染",
+      "inputs": "describe | validate --operations JSON | plan --pptx PPTX --outdir NEW_DIR [--operations JSON] [--previous edit-run.json] [--reuse-unchanged-slides] | run --plan edit-plan.json --outdir NEW_DIR | run --operations JSON --pptx PPTX --outdir NEW_DIR",
+      "outputs": "新副本、文字与字号/填充/表格/图片裁切及移动缩放替换的保存重开读回记录与抽查页渲染",
       "manuals": [
         "references/codex-assistance.md",
-        "references/measured-refinement.md"
+          "references/measured-refinement.md",
+          "references/edit-runner.md"
       ],
-      "limitations": "实际执行需要Windows PowerPoint。裁切用绝对点值、0.05pt容差；整组移动须分阶段另测。",
+      "limitations": "实际执行需要 Windows PowerPoint。图片变换使用幻灯片点坐标；替换限 PNG/JPEG，显式声明裁切策略与 stretch。单层无旋转翻转组可用，非等比组内的旋转图片变换不支持；裁切与变换/替换分次执行。读回不包含 GUI 手势验收。",
       "timeout_seconds": 240
     },
     {
@@ -1985,7 +1996,16 @@
     "scripts/text_calibration.py",
     "scripts/text_calibration_measure.ps1",
     "scripts/production_settings.py",
-    "scripts/workflow_production.py"
+    "scripts/workflow_production.py",
+    "scripts/edit_evidence.py",
+    "scripts/graphics_contracts.py",
+    "scripts/graphics_preview_worker.py",
+    "toolbox_manager/submission.py",
+    "scripts/edit_runner.py",
+    "scripts/edit_preparation.py",
+    "scripts/edit_reuse.py",
+    "scripts/artifact_registry.py",
+    "scripts/workflow_timing.py"
   ],
   "note": "Actual CLI, module, host and manual registry. Core v1.3.1 fixes shared regions, current-task contracts and separate preview review."
 }

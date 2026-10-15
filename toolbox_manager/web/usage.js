@@ -2,7 +2,7 @@ import {api} from './api.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const names={experience:'经验',tool:'工具',icon:'图标',skill:'组件技能'};
 const actions={retrieved:'检索返回',viewed:'查看',source_viewed:'原文查看',cited:'任务引用',call:'调用',rejected:'拦截',attempted:'尝试应用',extracted:'提取',placed:'加入项目素材',applied:'生成试用样件',delivered:'交付保留'};
-const outcomes={success:'成功',failed:'失败',unknown:'结果未知',waiting:'等待处理',blocked:'被拒绝',ok:'已记录'};
+const outcomes={success:'成功',failed:'失败',unknown:'结果未知',waiting:'等待处理',blocked:'被拒绝',ok:'已记录',timed_out:'超时',cancelled:'已取消',interrupted:'已中断'};
 const date=v=>v?new Date(v).toLocaleString('zh-CN',{hour12:false}):'暂无记录';
 let generation=0;
 export function stopUsage(){generation++;}

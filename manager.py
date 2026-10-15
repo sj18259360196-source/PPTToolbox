@@ -30,7 +30,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--version',action='version',version=VERSION);p.add_argument('--data-dir',type=Path,default=default_data())
     s=p.add_subparsers(dest='command');a=s.add_parser('serve');a.add_argument('--port',type=int,default=0);a.add_argument('--no-browser',action='store_true')
     for n in ['mcp','check','export-config']:s.add_parser(n)
-    a=s.add_parser('context');a.add_argument('--profile',choices=['full','production'],default='full')
+    a=s.add_parser('context');a.add_argument('--profile',choices=['full','production'],default='production')
+    a=s.add_parser('prepare-submit',help='Read-only current-task request draft; no automatic observations or approval')
+    a.add_argument('--project',required=True)
     a=s.add_parser('desktop',help='Windows background tray host; no execution permission changes')
     a.add_argument('--vendor',type=Path);a.add_argument('--show',action='store_true')
     a.add_argument('--smoke',action='store_true');a.add_argument('--agent-start',action='store_true')
@@ -61,6 +63,9 @@ def main():
     elif x.command=='authorize-project':out=m.authorize_project(x.project,x.input_root)
     elif x.command=='check':out={'manager':m.boot(),'environment':m.doctor()}
     elif x.command=='context':out=m.context(profile=x.profile)
+    elif x.command=='prepare-submit':
+        from toolbox_manager.project_inspection import inspect
+        out=inspect(m,{'project':x.project,'action':'submission'})
     elif x.command=='describe':out=m.tool(x.tool)
     elif x.command=='export-config':out=m.export_integration()
     elif x.command=='register-codex':
@@ -69,7 +74,8 @@ def main():
     else:
         out=m.execute(x.tool,x.args[1:] if x.args[:1]==['--'] else x.args)
     print(json.dumps(out,ensure_ascii=False,indent=2))
-    return (0 if out.get('command_status')=='action_required' else out.get('returncode',0)) if isinstance(out,dict) else 0
+    from toolbox_manager.submission import exit_code
+    return exit_code(out)
 if __name__=='__main__':
     if hasattr(sys.stdout,'reconfigure'):sys.stdout.reconfigure(encoding='utf-8',errors='replace')
     try:raise SystemExit(main())

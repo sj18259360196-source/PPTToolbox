@@ -5,6 +5,8 @@ description: 管理PPT工具箱的Skill、工具与指令、插件、设置、�
 
 # 工具箱管理
 
+制作前读取[项目目录合同](../../references/project-layout.md)。当前上下文的 directory_contract 和 references 分别提供目录用途与已登记原图。裁剪写入 assets/crops，生成素材写入 assets/generated；受管版本使用 runs，旧 build 不自动迁移。通过 toolbox_project_inspect action=layout 检查目录和显式依赖。page_plan.notes 简述素材来源、预期输出与验证方式，结束前检查本任务临时依赖。
+
 制作任务按返回的 view_strategy 选择看图范围，整页用于布局，原始像素局部用于制作和找错。相同 task_id 与图片哈希在当前上下文中已查看时继续工作，无需重复开图。提交使用 return_next=true；上下文变长时保存发现，从 HANDOFF、status、next 接续，仅补看当前必要图片。工具保留完全未变页面的有效原图核对记录，旧记录缺少内容绑定时需重新核对。Office、视觉和编辑验收仍按当前任务执行。详细约定见 ../../references/multipage-efficiency.md。
 
 软件提供后台窗口、项目列表、工作台和受管调用日志，PPT 分析、制作与验收由 Agent 配合工具完成。启动、目录和迁移以[当前软件说明](../../references/current-desktop.md)为准。
@@ -12,7 +14,7 @@ description: 管理PPT工具箱的Skill、工具与指令、插件、设置、�
 读取 `toolbox_production_settings` 或当前任务 `production_settings`，按实际值制作与续作。默认值、作用范围和过期任务见[制作设置](../../references/production-settings.md)。
 先看整页背景、分区和前后层次，再按同一组件计划选择路线。先读取当前 production_settings。图片生成优先按参考制作复杂插画、人物与装饰标题；可编辑绘制优先保留内部原生对象。简单线性、粗线条及少量规则部件构成的图标，两种模式都绘制为原生形状或路径。简单插画按模式和实际轮廓选路，已有合格独立素材可复用。照片按原件保留或参考生成要求处理，准确身份与明确保留约束继续有效。页面独立文字保持原生，素材自带文字随素材保留。装饰标题声明 asset_title 与准确可读原文，图片标题逐字核对准确原文，生成插画内嵌字查看实际产物，模糊字不猜写。内部编辑按项目绘制偏好及具体对象要求执行。
 
-生成决策使用 `content_category` 记录类别、编辑要求、参考和理由，无需先绘制或填写分数。多个独立小组件可用 `request.items` 合图生成，再按实际主体逐项裁切核对；`request_assets` 继续表示多个素材任务提交。失败项单独补做，完成结果先恢复文件和登记记录。完整字段见[素材规则](../../references/asset-policy.md)。查看全页与关键局部的左右图和叠图后再提交观察，旧项目已接受计划通过范围修订更新。
+生成决策使用 `content_category` 记录类别、编辑要求、参考和理由，无需先绘制或填写分数。多个独立小组件可用 `request.items` 合图生成，再按实际主体逐项裁切核对；`request_assets` 继续表示多个素材任务提交。失败项单独补做，完成结果先恢复文件和登记记录。完整字段见[素材规则](../../references/asset-policy.md)。查看全页与关键局部左右图，叠图按当前必看清单执行后提交观察，旧项目已接受计划通过范围修订更新。
 
 新建参考图项目按[插画要求与素材验收](../../references/material-quality.md)保存原始要求并填写素材资格。截图清楚不能直接声明已有独立素材。每项分别验收独立性、边缘与参考保真，开放缺陷不得通过。保留合法照片裁切、白色标签、内部箭头和渐隐；旧合同通过正式范围修订启用新检查。
 
@@ -45,7 +47,7 @@ start 的目标目录必须尚不存在。先保存图片时用工作目录下�
 
 结构化参数、错误/等待、超时恢复和日志边界见[受管执行](../../references/managed-execution.md)。发生 `outcome_unknown` 时先 `rebuild_status` 观察真实状态及日志，不重复执行先前的有副作用操作。任务 `token` 只留在受控任务记录和协议响应，不复制到公开日志。
 
-多页提交使用 `return_next=true`。`accepted_task` 表明提交已保存，后续失败按 `recovery` 处理，不重放。任务审查使用 passed、needs_changes、blocked。接入诊断、调用内校验和局部修改影响见[调用效率与恢复](../../references/workflow-efficiency.md)。
+受管 CLI 与 MCP 默认精简返回，提交默认 `return_next=true`，上下文默认 `profile=production`；显式 full 或 false 继续有效。`accepted_task` 表明提交已保存，后续失败按 `recovery` 处理，不重放。需要完整待填包时用 `toolbox_project_inspect(action="submission")` 或 CLI `prepare-submit`，只改 `request.result`，先预检再提交。预检失败和等待处理返回非零退出码或 `isError=true`，停止依赖步骤。任务审查使用 passed、needs_changes、blocked，每项独立填写实际观察。接入诊断、调用内校验和局部修改影响见[调用效率与恢复](../../references/workflow-efficiency.md)。
 
 第二阶段增加 `rebuild_probe/patch/compare/adopt`，沿用同一服务、policy、worker和日志。实际参数见[局部重建合同](../../references/local-rebuild.md)。对应CLI为workflow.probe/patch/compare/adopt，使用授权request JSON，不能传自由argv或COM属性。局部证据不自动继承为整页passed。当前实施与测试状态见 `docs/upgrade/phase-02/STATUS.json`。
 

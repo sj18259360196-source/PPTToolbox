@@ -1,5 +1,5 @@
 """Discoverable bounded contracts shared by manager and tests."""
-from graphics_recipe import obj,array,STYLE,ID
+from graphics_contracts import obj,array,STYLE,ID
 S={'type':'string','minLength':1}
 HASH={'type':'string','pattern':'^[a-f0-9]{64}$'}
 TIME={'type':'integer','minimum':5,'maximum':180}

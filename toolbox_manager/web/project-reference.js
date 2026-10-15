@@ -22,6 +22,7 @@ export function mountProjectReference(panel,project){
    }catch(error){fail(error);}
   };
   panel.querySelector('[data-enlarge]').onclick=()=>panel.querySelector('.chain-reference-image').click();
+  if(item.missing){panel.querySelector('[role=status]').textContent='参考原图缺失 · '+item.path;panel.querySelector('[data-enlarge]').disabled=true;return;}
   const blob=await image(item,true);if(!alive()||request!==serial)return;
   if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);panel.querySelector('.chain-reference-image img').src=url;
  }
@@ -30,10 +31,10 @@ export function mountProjectReference(panel,project){
   if(!alive()||busy)return;busy=true;
   try{
    const result=await api('project.gallery',undefined,{project});if(!alive())return;
-   const next=result.versions.filter(v=>v.kind==='参考图').flatMap(v=>v.pages),nextSignature=JSON.stringify(next);
+   const next=result.versions.filter(v=>v.kind==='参考图').flatMap(v=>v.pages),nextSignature=JSON.stringify([next,result.reference_issues]);
    if(signature===nextSignature)return;
    const previous=pages[page]?.path;pages=next;page=Math.max(0,pages.findIndex(p=>p.path===previous));
-   if(pages.length)await paint();else{serial++;if(url)URL.revokeObjectURL(url);url='';panel.innerHTML='<div class="simple-preview-empty">项目 input 文件夹中暂无参考图</div>';}
+   if(pages.length)await paint();else{serial++;if(url)URL.revokeObjectURL(url);url='';panel.innerHTML='<div class="simple-preview-empty" role="status"></div>';panel.querySelector('[role=status]').textContent=result.reference_issues?.length?'参考图清单缺失或无效，请核对已登记原图':'尚未登记参考原图';}
    if(alive())signature=nextSignature;
   }catch(error){fail(error);}finally{busy=false;}
  }

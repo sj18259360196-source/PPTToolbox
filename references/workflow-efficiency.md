@@ -8,7 +8,7 @@
 
 同页兼容小素材使用一条 `request_asset` 的 `request.items` 合成一张透明图，按实际输出逐项裁切，复用已接受素材，只重做失败项。它与 `request_assets` 的多个独立任务有不同用途。合图前检查每个主体的有效像素和间距，不能靠降低细节换取速度。
 
-新任务全页与局部都保留左右对比和叠加图。独立观察、文字核对和 Office 检查照常执行。节省调用来自共用输入、合并生成与局部返修，不从检查范围中扣除组件。
+新任务全页与局部继续生成左右图和叠图。标准模式首次正式全页必看叠图，后续按定位需要使用，频繁模式按任务清单逐版检查。独立观察、文字核对和 Office 检查照常执行。节省调用来自共用输入、合并生成与局部返修，不从检查范围中扣除组件。
 
 ## 证据校验
 
@@ -18,7 +18,7 @@
 
 ## 提交后继续
 
-`return_next=true` 让提交返回下一项任务。先检查 `submission` 与 `accepted_task`。
+受管 CLI 与 MCP 的提交默认带 `return_next=true`，保存提交后返回下一项任务。先检查 `submission` 与 `accepted_task`。显式传 `return_next=false` 可只保存提交。
 
 | 结果 | 下一步 |
 | --- | --- |
@@ -58,7 +58,9 @@ Office 全页及局部审查任务会返回 `text_geometry_hints`。它使用当
 
 ## 反馈修复后的调用方式
 
-`rebuild_start`、`rebuild_next`、`rebuild_status`、`rebuild_submit` 可选 `response_detail="compact"`。默认仍返回完整任务。精简模式保留任务身份、必看文件、完整当前 context、响应模板、提交约束和素材权限。返回 `delivery_format=ppt-task-inline/2` 时无需再次读取 packet 和 response template；路径及 SHA-256 仅用于追溯。旧版精简回包没有此标识时，仍读取其 `required_read_files`。`return_next=true` 可与精简模式合用。
+`rebuild_start`、`rebuild_next`、`rebuild_status`、`rebuild_submit` 及其受管 CLI 入口默认使用 `response_detail="compact"`。显式传 `response_detail="full"` 可取完整结果。精简模式保留任务身份、必看文件、完整当前 context、响应模板、提交约束和素材权限。返回 `delivery_format=ppt-task-inline/2` 时无需再次读取 packet 和 response template；路径及 SHA-256 仅用于追溯。旧版精简回包没有此标识时，仍读取其 `required_read_files`。
+
+需要填写完整提交包时，使用当前任务的 `submission_draft_query`，或调用 `toolbox_project_inspect(action="submission")`。工具固定任务身份，给出空白观察、当前所需动作种类及局部审查草稿。每个局部仍需独立看图并填写结论；没有完成的项从 `additional_reviews` 删除，它们继续待审。字段说明见[提交预检](stage1-contracts.md)。
 
 `region_objects` 可用 `action="request_assets"` 和 `requests` 数组一次申请 1 到 8 项素材。单项字段仍为 id、purpose、prompt、transparent、allowed_approximation。整批校验通过后才登记，每项继续独立领取 asset_material 任务。已接受的批次不重放；一项完成后，其他项保持 pending。关闭宿主生图权限时，受管入口拒绝登记生成请求。
 
@@ -79,9 +81,9 @@ Office 全页及局部审查任务会返回 `text_geometry_hints`。它使用当
 
 ## Inline task delivery v2
 
-Use toolbox_context with profile=production for reviewed startup deduplication. Legacy profile=full remains supported. The production profile preserves the complete current skill, effective policies, owner commands, disabled tools and identity. Customized or changed bootstrap sources fall back to full context.
+toolbox_context and the managed context CLI default to profile=production for reviewed startup deduplication. Explicit profile=full remains supported. The production profile preserves the complete current skill, effective policies, owner commands, disabled tools and identity. Customized or changed bootstrap sources fall back to full context.
 
-Set response_detail=compact on start/next/status/submit. With delivery_format=ppt-task-inline/2, context and response are complete inline, including new task fields. required_read_files is empty. source_files contains immutable packet/template provenance, not additional reading or viewing obligations. Open every current must_view_files item and manuals actually needed. Old compact responses without this format still require their listed text reads.
+Public start/next/status/submit calls default to response_detail=compact, and submit defaults to return_next=true. Explicit full/false choices remain valid; the low-level Manager.execute_workflow API keeps its existing defaults. With delivery_format=ppt-task-inline/2, context and response are complete inline, including new task fields. required_read_files is empty. source_files contains immutable packet/template provenance, not additional reading or viewing obligations. Open every current must_view_files item and manuals actually needed. Old compact responses without this format still require their listed text reads.
 
 The managed CLI accepts --response-detail compact. Existing-project calls can use --project <absolute path> --request-json <project JSON file>; omit project/context_id from the file. Normal authorization, size limits, validation and accepted-task recovery still apply. Compact CLI output avoids the duplicate stdout string; the worker files remain in output_directory.
 

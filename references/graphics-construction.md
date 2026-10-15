@@ -134,6 +134,33 @@ drawn Boolean-like silhouettes from executed Boolean operations, and provides
 two generic recipes. These additions are source guidance; check the currently
 installed schema before invocation. Example compilation is not Office approval.
 
+## Bounded preview lifecycle
+
+`graphics.preview` / MCP `graphics_preview` accepts optional `call_id`,
+`async` and `timeout_seconds` in addition to the existing recipe/project/version.
+The timeout range is 0.1 to 120 seconds, with a default of 30 seconds. With
+`async=true`, retain the returned `preview_call.call_id` and query that call.
+Without it, the dispatcher waits for the bounded worker result. A completed
+response keeps the PNG data URL in `preview` and lifecycle facts in `preview_call`.
+
+Use `graphics.preview_status` / MCP `graphics_preview_status` with
+`{"call_id":"the-returned-id"}` to recover state and an already completed image.
+Use `graphics.preview_cancel` / MCP `graphics_preview_cancel` with the same input
+to request cancellation. These tools resolve the stored project authorization;
+do not fabricate a project binding. A stable call ID with identical input returns
+the existing call; a different input under that ID is rejected.
+
+The confirmed terminal states are `completed`, `failed`, `timed_out`, `cancelled`
+and `interrupted`. `outcome_unknown` requires a state/receipt query and must not
+trigger automatic replay. Cancellation and timeout are confirmed only after the
+owned preview worker has stopped. This process policy applies to preview workers;
+it does not authorize terminating shared Office or unrelated services.
+
+After a host interruption, query the original call first. An on-time completed
+publication can be recovered even when its reply was lost; persisted termination
+requests prevent late output from replacing a terminal result. Recovery and
+evidence boundaries are described in the [reliability guide](reliability-and-recovery.md).
+
 ## Dependencies
 
 Install `requirements-graphics.txt` into the application's Python environment,

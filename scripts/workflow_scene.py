@@ -71,7 +71,7 @@ def valid_plan(value, size, project=None):
     if not isinstance(value['regions'],list) or not value['regions']: raise ValueError('regions: at least one region required')
     seen=set(); rows=[]
     def check_region(row):
-        keys(row,['id','bbox','role','summary'],['local_review'])
+        keys(row,['id','bbox','role','summary'],['local_review','overlay_review','overlay_reason'])
         rid=identifier(row['id'],'region id')
         if rid.casefold() in seen or rid.casefold()=='full': raise ValueError('Duplicate/reserved region id: '+rid)
         seen.add(rid.casefold())
@@ -79,7 +79,13 @@ def valid_plan(value, size, project=None):
         if row['role'] not in ROLES: raise ValueError('region role must be one of '+', '.join(sorted(ROLES)))
         text(row['summary'],'region summary')
         if 'local_review' in row and type(row['local_review']) is not bool: raise ValueError('local_review must be boolean')
+        if 'overlay_review' in row and type(row['overlay_review']) is not bool: raise ValueError('overlay_review must be boolean')
+        if row.get('overlay_review'):
+            text(row.get('overlay_reason'), 'overlay_reason')
+        elif 'overlay_reason' in row:
+            raise ValueError('overlay_reason requires overlay_review=true')
         rows.append({**row,'local_review':row.get('local_review',row['role'] in {'diagram','chart','table'})})
+        if row.get('overlay_review'): rows[-1]['local_review'] = True
     for index,row in enumerate(value['regions']):
         checks.run(lambda:check_region(row),'/regions/'+str(index),'region_contract',
                    row.get('id') if isinstance(row,dict) else None)
@@ -119,6 +125,8 @@ def import_file(source:Path, project:Path, folder='assets'):
     target=project/folder/name; target.parent.mkdir(parents=True,exist_ok=True)
     if target.exists() and sha256(target)!=sha256(source): raise ValueError('Asset content collision')
     if not target.exists(): shutil.copyfile(source,target)
+    from artifact_registry import record_transform
+    record_transform(project, source, target, {'operation': 'asset_import'})
     return target.relative_to(project).as_posix()
 
 
@@ -146,6 +154,8 @@ def import_scene(scene_path:Path, project:Path, *, source_project=None):
         ref=resolve_asset(base,s.get('reference',''))
         size=image_size(ref); rel=f'input/slide-{i:03}{ref.suffix.lower()}'
         (project/'input').mkdir(parents=True,exist_ok=True);shutil.copyfile(ref,project/rel)
+        from artifact_registry import record_transform
+        record_transform(project, ref, project/rel, {'operation': 'reference_import'})
         s['reference']=rel
         # Enforce an explicit and usable comparison transform at import time.
         review_mapping(scene,s,size)
@@ -465,28 +475,24 @@ def auto_regions(scene, pages):
 
 
 def freeze_scene(state, project, run_dir):
-    scene=assemble(state);errors=validate(scene,project)
+    from scene_paths import dependency_records, require_dependencies, copy_dependencies, dependency_manifest
+    scene, base, dependencies = dependency_records(assemble(state), project, project)
+    require_dependencies(dependencies)
+    errors=validate(scene,base)
     for page, slide in zip(state['pages'], scene['slides']):
         if page.get('native_first'):
             from element_scope import validate_outputs
             preserved = validate_outputs(slide['element_scope'], slide['objects'], project) if 'element_scope' in slide else set()
             errors.extend(native_image_issues(slide['objects'], preserved))
     if errors:raise ValueError('Assembled scene errors: '+'; '.join(errors[:16]))
-    files=set(s['reference'] for s in scene['slides'])
-    for s in scene['slides']:
-        from material_quality import sources
-        files.update(row['file'] for row in sources(s.get('element_scope')))
-        files.update(u['source']['asset'] for u in s.get('element_scope', {}).get('units', []) if 'source' in u)
-        files.update(o['asset'] for o in walk_objects(s['objects']) if o['kind']=='image')
-        for obj in walk_objects(s['objects']):
-            if obj.get('raster_content')=='generated_illustration':
-                files.update(obj['generation_decision'][k] for k in ('reference','drawing') if k in obj['generation_decision'])
-    for rel in sorted(files):
-        src=resolve_asset(project,rel);dst=run_dir/rel;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+    files = copy_dependencies(dependencies, base, run_dir)
+    errors = validate(scene, run_dir)
+    if errors:raise ValueError('Frozen scene errors: '+'; '.join(errors[:16]))
     refs=[{'slide':i,'path':p['reference'],'size':p['size'],'sha256':p['sha256']} for i,p in enumerate(state['pages'],1)]
     write_json(run_dir/'input/references.json',refs);write_json(run_dir/'scene.json',scene)
     write_json(run_dir/'regions.json',auto_regions(scene,state['pages']))
+    write_json(run_dir/'dependency-manifest.json', dependency_manifest(dependencies))
     tracked={rel:sha256(run_dir/rel) for rel in files}
-    tracked.update({rel:sha256(run_dir/rel) for rel in ['scene.json','input/references.json','regions.json']})
+    tracked.update({rel:sha256(run_dir/rel) for rel in ['scene.json','input/references.json','regions.json','dependency-manifest.json']})
     write_json(run_dir/'frozen-inputs.json',tracked)
     return scene,tracked

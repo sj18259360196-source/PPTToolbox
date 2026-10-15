@@ -41,8 +41,10 @@ def region_payload(label='TEST',with_path=False):
     return {'objects':objects,'source_notes':'Known synthetic source, controlled by test','relationship_ids':['connection'] if with_path else []}
 
 
-def make_ready(tmp,local=False,two_regions=False):
+def make_ready(tmp,local=False,two_regions=False,review_policy='layered-review/2'):
     project=tmp/'project';wf.start(project,[ref(tmp)])
+    # Existing fixtures retain the historical frequent-review contract.
+    state=load(project);state['review_policy']=review_policy;save(project,state,'fixture_review_policy')
     regions=[{'id':'one','bbox':[0,0,320 if two_regions else 640,360],'role':'content','summary':'Known synthetic region','local_review':local}]
     if two_regions:regions.append({'id':'two','bbox':[320,0,640,360],'role':'content','summary':'Second region'})
     respond(project,{'regions':regions});respond(project,region_payload('ONE',local))
@@ -63,8 +65,8 @@ def fake_office(tmp,project):
     return path
 
 
-def bring_to_review(tmp,local=True):
-    project,t=make_ready(tmp,local);receipt=fake_office(tmp,project)
+def bring_to_review(tmp,local=True,review_policy='layered-review/2'):
+    project,t=make_ready(tmp,local,review_policy=review_policy);receipt=fake_office(tmp,project)
     respond(project,{'receipt':str(receipt)},t)
     task=wf.next_task(project);assert task['task']['kind']=='review_full'
     return project,task

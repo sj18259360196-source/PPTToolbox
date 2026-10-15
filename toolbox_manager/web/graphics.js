@@ -99,6 +99,12 @@ export async function mountGraphics(main){
   const id=++request;state('正在计算');
   const out=await api('graphics.preview',{recipe,...(version?{version,project:$('#graphics-project').value.trim()}:{})});
   if(generation!==epoch||id!==request)return;
+  if(out.preview_call&&out.preview_call.status!=='completed'){
+   const call=out.preview_call;
+   const names={failed:'预览失败',timed_out:'预览超时',cancelled:'预览已取消',interrupted:'预览进程已中断',outcome_unknown:'预览结果尚未确认',running:'预览仍在运行'};
+   state(`${names[call.status]||call.status} ${call.error||''}。调用 ${call.call_id} 可通过 graphics.preview_status 查询，确认状态后再重试。`,true);
+   return;
+  }
   $('#graphics-image').src=out.preview;state(`${out.objects.length} 个对象 · Office 未验证`);
  }
  $('#graphics-properties').onchange=e=>{

@@ -273,14 +273,29 @@ def build_review(project, state):
             'limitations':['Review assertions supplied by the host Agent. File integrity cannot prove honest or correct visual interpretation.'],
             'user_acceptance':'not_run'}
     notes={k:[] for k in REQUIRED}; statuses={k:[] for k in REQUIRED};reviewers=[]
-    def evidence(check,path):
+    def evidence(check,path,expected=None):
+        path=Path(path).resolve()
+        if not path.is_relative_to(project.resolve()):
+            raise ValueError('Review evidence leaves the current project')
+        if expected is not None and sha256(path)!=expected:
+            raise ValueError('Accepted evidence SHA-256 changed before final gate')
+        if not path.is_relative_to(base.resolve()):
+            # The task contract permits project-level evidence. Publish an immutable
+            # run-local copy for the legacy gate; retain the original and its bytes.
+            from workflow_scene import import_file
+            relative=import_file(path,project,run['dir']+'/review-evidence/attachments')
+            path=under(project,relative)
         rec=file_record(base,path)
+        if expected is not None and rec['sha256']!=expected:
+            raise ValueError('Accepted evidence SHA-256 changed during archival')
         if rec not in review['checks'][check]['evidence']:review['checks'][check]['evidence'].append(rec)
     def add(check,value,indices,record,extra=()):
         statuses[check].append(value['status']);notes[check].append(value['note'])
         review['checks'][check]['slides']=sorted(set(review['checks'][check]['slides'])|set(indices))
         evidence(check,record)
-        for p in extra:evidence(check,p)
+        for p in extra:
+            if isinstance(p,dict):evidence(check,under(project,p['file']),p['sha256'])
+            else:evidence(check,p)
     records=run.get('reviews',{})
     # Source check is a separate origin-to-transcript assertion; it is NOT inferred from OOXML.
     for page in state['pages']:
@@ -315,7 +330,7 @@ def build_review(project, state):
                     if not any(x['index']==idx and x['object_id']==row['object_id'] for x in review['checks']['relationships']['objects']):
                         review['checks']['relationships']['objects'].append({'index':idx,**row})
         elif kind in {'editable_behavior','reproducibility'}:
-            files=[under(project,x['file']) for x in record.get('attachments',[])]
+            files=record.get('attachments',[])
             add(kind,r,list(range(1,count+1)),target,files)
     required_rel=any(required_review(s)['relationship_objects'] for s in scene['slides'])
     for name in REQUIRED:

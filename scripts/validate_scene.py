@@ -15,14 +15,15 @@ ADJUSTMENT_COUNTS = {"rect":0, "round_rect":1, "ellipse":0, "triangle":1,
 def validate(scene: dict, base: Path, check_files: bool = True, *, project_root=None) -> list[str]:
     import jsonschema
     path_errors = []
-    if isinstance(scene, dict) and scene.get('version') == '1.1' and check_files:
+    if isinstance(scene, dict) and check_files:
         if __package__:
-            from .scene_paths import prepare
+            from .scene_paths import dependency_records
         else:
-            from scene_paths import prepare
+            from scene_paths import dependency_records
         try:
-            scene, base, paths = prepare(scene, base, project_root)
-            path_errors = [r['field']+': '+r['error'] for r in paths if 'error' in r]
+            scene, base, paths = dependency_records(scene, base, project_root)
+            path_errors = ['dependency_missing_or_invalid ' + r['field']+': '+r['error']
+                           for r in paths if 'error' in r]
         except ValueError as exc:
             return [str(exc)]
     schema = read_json(Path(__file__).resolve().parents[1] / "assets/schemas/scene.schema.json")
@@ -36,6 +37,8 @@ def validate(scene: dict, base: Path, check_files: bool = True, *, project_root=
                           "0.5 makes a capsule. The current scene contract excludes "
                           "preset adjustments outside 0..1; use a documented native path.")
         return errors
+    if path_errors:
+        return path_errors + ['semantic_checks_not_checked: resolve scene dependencies before material preservation checks']
     c = scene["canvas"]
     try:
         bbox_to_points([0, 0, c["width"], c["height"]], c)

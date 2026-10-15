@@ -49,7 +49,7 @@ def startup_prompt(manager,preview=None,package_id=None,template_document=None):
     guidance += ('\n页面独立正文按要求改字。生成素材验证整体移动、缩放和替换；插画内部编辑按项目绘制偏好与具体对象要求执行。'
                  '照片按用户保真要求决定保留或生成，原有文字随图保留；生成插画保留可辨识原文，装饰标题保存准确原文并逐字核对实际产物。'
                  '多个风格相容的小素材可通过 request_asset 的 request.items 合成一次宿主生成请求，按实际图像裁切，保留源图哈希和逐项状态，仅补做未采用项。'
-                 '先恢复已完成的生成文件，再判断是否需要补生成。整页与重点局部按任务清单查看左右对比和叠加图，分别核对内容、位置、比例与遮挡。'
+                 '先恢复已完成的生成文件，再判断是否需要补生成。每页首次正式全页校验查看左右对比和叠加图，检查移位、比例与大幅偏差。后续叠图按任务清单用于定位、精确区域或频繁检查设置。每次返修记录具体对象、缺陷和预期改善，没有新缺陷就停止追加检查。'
                  'native_first 是保留来源与路线检查的兼容字段，组件仍按类别和编辑要求选路。')
     text=template.replace('{{production_storage}}',guidance) if '{{production_storage}}' in template else template+'\n\n'+guidance
     text += ('\n新建参考图项目按 references/material-quality.md 保存用户制作要求原文，'

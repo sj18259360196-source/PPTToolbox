@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+from pathlib import Path
 from zipfile import ZipFile
 from common import read_json, sha256, resolve_asset, walk_objects
 from workflow_store import under, WorkflowError
@@ -53,23 +54,28 @@ def signature(project, run, *, local=False):
 
 def eligible(project, old, new):
     from workflow_evidence import comparison_views
-    from layered_review import view_signature, review_policy
+    from layered_review import view_signature, review_policy, requires_overlay
     old_policy, new_policy = review_policy(old), review_policy(new)
     if old_policy != new_policy:
         return {}
     a=signature(project,old);b=signature(project,new)
     av=comparison_views(project,old);bv=comparison_views(project,new)
+    def same_view(index, region_id=None):
+        prior = requires_overlay(old,index,region_id)
+        needed = requires_overlay(new,index,region_id)
+        if needed and not prior:return False
+        return view_signature(av,index,region_id,old_policy,prior)==view_signature(bv,index,region_id,new_policy,prior)
     unchanged={i for i in a if a[i]==b.get(i) and
-               view_signature(av,i,policy=old_policy)==view_signature(bv,i,policy=new_policy)}
+               same_view(i)}
     for i in list(unchanged):
         left={k:v for k,v in av['local_paths'].items() if k[0]==i}
         right={k:v for k,v in bv['local_paths'].items() if k[0]==i}
         if set(left)!=set(right) or any(left[k]['object_ids']!=right[k]['object_ids'] or
-                view_signature(av,k[0],k[1],old_policy)!=view_signature(bv,k[0],k[1],new_policy) for k in left):unchanged.remove(i)
+                not same_view(k[0],k[1]) for k in left):unchanged.remove(i)
     al=signature(project,old,local=True);bl=signature(project,new,local=True)
     unchanged_locals={key for key,value in al.items() if value==bl.get(key)
                       and key in av['local_paths'] and key in bv['local_paths']
-                      and view_signature(av,key[0],key[1],old_policy)==view_signature(bv,key[0],key[1],new_policy)}
+                      and same_view(key[0],key[1])}
     result={}
     for key,ref in old.get('reviews',{}).items():
         path=under(project,ref['file'])
@@ -85,7 +91,13 @@ def eligible(project, old, new):
         p=read_json(packet)
         for item in p['input_files']:
             if sha256(under(project,item['file']))!=item['sha256']:raise WorkflowError('reuse_changed','Observed input changed')
-        if passed:result[key]=copy.deepcopy(ref)
+        if passed:
+            # Optional overlays explicitly viewed by the reviewer remain bound.
+            optional = p.get('context',{}).get('optional_view_files',[])
+            viewed = {str(under(project,name)) if not Path(name).is_absolute() else str(Path(name).resolve()) for name in r.get('viewed_files',[])}
+            observed = [name for name in optional if str(under(project,name)) in viewed]
+            if observed and not same_view(target['index'], target.get('region_id')):continue
+            result[key]=copy.deepcopy(ref)
     return result
 
 

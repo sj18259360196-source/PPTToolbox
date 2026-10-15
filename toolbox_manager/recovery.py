@@ -2,16 +2,44 @@
 from __future__ import annotations
 
 
+def independent_outcomes(result, *, command, arguments, dispatched, before, after, checkpoint):
+    """Report independent observed effects; revision changes do not certify acceptance."""
+    if command == 'submit':
+        submission = dict(result.get('submission') or {})
+        accepted = bool(result.get('accepted_task')) or submission.get('state') == 'accepted'
+        unknown = result.get('command_status') == 'outcome_unknown'
+        submission.update(state='accepted' if accepted else 'unknown' if unknown else 'not_accepted',
+            accepted=True if accepted else None if unknown else False, dispatched=dispatched,
+            task_id=submission.get('task_id') or result.get('accepted_task') or arguments.get('task_id'),
+            workflow_revision_before=before.get('revision'), workflow_revision_after=after.get('revision'))
+        result['submission'] = submission
+    result['checkpoint_receipt'] = checkpoint or {'state':'not_requested', 'recorded':False,
+        'duplicate':False, 'checkpoint_id':None, 'stage_revision_before':None, 'stage_revision_after':None}
+    return result
+
+
 def describe_result(result, *, dispatched):
-    accepted = result.get("accepted_task")
+    submission = result.get('submission') or {}
+    accepted = result.get("accepted_task") or (submission.get('task_id') if submission.get('state') == 'accepted' else None)
+    is_accepted = bool(accepted) or submission.get('state') == 'accepted'
     status = result.get("command_status")
     error = (result.get("error") or {}).get("code")
     unknown = status == "outcome_unknown"
-    if accepted:
+    causes = [result.get(name) for name in ('next_error', 'failure', 'error')]
+    causes = [c for c in causes if isinstance(c, dict) and c]
+    cause = causes[0] if causes else {}
+    failed_stage = next((c['stage'] for c in causes if isinstance(c.get('stage'), str) and c['stage']), None)
+    from .project_status import safe_message
+    result['failure_reason'] = {'code': cause.get('code'), 'stage': failed_stage,
+                                'message': safe_message(cause.get('message'))}
+    result['failed_stage'] = failed_stage
+    result['acceptance_state'] = 'accepted' if is_accepted else 'unknown' if unknown else 'not_accepted'
+    if is_accepted:
         if not result.get("submission"):
             result["submission"] = {
                 "state": "accepted", "task_id": accepted, "replay_allowed": False}
-        outcome = "accepted_next_failed" if result.get("next_error") or status != "completed" else "accepted"
+        result['submission']['replay_allowed'] = False
+        outcome = "accepted_next_failed" if result.get("next_error") or result.get('failure') or status != "completed" else "accepted"
         action = "inspect_status" if outcome == "accepted_next_failed" else "continue_returned_task"
         retry = "never_replay_accepted_submission"
     elif unknown:
@@ -34,6 +62,19 @@ def describe_result(result, *, dispatched):
         "next_action": action, "retry_policy": retry,
         "status_tool": "rebuild_status",
     }
+    result['retry_scope'] = 'inspect_failed_stage' if outcome == 'accepted_next_failed' else action
+    checkpoint = result.get('checkpoint_receipt') or {}
+    result['recovery']['submission_retry_scope'] = (
+        'do_not_resubmit' if is_accepted else 'inspect_status_and_receipt' if unknown else
+        'correct_current_task_result' if dispatched else 'correct_or_wait_then_submit')
+    result['recovery']['checkpoint_retry_scope'] = (
+        'do_not_repeat_recorded_checkpoint' if checkpoint.get('recorded') else
+        'correct_checkpoint_then_retry' if checkpoint.get('state') == 'failed' else
+        'inspect_checkpoint_receipt' if checkpoint.get('state') == 'unknown' else
+        'checkpoint_not_attempted' if checkpoint.get('state') == 'not_attempted' else
+        'not_requested')
+    blockers = result.get('pending_calls') or []
+    result['blocking_call_id'] = blockers[0].get('call_id') if blockers and isinstance(blockers[0], dict) else None
     return result
 
 

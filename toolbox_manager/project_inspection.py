@@ -19,10 +19,46 @@ def inspect(manager, args):
     action=args.get('action','identity');offset=args.get('offset',0);limit=args.get('limit',6)
     if not 0<=offset or not 1<=limit<=20:raise ValueError('Invalid pagination')
     if action=='identity':return identity
+    if action=='response':
+        import re
+        cid=args.get('call_id')
+        if not isinstance(cid,str) or not re.fullmatch(r'[0-9a-f]{32}',cid):
+            raise ValueError('Expected a managed 32-character hexadecimal call_id')
+        context=ProjectContext(manager,project)
+        call=context.path('logs/tool-calls/'+cid+'/call.json')
+        if not call.is_file():return {'available':False,'reason':'call_receipt_unavailable','call_id':cid}
+        if call.stat().st_size>16*1024*1024:raise ValueError('Call receipt exceeds inspection limit')
+        receipt=read_json(call)
+        if receipt.get('call_id')!=cid or Path(receipt.get('project','')).resolve()!=project:
+            raise ValueError('Call receipt project/call identity differs')
+        ref=receipt.get('response_detail')
+        if not ref:return {'available':False,'reason':'legacy_call_has_no_full_response','call_id':cid}
+        if receipt.get('project_id')!=identity.get('project_id'):
+            raise ValueError('Call receipt belongs to a different project identity')
+        path=context.path('logs/tool-calls/'+cid+'/response-full.json')
+        if not path.is_file():return {'available':False,'reason':'full_response_unavailable','call_id':cid}
+        if ref.get('format')!='ppt-response-detail/1' or ref.get('file')!='response-full.json':
+            raise ValueError('Unsupported full response reference')
+        from .context_delivery import DETAIL_BYTES
+        if path.stat().st_size>DETAIL_BYTES:raise ValueError('Full response exceeds inspection limit')
+        if sha256(path)!=ref.get('sha256'):raise ValueError('Full response hash changed')
+        payload=read_json(path)
+        if (payload.get('format')!=ref['format'] or payload.get('call_id')!=cid
+                or payload.get('project')!=str(project) or payload.get('project_id')!=identity.get('project_id')):
+            raise ValueError('Full response identity differs')
+        return {'available':True,'format':ref['format'],'sha256':ref['sha256'],'call_id':cid,
+                'result':payload['result'],'scope':'Historical complete facts for this call; no automatic resubmission.'}
+    if action=='layout':
+        from scripts.project_layout import audit
+        from scripts.artifact_registry import preflight
+        return {'identity':identity, **audit(project), 'delivery_preflight':preflight(project), 'state_changed':False}
     if action=='calls':
         from .call_metrics import summarize
         return {'identity':identity, **summarize(project)}
     state=load(project)
+    if action=='submission':
+        from .submission import prepare
+        return {'identity':identity, **prepare(project)}
     if action=='impact':
         from scripts.review_impact import compare, from_runs
         if args.get('scene') or args.get('before_scene'):

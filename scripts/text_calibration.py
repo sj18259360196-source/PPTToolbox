@@ -11,6 +11,8 @@ import os
 import platform
 from pathlib import Path
 import re
+from xml.etree import ElementTree
+from zipfile import ZipFile
 
 if __package__:
     from .common import read_json, write_json, sha256, staged_directory
@@ -20,6 +22,71 @@ else:
     from review_impact import digest
 
 FORMAT = 'native-text-calibration/1'
+
+
+def _export_size(canvas):
+    """Raster pixels are integral; scene coordinates and physical points are not."""
+    logical = [canvas[k] for k in ('width', 'height')]
+    if any(type(v) not in (int, float) or not math.isfinite(v) or not 1 <= v <= 4096 for v in logical):
+        raise ValueError('Calibration needs logical dimensions within 1..4096 for pixel export')
+    return [math.floor(v + .5) for v in logical]
+
+
+def _bound_export_size(plan, source):
+    if plan['canvas'] != source['canvas']:
+        raise ValueError('Calibration canvas differs from the frozen source')
+    derived = _export_size(source['canvas'])
+    declared = plan.get('export_size_px')
+    if 'export_size_px' not in plan:
+        if any(v != int(v) for v in (source['canvas']['width'], source['canvas']['height'])):
+            raise ValueError('Fractional calibration canvas requires export_size_px; regenerate the plan')
+    elif (not isinstance(declared, list) or len(declared) != 2
+          or any(type(v) is not int for v in declared) or declared != derived):
+        raise ValueError(f'Calibration export_size_px differs from the source-derived pixel dimensions: expected {derived}, got {declared}')
+    return derived
+
+
+def _physical_canvas_validation(canvas, pptx, receipt):
+    """Bind the package exactly; accommodate only observed Office readback rounding.
+
+    PowerPoint 16.0 reads page sizes on an eighth-point grid. Keep this separate
+    from source/package geometry, which must remain exact at build's EMU precision.
+    Integer arithmetic also avoids introducing a floating-point midpoint policy.
+    """
+    from pptx.util import Pt
+    expected = [canvas[k] for k in ('width_pt', 'height_pt')]
+    if any(type(v) not in (int, float) or not math.isfinite(v) or v <= 0 for v in expected):
+        raise ValueError('Invalid calibration physical canvas in the frozen source')
+    with ZipFile(pptx) as package:
+        node = ElementTree.fromstring(package.read('ppt/presentation.xml')).find(
+            '{http://schemas.openxmlformats.org/presentationml/2006/main}sldSz')
+    if node is None:
+        raise ValueError('Calibration PPTX lacks a physical canvas')
+    package_emu = [int(node.attrib[k]) for k in ('cx', 'cy')]
+    expected_emu = [int(Pt(v)) for v in expected]
+    if package_emu != expected_emu:
+        raise ValueError(f'Calibration package physical canvas differs from the frozen source: expected EMU {expected_emu}, got {package_emu}')
+    physical = receipt.get('canvas_pt')
+    if (not isinstance(physical, list) or len(physical) != 2
+            or any(type(v) not in (int, float) or not math.isfinite(v) or v <= 0 for v in physical)):
+        raise ValueError(f'Calibration physical canvas readback is invalid: expected pt {expected}, got {physical}')
+    package_pt = [v / 12700 for v in package_emu]
+    # A half-grid point is never an integral EMU (12700/16 ends in .75).
+    quantized = [((v * 8 + 6350) // 12700) / 8 for v in package_emu]
+    modes = []
+    for axis, wanted, actual, grid in zip(('width', 'height'), expected, physical, quantized):
+        if math.isclose(actual, wanted, rel_tol=0, abs_tol=.001):
+            modes.append('source_with_numeric_tolerance')
+        elif math.isclose(actual, grid, rel_tol=0, abs_tol=.001):
+            modes.append('nearest_eighth_point')
+        else:
+            raise ValueError(f'Calibration physical canvas differs from the source: axis={axis}, source_pt={wanted}, '
+                             f'office_pt={actual}, nearest_eighth_pt={grid}, numeric_tolerance_pt=0.001')
+    return {'expected_pt': expected, 'package_emu': package_emu, 'package_pt': package_pt,
+            'office_pt': physical, 'delta_pt': [a-b for a,b in zip(physical, expected)],
+            'nearest_eighth_pt': quantized, 'axis_match': modes,
+            'numeric_tolerance_pt': .001, 'quantization_step_pt': .125,
+            'package_binding': 'exact_source_emu', 'rule': 'exact_package_nearest_eighth_readback/1'}
 
 
 def environment(fonts):
@@ -113,8 +180,14 @@ def _targets(scene):
                 continue
             mixed = bool(obj.get('runs') or obj.get('paragraphs'))
             uncertain = bool(obj.get('rotation', 0) or any(k in style for k in ('native_format', 'warp', 'text_outline')))
-            category = ('mixed_language' if re.search('[\u3400-\u9fff]', value) and re.search('[A-Za-z0-9]', value)
-                        else 'title' if obj.get('role') in ('title', 'header') else 'body')
+            roles = ['title' if obj.get('role') in ('title', 'header') else 'body']
+            if re.search('[\u3400-\u9fff]', value) and re.search('[A-Za-z0-9]', value):
+                roles.append('mixed_language')
+            if re.search(r'\d', value) and not re.search('[\u3400-\u9fffA-Za-z]', value):
+                roles.append('numbers')
+            if len(value) >= 24 or '\n' in value:
+                roles.append('long_text')
+            category = 'title' if roles[0] == 'title' else 'mixed_language' if 'mixed_language' in roles else 'numbers' if 'numbers' in roles else 'body'
             # Position is retained: Office rasterization may depend on pixel phase.
             specimen = {k: copy.deepcopy(v) for k,v in obj.items()
                         if k in {'id', 'kind', 'role', 'editability', 'evidence', 'bbox',
@@ -122,17 +195,21 @@ def _targets(scene):
             sample = {k:v for k,v in specimen.items() if k not in {'id','role','evidence','editability'}}
             style_key = digest([scene['canvas'], style, obj['bbox'][2:], obj.get('rotation', 0), category])
             result.append({'slide': sid, 'id': obj['id'], 'category': category, 'object': specimen,
-                           'style_key': style_key, 'sample_key': digest([scene['canvas'], sample]),
+                           'roles': roles, 'style_key': style_key, 'sample_key': digest([scene['canvas'], sample]),
                            'force_measure': mixed or uncertain,
                            'trigger': 'mixed_format' if mixed else 'low_confidence' if uncertain else 'first_style'})
     for slide in scene['slides']:
         walk(slide['objects'], slide['id'])
-    # One of each semantic role first; new styles then use the remaining budget.
+    # Pick critical content before style deduplication. A short label and a long
+    # sentence with identical styling are not interchangeable fit measurements.
     ordered = []
-    for category in ('title', 'body', 'mixed_language'):
-        candidates = [t for t in result if t['category'] == category]
+    for category in ('title', 'body', 'numbers', 'long_text', 'mixed_language'):
+        candidates = [t for t in result if category in t['roles']]
         if candidates:
-            ordered.append(max(candidates, key=lambda t: (t['object']['style']['font_size_pt'] if category=='title' else len(_text(t['object'])))))
+            chosen = max(candidates, key=lambda t: (t['object']['style']['font_size_pt'] if category=='title' else len(_text(t['object']))))
+            chosen.setdefault('representative_for', []).append(category)
+            if chosen not in ordered:
+                ordered.append(chosen)
     ordered += [t for t in result if t not in ordered]
     return ordered, deferred
 
@@ -168,7 +245,18 @@ def _measurement(target, row):
         reasons.append('line_bounds_unavailable')
     for i, line in enumerate(lines):
         line['line_advance_pt'] = (lines[i+1]['bound_pt'][1]-line['bound_pt'][1]) if i+1 < len(lines) else None
-    suggestions = [{'action': 'compare_reference', 'note': 'Compare this measured title/body/mixed-language sample with the same reference text before applying size changes.'}]
+    requested_fonts = _fonts([target['object']])
+    office_fonts = sorted({run[key] for run in runs for key in ('font', 'font_ascii', 'font_east_asia') if run.get(key)})
+    # Names are API readback, not glyph-level fallback proof. Localized family
+    # aliases can differ; report the difference without declaring substitution.
+    font_names = {'requested': requested_fonts, 'office_readback': office_fonts,
+                  'status': 'unavailable' if not office_fonts else 'names_differ' if any(
+                      font.casefold() not in {name.casefold() for name in office_fonts} for font in requested_fonts) else 'requested_names_present',
+                  'substitution': 'not_certified'}
+    if font_names['status'] != 'requested_names_present':
+        reasons.append('font_names_require_visual_check')
+    explicit_lines = len(expected.split('\n'))
+    suggestions = [{'action': 'compare_reference', 'note': 'Compare this measured sample with the same reference text before applying size changes.'}]
     bounds, box = row.get('bound_pt'), row.get('box_pt')
     if valid_box(bounds) and valid_box(box) and not row.get('rotation', 0):
         if (bounds[0] < box[0]-.75 or bounds[1] < box[1]-.75
@@ -180,6 +268,9 @@ def _measurement(target, row):
             'sample_key': target['sample_key'], 'style_key': target['style_key'],
             'confidence': 'low' if reasons else 'high', 'reasons': sorted(set(reasons)),
             'box_pt': box, 'bound_pt': bounds, 'lines': lines, 'runs': runs,
+            'representative_for': target.get('representative_for', []), 'font_names': font_names,
+            'line_count': len(lines), 'explicit_line_count': explicit_lines,
+            'additional_wrapping': len(lines) > explicit_lines if lines else None,
             'baseline_y_pt': None, 'baseline_y_status': 'unavailable_from_collector',
             'baseline_shift_basis': data.get('baseline_shift_basis'),
             'glyph_font_identity': 'not_certified', 'suggestions': suggestions,
@@ -200,19 +291,15 @@ def _verified_measurements(plan_dir, office_dir, *, check_path=lambda p: p):
     receipt_path = Path(check_path(Path(office_dir)/'office-render.json'))
     if sha256(source) != plan['source_copy_sha256'] or sha256(pptx) != plan['specimens_sha256']:
         raise ValueError('Calibration specimens or frozen source changed')
+    export_size = _bound_export_size(plan, read_json(source))
     # Authorize indirect images before validate_render reads them.
     raw = read_json(receipt_path)
     for row in raw.get('slides', []):
         check_path(receipt_path.parent/row['file'])
     receipt, rows = validate_render(receipt_path, pptx, plan['page_exports_planned'])
-    physical=receipt.get('canvas_pt')
-    expected=[plan['canvas']['width_pt'],plan['canvas']['height_pt']]
-    if (not isinstance(physical,list) or len(physical)!=2
-            or any(type(a) not in (int,float) or not math.isfinite(a)
-                   or not math.isclose(a,b,rel_tol=0,abs_tol=.001) for a,b in zip(physical,expected))):
-        raise ValueError('Calibration physical canvas differs from the source')
-    if any([r['width'],r['height']] != [plan['canvas']['width'],plan['canvas']['height']] for r in rows.values()):
-        raise ValueError('Calibration export must retain the source canvas pixel dimensions')
+    canvas_validation = _physical_canvas_validation(plan['canvas'], pptx, receipt)
+    if any([r['width'],r['height']] != export_size for r in rows.values()):
+        raise ValueError(f'Calibration export must retain the source-derived pixel dimensions: expected {export_size}')
     measurements = {}
     for row in receipt.get('text_bounds', []):
         key = (row.get('slide'), row.get('id'))
@@ -220,7 +307,7 @@ def _verified_measurements(plan_dir, office_dir, *, check_path=lambda p: p):
             raise ValueError('Duplicate calibration text identity')
         measurements[key] = row
     result = [_measurement(t, measurements.get((t['index'],t['sample_id']), {})) for t in plan['targets']]
-    return plan, receipt, result
+    return plan, receipt, result, canvas_validation
 
 
 def cache(report_path, check_path=lambda p: p):
@@ -234,7 +321,7 @@ def cache(report_path, check_path=lambda p: p):
     for path, key in ((plan_dir/'plan.json','plan_sha256'), (office_dir/'office-render.json','receipt_sha256')):
         if sha256(Path(check_path(path))) != binding[key]:
             raise ValueError('Cached calibration evidence changed')
-    plan, receipt, rows = _verified_measurements(plan_dir, office_dir, check_path=check_path)
+    plan, receipt, rows, _ = _verified_measurements(plan_dir, office_dir, check_path=check_path)
     return plan, receipt, rows
 
 
@@ -254,8 +341,7 @@ def plan(scene_path, outdir, *, reuse=None, max_samples=8):
     if errors:
         raise ValueError('Invalid calibration scene: '+'; '.join(errors[:10]))
     canvas = source['canvas']
-    if any(type(canvas[k]) not in (int,float) or canvas[k] != int(canvas[k]) or not 1 <= canvas[k] <= 4096 for k in ('width','height')):
-        raise ValueError('Calibration needs an integer export canvas up to 4096 pixels')
+    export_size = _export_size(canvas)
     targets, deferred = _targets(source)
     env = environment(_fonts([t['object'] for t in targets]))
     cached = {}
@@ -280,7 +366,7 @@ def plan(scene_path, outdir, *, reuse=None, max_samples=8):
         if not target['force_measure'] and key in cached:
             reused.append({**identity, 'measurement': cached[key], 'evidence_report': str(Path(reuse).resolve())})
             styles.setdefault(target['style_key'], identity)
-        elif not target['force_measure'] and target['style_key'] in styles:
+        elif not target['force_measure'] and not target.get('representative_for') and target['style_key'] in styles:
             siblings.append({**identity, 'representative': styles[target['style_key']],
                              'scope': 'style_advice_only', 'text_fit': 'unmeasured'})
         elif len(selected) < max_samples:
@@ -308,7 +394,7 @@ def plan(scene_path, outdir, *, reuse=None, max_samples=8):
         record = {'version': FORMAT, 'source_path': str(Path(scene_path).resolve()),
                   'source_sha256': sha256(scene_path), 'source_copy_sha256': sha256(stage/'source.scene.json'),
                   'specimens_sha256': sha256(stage/'specimens.pptx') if slides else None,
-                  'canvas': canvas, 'environment': env, 'references': {},
+                  'canvas': canvas, 'export_size_px': export_size, 'environment': env, 'references': {},
                   'targets': selected, 'reused': reused, 'style_siblings': siblings,
                   'pending': pending, 'deferred': deferred, 'reuse_reason': reuse_reason,
                   'page_exports_planned': len(slides), 'status': 'awaiting_office' if slides else 'reuse_only' if reused else 'no_supported_samples',
@@ -317,14 +403,15 @@ def plan(scene_path, outdir, *, reuse=None, max_samples=8):
     return {'format': FORMAT, 'status': record['status'], 'plan': str(Path(outdir)/'plan.json'),
             'samples': len(selected), 'reused': len(reused), 'style_siblings': len(siblings),
             'pending': len(pending), 'deferred': len(deferred), 'page_exports_planned': len(slides),
-            'reuse_reason': reuse_reason, 'office_arguments': ['-TextCalibration', '-Width', str(int(canvas['width'])), '-Height', str(int(canvas['height']))] if slides else [],
+            'reuse_reason': reuse_reason, 'export_size_px': export_size,
+            'office_arguments': ['-TextCalibration', '-Width', str(export_size[0]), '-Height', str(export_size[1])] if slides else [],
             'visual_review': 'pending', 'automatic_changes': False}
 
 
 def evaluate(plan_dir, office_dir, output):
     if Path(output).exists():
         raise FileExistsError(output)
-    plan, receipt, rows = _verified_measurements(plan_dir, office_dir)
+    plan, receipt, rows, canvas_validation = _verified_measurements(plan_dir, office_dir)
     if sha256(Path(plan['source_path'])) != plan['source_sha256']:
         raise ValueError('Source scene changed; regenerate a calibration plan')
     current = environment(plan['environment']['requested'])
@@ -340,6 +427,8 @@ def evaluate(plan_dir, office_dir, output):
                           'receipt_sha256': sha256(Path(office_dir)/'office-render.json'),
                           'source_sha256': plan['source_sha256'], 'environment_sha256': current['sha256']},
               'office_version': receipt.get('office_version'), 'targets': rows,
+              'export_size_px': _export_size(plan['canvas']),
+              'canvas_validation': canvas_validation,
               'reused': plan['reused'], 'style_siblings': plan['style_siblings'],
               'pending': plan['pending'], 'deferred': plan['deferred'],
               'visual_review': 'pending', 'automatic_changes': False,
@@ -347,6 +436,7 @@ def evaluate(plan_dir, office_dir, output):
               'reuse_note': 'Only exact plain samples with unchanged environment may reuse measurements. Different text shares style advice only.'}
     write_json(output, report)
     return {'format': FORMAT, 'status': 'advisory', 'report': str(output),
+            'export_size_px': _export_size(plan['canvas']), 'canvas_validation': canvas_validation,
             'measured': len(rows), 'low_confidence': sum(r['confidence']=='low' for r in rows),
             'pending': len(plan['pending']), 'deferred': len(plan['deferred']),
             'visual_review': 'pending', 'automatic_changes': False}

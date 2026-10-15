@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT/"scripts") not in sys.path:
     sys.path.insert(0, str(ROOT/"scripts"))
-from graphics_recipe import SCHEMA, compile_recipe, digest, obj, array, STYLE, COMMANDS, ID
+from graphics_contracts import SCHEMA, digest, obj, array, STYLE, COMMANDS, ID
 
 S = {"type": "string", "minLength": 1}
 VERSION = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
@@ -62,7 +62,11 @@ SPECS = {
     "audit_sources": ("核对项目内列明的绘图依赖、哈希及临时目录风险。", SOURCES_INPUT),
     "inspect": ("读取图形构造契约或项目草稿。", obj({**PROJECT, "version": VERSION})),
     "preview": ("计算曲线组、共享边与关联副本预览，不修改 PPT。",
-                obj({**PROJECT, "version": VERSION, "recipe": SCHEMA}, ("recipe",))),
+                obj({**PROJECT, "version": VERSION, "recipe": SCHEMA,
+                     "call_id": S, "async": {"type": "boolean"},
+                     "timeout_seconds": {"type": "number", "minimum": .1, "maximum": 120}}, ("recipe",))),
+    "preview_status": ("读取持久预览状态和已完成图片。", obj({"call_id": S}, ("call_id",))),
+    "preview_cancel": ("取消指定预览，确认其工作进程退出后记录终态。", obj({"call_id": S}, ("call_id",))),
     "compile": ("编译原生图形草稿到已授权项目，保留配方与可编辑样件。",
                 obj({**PROJECT, "recipe": SCHEMA}, ("project", "recipe"))),
     "regenerate": ("核对草稿及实际 PPT 修改冲突，再生成新的关联副本与共享边。",
@@ -125,7 +129,6 @@ def _load(project, version):
 def call(manager, op, args=None, source="mcp"):
     from jsonschema import Draft202012Validator
     from .policy import PolicyDenied, authorize, plain_path
-    from illustration_tools import analyze, material_recipe, audit_sources
     a = args or {}
     if op not in SPECS:
         raise ValueError("Unknown graphics operation")
@@ -135,7 +138,7 @@ def call(manager, op, args=None, source="mcp"):
         raise PolicyDenied("Graphics package is disabled or untrusted")
     if not manager.override(p["id"], "tool", "graphics."+op, True):
         raise PolicyDenied("Graphics tool disabled")
-    if op not in {"illustration_guide", "inspect", "validate", "analyze", "audit_sources",'compare_contours','boolean_trials'} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
+    if op not in {"preview_status", "preview_cancel", "illustration_guide", "inspect", "validate", "analyze", "audit_sources",'compare_contours','boolean_trials'} and source != "owner" and not manager.settings()["agent_execution_enabled"]:
         raise PolicyDenied("Agent execution is disabled")
     from contextlib import nullcontext
     with nullcontext():
@@ -143,7 +146,7 @@ def call(manager, op, args=None, source="mcp"):
         started_at=stamp()
         import uuid
         from .project_activity import CALL_ID
-        call_id=CALL_ID.get() or uuid.uuid4().hex
+        call_id=(a.get('call_id') if op == 'preview' else None) or CALL_ID.get() or uuid.uuid4().hex
         manager.store.event('graphics.started','Graphics operation started',source=source,status='running',
                             details={'call_id':call_id,'operation':op,'tool_id':'graphics.'+op,'command_status':'running','project':a.get('project'),'started_at':started_at})
         status = "ok"
@@ -151,6 +154,39 @@ def call(manager, op, args=None, source="mcp"):
             project = None
             if "project" in a:
                 project, _ = authorize(manager, a["project"])
+            if op in {'preview', 'preview_status', 'preview_cancel'}:
+                from .graphics_lifecycle import PreviewLifecycle
+                def terminal_event(state):
+                    manager.store.event('graphics.preview', 'Graphics preview terminal outcome',
+                        source=source, status=state['status'], details={**state,
+                        'tool_id': 'graphics.preview', 'command_status': state['status'],
+                        'project': str(project) if project else None})
+                    if project:
+                        from scripts import project_journal as journal
+                        receipt = journal.safe(project, 'logs/tool-calls/'+state['call_id']+'/activity.json')
+                        if receipt.exists():
+                            activity = json.loads(receipt.read_text(encoding='utf-8'))
+                            activity.update(command_status=state['status'], ended_at=stamp(),
+                                            preview_call=state)
+                            journal.atomic(receipt, json.dumps(activity, ensure_ascii=False))
+                lifecycle = PreviewLifecycle(manager.data, on_terminal=terminal_event)
+                if op != 'preview':
+                    stored_request = json.loads((lifecycle.directory(a['call_id'])/'request.json').read_text(encoding='utf-8'))
+                    if stored_request.get('project'):
+                        project, _ = authorize(manager, stored_request['project'])
+                    response = lifecycle.query(a['call_id'], cancel=op == 'preview_cancel')
+                else:
+                    request = {key: a[key] for key in ('recipe', 'version') if key in a}
+                    if project is not None:
+                        request['project'] = str(project)
+                    response = lifecycle.start(request, a.get('call_id') or call_id, a.get('timeout_seconds', 30))
+                    if not a.get('async'):
+                        response = lifecycle.wait(response['call_id'])
+                status = response['status']
+                if status == 'completed':
+                    return {**response.pop('result'), 'preview_call': response, 'command_status': status}
+                return {'preview_call': response, 'command_status': status}
+            from illustration_tools import analyze, material_recipe, audit_sources
             if op == 'illustration_guide':
                 from .illustration_guide import guide
                 return guide(manager,a)
@@ -233,6 +269,7 @@ def call(manager, op, args=None, source="mcp"):
                         "structure": "unchanged" if not conflicts else "changed",
                         "office": "not_run", "visual_review": "pending"}
             from graphics_preview import png, svg, readback
+            from graphics_recipe import compile_recipe
             previous = None
             if op == "regenerate" or (op == "preview" and "version" in a):
                 if project is None:
@@ -302,4 +339,4 @@ def call(manager, op, args=None, source="mcp"):
         finally:
             manager.store.event("graphics."+op, "Graphics operation", source=source, status=status,
                                 details={"project": str(project) if "project" in locals() and project else None,
-                                         "call_id":call_id,"tool_id":"graphics."+op,"command_status":"completed" if status=="ok" else "failed","version": a.get("version"), "started_at": started_at, "ended_at": stamp()})
+                                         "call_id":call_id,"tool_id":"graphics."+op,"command_status":"completed" if status=="ok" else "failed" if status=='error' else status,"version": a.get("version"), "started_at": started_at, "ended_at": stamp()})

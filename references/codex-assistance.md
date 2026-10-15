@@ -44,7 +44,54 @@ python toolbox.py tools run office.edit-readback -- run --pptx candidate.pptx --
 
 只保留当前文件适用的操作。执行需要 Windows、PowerPoint 和 pywin32；输出目录必须不存在。程序只修改新副本，保存关闭后重开读回，并导出抽查页。拒绝未改变值的操作，不关闭用户其他文档，不退出 PowerPoint 应用。
 
-`edit-readback.json` 的 passed 只表示已抽查值在保存重开后匹配。必须查看导出图，再使用现有任务的 actions/files 提交实际操作和副本。数据图表、照片替换、复杂路径和长文案排版未由此工具验证；含这些要求时另外检查。不自动写入验收状态。
+`edit-readback.json` 的 passed 只表示已抽查值在保存重开后匹配。必须查看导出图，再使用现有任务的 actions/files 提交实际操作和副本。数据图表和复杂路径需要另行检查。长文案另看 `longer_text_layout`，图片另看几何、裁切、对象身份和媒体读回结果。不自动写入验收状态。
+
+## 图片变换与替换
+
+`picture.transform` 使用幻灯片坐标，单位为 PowerPoint 点。`expected` 填原值，`value` 填目标值，两者均包含 `left`、`top`、`width`、`height`、`rotation`。数值必须有限，绝对值不超过 100000，宽高为正，旋转范围为 `[0,360)`。`aspect_ratio=preserve` 保持宽高比，`free` 允许显式改变比例。前置值与源文件不符时拒绝操作。
+
+```json
+[
+  {
+    "op": "picture.transform", "slide": 1, "name": "photo",
+    "units": "slide_points", "aspect_ratio": "preserve",
+    "expected": {"left": 90, "top": 90, "width": 160, "height": 100, "rotation": 0},
+    "value": {"left": 110, "top": 100, "width": 200, "height": 125, "rotation": 0}
+  }
+]
+```
+
+支持顶层图片及单层无旋转、无翻转的组内图片。组内操作通过父组的偏移和缩放换算幻灯片坐标。嵌套组、旋转组或翻转组在写副本和启动 Office 前拒绝，不把组内图片移到顶层。父组发生非等比缩放时，组内图片的原旋转和目标旋转均须为 0；带旋转的图片暂不支持这一组合。
+
+`picture.replace` 保留原图片的 OOXML 对象节点、ID、组归属和层级，为目标图片建立独立媒体关系，随后由 Office 保存重开。替换不会删除再建对象，也不会覆盖其他对象共享的媒体。
+
+```json
+[
+  {
+    "op": "picture.replace", "slide": 1, "name": "photo",
+    "image": "replacement.png",
+    "image_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "crop_policy": "preserve", "fit_policy": "stretch"
+  }
+]
+```
+
+示例哈希仅占位，调用前分别填入新素材和当前图片媒体的真实 SHA-256。`image` 必须是源 PPTX 所在目录内的相对路径，仅支持 PNG/JPEG，拒绝绝对路径、越界和符号链接或目录联接。`crop_policy` 为 `preserve` 或 `reset`，分别保留或清除原裁切。当前 `fit_policy` 仅支持显式 `stretch`，按原图片框拉伸；素材宽高比不同时需自行决定是否接受变形。工具不自动选择 contain 或 cover。
+
+`picture.crop` 不能与 `picture.transform` 或 `picture.replace` 放在同一批操作中，即使针对不同图片也需分次执行。先在独立副本完成一项，再以其保存输出为输入执行下一项，并重新读取前置值。带扩展 blip 效果的图片暂不支持替换，新素材解码后不超过 1600 万像素。
+
+图片读回核对点坐标、尺寸、旋转、裁切、组归属、层级、对象 ID 和解码后的 RGBA 像素，并检查邻近对象。媒体字节哈希变化不能单独证明换图成功。透明像素读回仍需结合导出图检查外观，GUI 拖动和更换图片另作验证。
+
+## 字号与长文本
+
+`text.set` 可选 `font_size_pt`，取值为有限数值且满足 `0 < font_size_pt <= 400`。文字相同时可以只修改字号，未提供该字段时沿用原行为。保存重开后，收据另给出 `actual_font_size_pt` 和 `font_size_matches`，字号不匹配不能通过内容读回。
+
+```json
+[{"op":"text.set","slide":1,"name":"title","text":"同一条待验证的长句","font_size_pt":46}]
+```
+
+`longer_text_layout` 分别记录 `within_frame`、`overflow_detected` 或 `not_assessed`。属性读回、几何排版警告和实际看图需要分别报告。历史失败的替代关系见[可靠性与恢复](reliability-and-recovery.md)。调用前用当前安装入口的 describe 核对支持的操作。
 
 ## 定向返修
 

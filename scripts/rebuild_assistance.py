@@ -106,6 +106,10 @@ def production_guidance(kind):
         from material_routes import GUIDANCE
         result['native_first']=GUIDANCE+' 准确标识优先保留原件或源像素，只有编辑要求确需路径时再重建并核对。照片、纹理和生成插图逐个记录 raster_content、raster_reason 和素材路线。'
         result['native_tools']='先核对当前工具能力。描摹与拟合产生的是候选几何，需要对照原图和实际 Office 渲染检查轮廓及层次，不能以生成成功作为视觉通过。'
+    if kind == 'editable_behavior':
+        result['picture_edit_tools']={'tool':'office.edit-readback','operations':['picture.transform','picture.replace','picture.crop'],
+            'units':'slide_points','group_limit':'single unrotated/unflipped group; nested groups rejected before Office',
+            'replacement':'source-directory relative PNG/JPEG + SHA-256; explicit preserve/reset crop and stretch fit; package relationship edit then Office save/reopen'}
     if kind == 'region_objects':
         result['native_units']='bbox、路径坐标、rounded_rect 组件的 radius 使用当前区域像素。字号、描边和阴影使用 pt。round_rect 的 adjustments 是圆角半径除以短边，范围 0..0.5，写 0.06，不能写 OOXML 整数 6000。线端可用 butt、round、square。'
         result['native_repetition']='普通虚线可给单条线或开放路径设置 style.dash="dash"。需要指定段长和间隔时，在 components 中使用 dashed_line，params 指定 dash_length、gap_length 和 axis。段长与间隔使用区域像素，横线沿 bbox 水平中线，竖线沿垂直中线，最多 512 段。由编译器展开路径，避免逐段输出重复坐标。混用 components 和 objects 时用 draw_order 明确层级，保留 source_notes；仍需实际渲染检查。'

@@ -44,7 +44,7 @@ def source_files(root, *, release=False):
             relative = path.relative_to(root).as_posix()
             if name.endswith(".pyc") or relative == "MANIFEST.json":
                 continue
-            if release and (name == "AGENTS.md" or name.startswith(".env")):
+            if release and (name == "AGENTS.md" or relative == "plan.md" or name.startswith(".env")):
                 if name.startswith(".env"):
                     raise ValueError("Environment file is not distributable: " + relative)
                 continue
@@ -71,10 +71,15 @@ def release_contract(root):
             raise ValueError('Public source audit failed: ' + json.dumps(public_audit['issues']))
     if manager_version != release['version'] or core_version != release['version']:
         raise ValueError('Loaded component code differs from the product release')
-    specs=MCP.specs(SimpleNamespace(manager=SimpleNamespace(root=root)))
-    names=[name for name,_,schema in specs]
-    if len(names)!=len(set(names)) or any(schema.get('type')!='object' for _,_,schema in specs):
-        raise ValueError('MCP discovery requires unique names and object-root schemas')
+    checked=subprocess.run([sys.executable,'-B','-E','-P','-X','utf8',
+        str(root/'distribution/mcp_discovery_probe.py'),'--root',str(root)],
+        capture_output=True,text=True,encoding='utf-8',timeout=30)
+    if checked.returncode:
+        raise ValueError('Clean-process MCP discovery failed: '+checked.stderr[-2000:])
+    discovery=json.loads(checked.stdout)
+    if discovery.get('status')!='passed' or discovery.get('version')!=release['version']:
+        raise ValueError('Clean-process MCP discovery did not verify the release')
+    names=discovery['tool_names']
     return {'manager_version':manager_version,'core_version':core_version,
             'mcp_tool_count':len(names),'mcp_tool_names':names}
 

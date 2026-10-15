@@ -1,6 +1,14 @@
 # 渲染、审查与交付
 
-新建任务采用 layered-review/2，在全页与重点局部查看左右对比和叠加图。任务的 must_view_files 和每个 review_bundle.required_view_files 给出实际必看文件。任一叠加图变化后，旧观察不能复用；旧任务仍执行其保存的策略。
+新建任务采用 layered-review/3。标准检查下，每页首次正式 PowerPoint 全页校验必须查看左右图和 50% 叠图，用于发现移位、比例和大幅偏差。首次检查未通过时继续要求叠图，LibreOffice 预审不完成正式首检。首检通过后，普通修订查看左右图；叠图用于精确定位、指定高要求区域和大幅布局变化。项目制作设置可开启频繁叠图检查，每个新版本的全页与必查局部都要求叠图。旧任务保留原策略，用户应用新设置后才切换。
+
+任务的 must_view_files 和 review_bundle.required_view_files 是必看清单，optional_view_files 提供可选叠图。未使用的可选叠图不单独影响观察复用，必查或实际使用的叠图变化后相关观察失效。当前叠图模式以 overlay_check 和 review_settings 为准，制作内容合同保留原设置快照。
+
+区域计划可设置 overlay_review=true 和具体 overlay_reason，声明精确定位或用户高精度要求。局部返修可用 rebuild_revise 的 overlay_review=true，CLI revise 和 review-again 支持 --overlay-review。整页重规划重新要求全页叠图。根对象多数位置或边界变化超过画布对应尺寸 5%、或画布变化时，工具要求复查全页。这只增加检查，不自动判断缺陷或通过。
+
+叠图重影须回到左右图确认具体缺陷。错字、漏项、明显移位、错误比例、箭头错误、裁切和影响阅读的遮挡须解决。抗锯齿、截图压缩噪声及要求允许的生成纹理差异不单独触发返修。频繁检查不自动提高素材逐像素一致性要求。
+
+新策略提交 needs_changes 时填写 refinement_issues，记录稳定 issue_id、具体 object_ids、problem、expected_improvement、improved 和 decision。同一问题跨两个修订版本均无改善时，decision 必须选择 change_method、accept_difference 或 unresolved。相同版本的全页和局部观察不重复计轮。达到轮数不自动通过，未解决问题继续阻止通过；没有新缺陷就停止追加检查。
 
 装饰标题作为独立素材接受检查。生成图中可辨认的文字通过 material_text_checks 绑定当前图片哈希，逐字比对原文。照片与插画内部文字保留在所属素材内，不要求逐字编辑。具体字段见 `component-material-workflow.md`。
 

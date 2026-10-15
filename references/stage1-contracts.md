@@ -19,11 +19,19 @@
 
 ## 提交预检
 
+`toolbox_project_inspect` 的 `action="submission"` 返回当前任务的提交草稿。CLI 使用 `manager.py --data-dir <当前数据目录> prepare-submit --project <已授权项目>`。该入口只读状态，固定 `task_id`、`token` 和 `base_revision`，从当前任务生成待填结果。编辑和重建动作的 `kind` 取自当前要求，备注仍为空。批量审查的每项保持 `blocked`，不会声明看过文件或填入通过结论。
+
+只编辑 `request.result`。CLI 通过 `--project` 指定项目时，从请求 JSON 中省略重复的 `project` 字段。任务身份变更后，先重新读取任务并检查工作是否仍适用，不把旧结果重新绑定到新 token。草稿的 `validation_status=not_run` 表示尚未预检。
+
 `rebuild_validate_response` 使用当前任务的身份和 `result`，与正式提交共用字段契约和语义校验。返回所有当前可检查的问题，每项包含 `path`、`rule`、`object_id`、`next_action` 和修正说明。缺少前置条件的检查列入 `not_checked`。
 
 普通字段错误按 `correct_result` 修正当前响应。申请生成素材与已选原生或保留路线冲突时，返回相关组件和 `revise`，先更新对应计划。预检不会填写文字转录、看图结论或通过状态。
 
 `validation_binding` 记录任务、版本、任务包、状态及输入哈希。本批不复用预检缓存，正式提交仍检查当前状态与依赖文件。不能把一次预检结果当成可长期使用的提交许可。
+
+CLI 预检入口为 `execute --tool workflow.validate_response -- --project <项目> --request-json <请求文件>`，提交入口为 `workflow.submit`。两步可以共用只含任务身份、版本和 `result` 的请求 JSON。
+
+受管 CLI 在预检 `valid=false`、等待处理、参数错误、执行失败或结果未知时返回非零退出码；MCP 同步返回 `isError=true`。PowerShell 脚本应在每步后检查 `$LASTEXITCODE`，非零时立即停止依赖步骤。提交已接受但领取下一项失败时，同样停止脚本，保留接受回执，先查状态，不重放提交。非零退出码本身不会阻止使用分号串联的后续命令。
 
 ## 调用统计
 

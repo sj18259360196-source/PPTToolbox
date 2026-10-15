@@ -627,6 +627,7 @@
                   "text_layout"
                 ],
                 "properties": {
+                  "overlay_checking": {"enum": ["standard", "frequent"]},
                   "illustration_mode": {
                     "enum": [
                       "generate_first",
@@ -688,6 +689,7 @@
                     "text_layout"
                   ],
                   "properties": {
+                    "overlay_checking": {"enum": ["standard", "frequent"]},
                     "illustration_mode": {
                       "enum": [
                         "generate_first",

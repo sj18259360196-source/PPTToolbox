@@ -41,6 +41,7 @@ def finish(record, result, began):
 
 
 def summarize(project, limit=2000):
+    from scripts.workflow_timing import summarize as workflow_timing
     root = Path(project).resolve()
     folder = root/'logs/tool-calls'
     files = sorted([*folder.glob('*/call.json'), *folder.glob('*/activity.json')],
@@ -91,6 +92,7 @@ def summarize(project, limit=2000):
             measured += 1
             returned += size
     return {'format': 'ppt-call-summary/1', 'calls': len(records), 'record_files': total_records,
+            'workflow_timing': workflow_timing(root),
             'limited': total_records > limit, 'unreadable_records': unreadable,
             'status_counts': dict(statuses), 'tool_counts': dict(tools), 'failure_codes': dict(failures),
             'item_counts':dict(item_counts),'item_failure_codes':dict(item_failures),

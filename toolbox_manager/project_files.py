@@ -21,7 +21,9 @@ def listing(manager, key, group=None, offset=0, limit=100):
                  and (not group or Path(f['path']).parts[0] == group)]
         items.sort(key=lambda f: (0 if f['group'] == 'delivery' else 1, -f['mtime_ns'], f['path']))
     root, row, state = Workbench(manager).entry(key)
+    from .project_status import production_summary
     return {'project': key, 'root': str(root), 'label': row['label'], 'status': state['status'],
+            'production_summary':production_summary(root, state, manager, key),
             'lifecycle': data['lifecycle'], 'files': items[offset:offset + limit], 'total': len(items),
             'offset': offset, 'next_offset': offset + limit if offset + limit < len(items) else None,
             'limited': not data['complete'], 'errors': data['errors'], 'history': state.get('history', [])[-100:]}

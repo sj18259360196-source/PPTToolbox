@@ -1,6 +1,6 @@
 """Offline asset inspection, strict cropping and transparent-PNG preparation; no OCR or generative calls."""
 from __future__ import annotations
-import argparse,json,sys
+import argparse,json,sys,os
 from pathlib import Path
 import numpy as np
 from PIL import Image
@@ -29,8 +29,25 @@ def audit(path:Path):
 
 def _guard(source:Path,dest:Path,overwrite:bool):
     if source.resolve()==dest.resolve():raise ValueError('Never overwrite source reference')
+    project = os.environ.get('PPT_USAGE_PROJECT')
+    if project:
+        from project_layout import check_output
+        check_output(Path(project), dest)
     if dest.exists() and not overwrite:raise FileExistsError(dest)
     dest.parent.mkdir(parents=True,exist_ok=True)
+
+
+def _record(source, dest, result):
+    project = os.environ.get('PPT_USAGE_PROJECT')
+    if project:
+        from artifact_registry import record_transform
+        try:
+            result['provenance_receipt'] = record_transform(project, source, dest, result)
+        except (OSError, ValueError) as exc:
+            # An output already exists; report the registration failure without
+            # disguising the successful write as permission to blindly retry it.
+            result['provenance_error'] = str(exc)
+    return result
 
 
 def crop(source:Path,dest:Path,box:list[int],overwrite=False):
@@ -39,7 +56,10 @@ def crop(source:Path,dest:Path,box:list[int],overwrite=False):
         l,t,r,b=box
         if not(0<=l<r<=im.width and 0<=t<b<=im.height):raise ValueError(f'Crop outside actual image {im.size}: {box}')
         im.crop(box).save(dest)
-    return audit(dest)
+    result = audit(dest)
+    result.update(operation='crop', source=str(source.resolve()), source_sha256=sha256(source),
+                  output=str(dest.resolve()), crop_box=list(box))
+    return _record(source, dest, result)
 
 
 def chroma_key(source:Path,dest:Path,key:str,tolerance:float=28,feather:float=16,overwrite=False):
@@ -70,7 +90,7 @@ def chroma_key(source:Path,dest:Path,key:str,tolerance:float=28,feather:float=16
     out[...,3]=np.clip(alpha*255,0,255).astype(np.uint8)
     Image.fromarray(out,'RGBA').save(dest)
     result=audit(dest);result['operation']='chroma';result['key']=key.upper().lstrip('#');result['tolerance']=tolerance;result['feather']=feather
-    return result
+    return _record(source, dest, result)
 
 
 def trim_alpha(source:Path,dest:Path,padding:int=0,threshold:int=1,overwrite=False):
@@ -85,7 +105,7 @@ def trim_alpha(source:Path,dest:Path,padding:int=0,threshold:int=1,overwrite=Fal
         r=min(rgba.width,int(xs.max())+1+padding);b=min(rgba.height,int(ys.max())+1+padding)
         rgba.crop((l,t,r,b)).save(dest)
     result=audit(dest);result['operation']='trim-alpha';result['source_box']=[l,t,r,b];result['padding']=padding;result['threshold']=threshold
-    return result
+    return _record(source, dest, result)
 
 
 def matte(source:Path,dest:Path,background:str='FFFFFF',overwrite=False):
@@ -95,7 +115,7 @@ def matte(source:Path,dest:Path,background:str='FFFFFF',overwrite=False):
         rgba=im.convert('RGBA')
         canvas=Image.new('RGBA',rgba.size,(*bg,255));canvas.alpha_composite(rgba);canvas.convert('RGB').save(dest)
     result=audit(dest);result['operation']='matte-preview';result['background']=background.upper().lstrip('#')
-    return result
+    return _record(source, dest, result)
 
 
 def main():

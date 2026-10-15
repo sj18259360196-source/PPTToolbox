@@ -43,7 +43,8 @@ def validate(destination):
     if (not isinstance(result,dict) or result.get("status")!="passed"
             or result.get("checks")!={"scipy_fit":True,"scipy_filter":True,
                                     "svg_render":True,"geometry":True,
-                                    "native_tool_entrypoints":True,"update_signature":True,"pdf_preview":True}):
+                                    "native_tool_entrypoints":True,"mcp_tool_discovery":True,
+                                    "update_signature":True,"pdf_preview":True}):
         raise ValueError("新版本图形运行环境检查未通过")
 
 def main():

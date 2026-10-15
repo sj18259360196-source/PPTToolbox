@@ -16,6 +16,61 @@ def safe_message(value):
     return re.sub(r'(?i)(bearer\s+|api[_-]?key[\s:=]+|token[\s:=]+)[^\s,;]+', r'\1[已隐藏]', text)
 
 
+def production_summary(root, workflow, manager=None, project_key=None):
+    """Inspect only registered candidate/delivery files, without approving them."""
+    from pathlib import Path
+    from scripts.project_journal import safe
+    from scripts.common import read_json, sha256
+    run = workflow.get('run') or {}
+    def artifact(record):
+        if not record:return None
+        item = {'file':record['file'],'expected_sha256':record.get('sha256'),'state':'unverified'}
+        try:
+            path = safe(Path(root), record['file'])
+            if not path.is_file():item['state']='missing'
+            else:
+                item['actual_sha256']=sha256(path)
+                item['state']='matched' if record.get('sha256')==item['actual_sha256'] else 'changed' if record.get('sha256') else 'unverified'
+        except (OSError,ValueError):item['state']='unavailable'
+        return item
+    delivery = None
+    if workflow.get('delivery'):
+        try:
+            receipt = read_json(safe(Path(root), workflow['delivery']+'/delivery.json'))
+            delivery = artifact({'file':workflow['delivery']+'/editable.pptx','sha256':receipt['pptx_sha256']})
+            delivery['run_id']=receipt.get('run_id')
+            delivery['current_run']=receipt.get('run_id')==run.get('id')
+            delivery['gates_recorded']=receipt.get('status')=='passed' and (receipt.get('gate') or {}).get('status')=='passed'
+        except (OSError,ValueError,KeyError,TypeError):
+            delivery={'state':'receipt_unavailable','file':workflow['delivery']+'/editable.pptx','current_run':False}
+    active = workflow.get('active_task') or {}
+    candidate = artifact(run.get('candidate'))
+    formal = (workflow.get('status')=='delivered' and bool(delivery) and
+              delivery.get('state')=='matched' and delivery.get('current_run') is True and
+              delivery.get('gates_recorded') is True and bool(candidate) and
+              candidate.get('state')=='matched' and candidate.get('actual_sha256')==delivery.get('actual_sha256'))
+    feedback = {'state':'not_recorded'}
+    if formal and manager is not None and project_key:
+        try:
+            from .learning import delivery_source
+            source = delivery_source(manager, project_key)
+            saved = manager.store.get('retrospective:'+source['id'], {})
+            if saved and saved.get('source',{}).get('hashes') != source['hashes']:
+                feedback = {'state':'version_changed'}
+            elif saved.get('accept'):
+                feedback = {'state':'recorded','reply':safe_message(saved['accept'].get('user_reply'))}
+        except (OSError,ValueError,KeyError,TypeError,StopIteration):
+            feedback = {'state':'unavailable'}
+            formal = False
+    return {'workflow_status':workflow.get('status'), 'run_id':run.get('id'),
+            'candidate':candidate, 'delivery':delivery, 'formal_delivery':bool(formal),
+            'pending_task_kind':active.get('kind'), 'review_records':sorted(run.get('reviews',{})),
+            'user_acceptance':feedback,
+            'refinement_history':workflow.get('refinement_history',[])[-100:],
+            'refinement_history_limited':len(workflow.get('refinement_history',[]))>100,
+            'history_coverage':'recorded_since_upgrade; older results are retained in workflow/results'}
+
+
 def call_state(call):
     status = call.get('status', '')
     recovery = call.get('recovery') or {}
@@ -169,20 +224,39 @@ def incident(call):
     if status == 'outcome_unknown':
         title, action = '执行结果待确认', '先核对调用日志和产物是否已写入，再决定下一步。不要直接重放写入。'
     if outcome == 'accepted_next_failed':
-        title, action = '提交已保存，下一步获取失败', '先读取当前任务状态；不要重新提交已经接受的内容。'
+        stage = call.get('failed_stage') or (call.get('failure_reason') or {}).get('stage')
+        label = {'render':'渲染失败','office_render':'渲染失败','next':'下一步获取失败',
+                 'build':'构建失败','compare':'比较失败'}.get(stage, '后续处理失败')
+        title, action = '提交已保存，'+label, '先读取当前任务状态；不要重新提交已经接受的内容。'
     return {**call, 'id': call['id'], 'status':status, 'title':title,
             'severity':'info' if status=='empty' else 'warning' if status=='blocked' else 'error',
             'message':safe_message(call.get('message') or code), 'next_action':action,
             'state':'open'}
 
 
-def reconcile(previous, calls):
+def reconcile(previous, calls, task_contexts=()):
     """Only the same call, or a known task's successful retry, settles a failure."""
     issues = {i['id']:copy.deepcopy(i) for i in previous}
+    from .flow_semantics import moment
     context = None
     for call in sorted(calls, key=lambda c:c.get('at','')):
         found = incident(call)
         if found:
+            # Unsent submissions may lack a task ID. Bind only to the exact
+            # issued revision in this project's authoritative workflow history.
+            if (not found.get('task_id') and found.get('tool')=='workflow.submit'
+                and found.get('error_code')=='invalid_arguments'
+                and found.get('recovery',{}).get('dispatch')=='not_dispatched'
+                and isinstance(found.get('revision_after'), int)):
+                issued=next((t for t in task_contexts
+                    if t.get('project')==found.get('project') and found.get('project')
+                    and t.get('project_id') and (not found.get('project_id') or t['project_id']==found['project_id'])
+                    and t.get('revision_after')==found['revision_after']
+                    and t.get('task_id') and moment(t.get('at')) is not None
+                    and moment(found.get('at')) is not None
+                    and moment(t['at'])<=moment(found['at'])), None)
+                if issued:
+                    found['task_context']={k:issued.get(k) for k in ('task_id','project_id','revision_after','evidence_id')}
             if (not found.get('task_id') and found.get('tool')=='workflow.submit'
                 and found.get('error_code')=='invalid_arguments'
                 and found.get('recovery',{}).get('dispatch')=='not_dispatched'
@@ -205,6 +279,8 @@ def reconcile(previous, calls):
                 same = old['id']==call['id']
                 retry = (old['status']!='outcome_unknown' and old.get('task_id') and
                          old.get('task_id')==call.get('task_id') and old.get('tool')==call.get('tool') and
+                         (not old.get('project') or old.get('project')==call.get('project')) and
+                         (not old.get('project_id') or old.get('project_id')==call.get('project_id')) and
                          (old.get('recovery') or {}).get('outcome')!='accepted_next_failed' and
                          call.get('at','')>old.get('at',''))
                 bound=old.get('task_context') or {}
@@ -212,14 +288,30 @@ def reconcile(previous, calls):
                 initialized=(scoped and old.get('tool')==call.get('tool')=='workflow.start'
                     and old.get('error_code')=='project_exists' and call.get('project_id')
                     and call.get('revision_after')==1 and (old.get('recovery') or {}).get('outcome')=='rejected')
+                missing_state=(scoped and old.get('tool')=='workflow.status'
+                    and call.get('tool')=='workflow.start' and call.get('project_id')
+                    and call.get('revision_after')==1 and old.get('revision_before') is None
+                    and old.get('error_code')=='invalid_operation'
+                    and (old.get('recovery') or {}).get('outcome')=='rejected'
+                    and 'No such file or directory' in old.get('message','')
+                    and 'state.json' in old.get('message',''))
                 submitted=(scoped and old.get('tool')==call.get('tool')=='workflow.submit'
                     and bound.get('task_id') and bound['task_id']==call.get('task_id')
                     and bound.get('project_id')==call.get('project_id')
                     and bound.get('revision_after')==call.get('revision_before'))
-                if same or retry or initialized or submitted:
+                operation_retry=(scoped and not old.get('task_id')
+                    and old.get('tool')==call.get('tool')
+                    and old.get('tool') in {'workflow.next','workflow.replace-scene'}
+                    and old.get('project_id') and old['project_id']==call.get('project_id')
+                    and (old.get('recovery') or {}).get('outcome')=='rejected'
+                    and isinstance(old.get('revision_before'),int)
+                    and old['revision_before']==old.get('revision_after')==call.get('revision_before')
+                    and isinstance(call.get('revision_after'),int)
+                    and call['revision_after']>old['revision_before'])
+                if same or retry or initialized or missing_state or submitted or operation_retry:
                     old.update(state='resolved', resolved_by=call['id'], resolved_at=call.get('at'),
                         resolved_evidence_id=call.get('evidence_id'),
-                        resolution_reason='项目已成功初始化' if initialized else '已领取任务成功提交' if submitted else '成功重试已确认')
+                        resolution_reason='项目已成功初始化' if initialized or missing_state else '已领取任务成功提交' if submitted else '同一版本的操作重试已成功' if operation_retry else '成功重试已确认')
         if call.get('tool','').startswith('workflow.') and call_state(call)=='done':
             context=call
         elif call.get('tool','').startswith('workflow.') and call.get('recovery',{}).get('dispatch')!='not_dispatched':
@@ -233,7 +325,9 @@ def reconcile(previous, calls):
 def graph(state):
     """Enrich registered nodes; otherwise show observed calls beside major stages."""
     calls = state.get('activity', {}).get('calls', [])
-    issues = [i for i in state.get('activity', {}).get('issues', []) if i.get('state')=='open']
+    all_issues = state.get('activity', {}).get('issues', [])
+    issues = [i for i in all_issues if i.get('state')=='open']
+    resolved = [i for i in all_issues if i.get('state')=='resolved']
     phase = state.get('phase', {})
     custom = state.get('work_graph', {}).get('nodes', [])
     all_routes = state.get('activity', {}).get('generation_routes', [])
@@ -256,7 +350,7 @@ def graph(state):
         # earlier failed review. Unresolved issues remain in the project panel.
         import hashlib
         groups={}
-        for c in calls+issues:
+        for c in calls+issues+resolved:
             kind=step_kind(c.get('tool'),c.get('task_kind'))
             if kind and c.get('task_id') not in routed_tasks:
                 groups.setdefault((kind,c.get('task_id')),[]).append(c)
@@ -294,7 +388,9 @@ def graph(state):
             return not custom and node.get('source')=='stage' and node.get('stage')==phase.get('stage') and not step_kind(c.get('tool'),c.get('task_kind'))
         relevant=[c for c in calls if matches(c) and (not node.get('updated_at') or c.get('at','')>=node['updated_at'])]
         problems=[i for i in issues if matches(i)]
-        node['call_ids']=list(dict.fromkeys(c['id'] for c in relevant+problems))
+        recovered=[i for i in resolved if matches(i)]
+        node['call_ids']=list(dict.fromkeys([c['id'] for c in relevant+problems+recovered]+
+            [i['resolved_by'] for i in recovered if i.get('resolved_by')]))
         problems=[i for i in problems if i.get('status')!='empty' and i.get('message')!='no_results']
         if problems:
             problem=next((i for i in reversed(problems) if i['severity']=='error'),problems[-1])
@@ -302,6 +398,15 @@ def graph(state):
                         evidence='调用异常 · '+str(problem.get('evidence_id','')), issue_ids=[i['id'] for i in problems],
                         detail=problem['title']+'\n'+problem['message']+'\n'+problem['next_action'])
             node.pop('status_label',None)
+        elif recovered and node.get('source') in {'pptagent','observer'}:
+            recovery=max(recovered,key=lambda i:i.get('resolved_at',''))
+            node.update(status='recovered', status_label='失败后已恢复',
+                evidence='恢复依据 · '+str(recovery.get('resolved_evidence_id') or recovery.get('resolved_by','')),
+                recovered_issue_ids=[i['id'] for i in recovered],
+                resolved_at=recovery.get('resolved_at'),
+                detail='原始失败\n'+recovery.get('message','')+'\n恢复情况\n'+
+                    recovery.get('resolution_reason','成功重试已确认')+'\n'+
+                    str(recovery.get('resolved_at',''))+' · '+str(recovery.get('resolved_evidence_id','')))
         elif relevant and node.get('status') not in {'done','skipped','replaced','paused'}:
             call=relevant[-1]; observed=call_state(call)
             node.update(observedTool=call.get('tool'), observed_at=call.get('at'))

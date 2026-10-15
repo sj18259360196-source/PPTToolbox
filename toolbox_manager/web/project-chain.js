@@ -71,7 +71,7 @@ export async function mountWorkbench(main){
  function alerts(){
   const s=current||{},issues=s.issue_view?.attention||(s.activity?.issues||[]).filter(i=>i.state==='open');
   const historical=s.issue_view?.history||[];
-  $('chain-diagnostics').innerHTML=historical.map(i=>`<details class="chain-incident info"><summary>${esc(i.title||i.tool)}<span>${esc(i.state==='open'?'历史记录':i.state==='resolved'?'已处理':'已收起')}</span></summary><p>${esc(i.impact_reason)}</p><p>${esc(i.message)}</p><small>${esc(i.evidence_id)}</small><button data-show-call="${esc(i.id)}">查看调用</button></details>`).join('')||'<p class="muted">暂无历史诊断记录</p>';
+  $('chain-diagnostics').innerHTML=historical.map(i=>`<details class="chain-incident info"><summary>${esc(i.title||i.tool)}<span>${esc(i.state==='open'?'历史记录':i.state==='resolved'?'失败后已恢复':'已收起')}</span></summary><p>${esc(i.state==='resolved'?i.resolution_reason:i.impact_reason)}</p><p>${esc(i.message)}</p><small>${esc(i.evidence_id)}</small><button data-show-call="${esc(i.id)}">查看原始调用</button>${i.state==='resolved'?`<p>恢复时间　${esc(new Date(i.resolved_at).toLocaleString())} · ${esc(i.resolved_evidence_id)}</p><button data-show-call="${esc(i.resolved_by)}">查看恢复调用</button>`:''}</details>`).join('')||'<p class="muted">暂无历史诊断记录</p>';
   const sync=fetchError||s.observer_error||s.manifest_warning;
   const time=s.updated_at?new Date(s.updated_at).toLocaleString():'尚未成功读取';
   $('chain-alerts').innerHTML=(sync?`<div class="chain-incident error" role="alert"><strong>项目状态暂未更新</strong><p>${esc(sync)}</p><small>最近可用记录 ${esc(time)} · 当前显示保留内容，恢复后自动更新</small></div>`:'')+

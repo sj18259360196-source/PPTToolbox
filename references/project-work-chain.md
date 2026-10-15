@@ -43,6 +43,14 @@
 
 软件至少检查首次接单登记和交付前的阶段位置。制作 Agent 负责在中间大阶段真实切换时登记，软件不会根据某一次页内工具调用猜测整个项目已经进入下一大阶段。此前的项目保留原流程，从首次打卡起建立工作链。
 
+## 提交与打卡分别生效
+
+合并调用不会把提交和打卡变成一个回滚事务。返回的 `submission` 包含 `state`、`accepted`、`dispatched`、`task_id`、`workflow_revision_before` 和 `workflow_revision_after`。`checkpoint_receipt` 包含 `state`、`recorded`、`duplicate`、`checkpoint_id`、`stage_revision_before` 和 `stage_revision_after`。两套版本必须分别核对。
+
+打卡状态区分 `not_requested`、`not_attempted`、`recorded`、`failed` 和 `unknown`。`unknown` 的 `recorded` 为 null，不能解读为未写入。相同 ID 和内容的重试返回 `duplicate=true`，同 ID 不同内容仍拒绝，阶段版本冲突也保留。
+
+先读 `recovery.submission_retry_scope` 和 `recovery.checkpoint_retry_scope`。提交拒绝而打卡已保存时，只修当前任务结果，保留已登记阶段。提交已接受时不重交；后续领取或展示失败只检查当前状态和失败阶段。超时、回包丢失或写入结果未知时，先按 `call_id` 查状态与收据，不靠整次调用失败推断两项均未生效。完整结果查询方法见[可靠性与恢复](reliability-and-recovery.md)。
+
 ## 软件关闭或 API 不可用
 
 MCP 打卡不依赖 PPTAgent API。软件界面关闭时仍可通过受管 MCP 保存记录。MCP 暂时不可达时，可把相同结构的 JSON 原子写入 `.ppttool/checkpoints/pending/<checkpoint_id>.json`，重新打开软件后读取 `.ppttool/checkpoints/receipts/` 的收件结果。只提交自己已获得授权的项目，不填写其他项目路径。冲突保留待核对，不覆盖既有阶段。

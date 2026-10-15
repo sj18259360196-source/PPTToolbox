@@ -76,6 +76,7 @@ def registered_context(manager, tid, args, explicit_project=None):
     text_fit_options = None
     path_fit_options = None
     generation_options = None
+    edit_options = None
     if tid in {'ops.generation-prepare', 'ops.generation-ingest'} and '--help' not in args:
         if explicit_project is None:
             raise PolicyDenied('Generation tools require an explicit managed --project context')
@@ -139,6 +140,9 @@ def registered_context(manager, tid, args, explicit_project=None):
                 raise ValueError("Invalid registered path-fit arguments") from None
         input_paths.extend(path_fit_options[k] for k in ("scene", "request"))
         output_paths.append(path_fit_options["outdir"])
+    elif tid == 'project.layout.audit' and '--help' not in args:
+        if explicit_project is None or args != ['--project', str(explicit_project)]:
+            raise ValueError('Layout audit requires the exact authorized project root')
     elif tid.startswith('assets.') and '--help' not in args:
         if not args or args[0].startswith('-'):raise ValueError('Asset tool requires a source path')
         input_paths.append(args[0])
@@ -161,18 +165,30 @@ def registered_context(manager, tid, args, explicit_project=None):
         else:
             sub = parser.add_subparsers(dest="command", required=True)
             sub.add_parser("describe")
+            child = sub.add_parser('plan')
+            child.add_argument('--pptx', required=True)
+            child.add_argument('--outdir', required=True)
+            child.add_argument('--operations')
+            child.add_argument('--previous')
+            child.add_argument('--reuse-unchanged-slides', action='store_true')
             for command in ("validate", "run"):
                 child = sub.add_parser(command)
-                child.add_argument("--operations", required=True)
+                group = child.add_mutually_exclusive_group(required=True)
+                group.add_argument('--operations')
                 if command == "run":
-                    child.add_argument("--pptx", required=True)
+                    group.add_argument('--plan')
+                    child.add_argument("--pptx")
                     child.add_argument("--outdir", required=True)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             try:
                 parsed = vars(parser.parse_args(args))
             except (SystemExit, argparse.ArgumentError):
                 raise ValueError("Invalid registered build/inspect/edit arguments") from None
-        input_paths.extend(parsed[k] for k in ("scene", "pptx", "operations") if parsed.get(k))
+        if tid == 'office.edit-readback':
+            edit_options = parsed
+            if parsed['command'] == 'run' and bool(parsed.get('plan')) == bool(parsed.get('pptx')):
+                raise ValueError('Run uses --plan or --pptx with --operations')
+        input_paths.extend(parsed[k] for k in ("scene", "pptx", "operations", "plan", "previous") if parsed.get(k))
         output_paths.extend(parsed[k] for k in ("output", "out", "outdir") if parsed.get(k))
     elif tid == "office.render" and "--help" not in args:
         # PowerShell accepts case-insensitive and colon-attached parameters.
@@ -230,11 +246,31 @@ def registered_context(manager, tid, args, explicit_project=None):
             check_input(absolute(path), project, roots)
         for path in output_paths:
             output = plain_path(absolute(path))
+            if tid.startswith('assets.'):
+                from scripts.project_layout import check_output
+                check_output(project, output)
             if not output.is_relative_to(project):
                 raise PolicyDenied("Output must stay inside the authorized project")
             protected_assets=output.is_relative_to(project/'assets') and (output.exists() or tid in {'office.render','office.edit-readback','pptx.build','pptx.inspect'})
             if output in candidates or output == project or output.is_relative_to(project/"input") or protected_assets:
                 raise PolicyDenied("Immutable inputs are not output targets")
+        if edit_options:
+            from scripts.edit_runner import load_plan, replacement_inputs, evidence_check, bound
+            check_edit = lambda path: check_input(absolute(path), project, roots)
+            if edit_options.get('plan'):
+                load_plan(absolute(edit_options['plan']), check_edit, check_environment=False)
+            if edit_options.get('operations') and edit_options.get('pptx'):
+                ops = json.loads(absolute(edit_options['operations']).read_text(encoding='utf-8-sig'))
+                from scripts.office_edit import validate_operations
+                replacement_inputs(absolute(edit_options['pptx']), validate_operations(ops), check_edit)
+            if edit_options.get('previous'):
+                prior = json.loads(absolute(edit_options['previous']).read_text(encoding='utf-8-sig'))
+                if prior.get('format') != 'office-edit-run/1':
+                    raise ValueError('Previous evidence must be an Office edit run')
+                bound(prior['source'], check_edit)
+                for case in prior['cases']:
+                    if case.get('evidence'):
+                        evidence_check(case['evidence'], case['operation'], case['evidence']['input'], check_edit)
         if text_fit_options:
             # Manifests carry indirect reads; validate them before spawning the tool.
             if tid.endswith("-plan"):
@@ -369,6 +405,11 @@ def cli_arguments(manager, command, args):
     a = {k: str(v) if isinstance(v, Path) else [str(p) for p in v] if isinstance(v, list) else v
          for k, v in a.items() if v is not None}
     if command == "submit":
+        # The core parser's store_true default is legacy False. An omitted flag
+        # must remain omitted so public CLI defaults can advance to the next task.
+        # Explicit False remains available through the structured request entry.
+        if '--return-next' not in args:
+            a.pop('return_next', None)
         project, roots = authorize(manager, a["project"])
         response = check_input(a.pop("response"), project, roots)
         from .payload_transport import read_json_file
@@ -402,6 +443,12 @@ def enrich_task(manager, result, project, response_detail='full'):
                 input_files=packet["input_files"], context=packet["context"], response=template)
     result["submit_tool"] = "rebuild_submit"
     result["validation_tool"] = "rebuild_validate_response"
+    task['contract_summary'] = {
+        'constraints':packet['context'].get('submission_constraints',{}),
+        'result_fields':list(template.get('result',{})),
+        'identity':'Preserve task_id/token/base_revision; never replay an accepted response.',
+        'observations':'Fill source_text, viewed_files and review conclusions from actual inspection.'}
+    task['preflight_hint'] = 'For complex or corrected results, call rebuild_validate_response with this task identity and result before submitting. Validation never certifies viewing or Office acceptance.'
     result["next_tool"] = "rebuild_next"
     from .payload_transport import MCP_INLINE_BYTES, RESULT_FILE_BYTES, FILE_HINT
     result['submission_transport'] = {
@@ -487,6 +534,11 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
     before = {}
     request = None
     result = None
+    checkpoint_receipt = None
+    if isinstance(arguments, dict) and isinstance(arguments.get('checkpoint'), dict):
+        checkpoint_receipt = {'state':'not_attempted', 'recorded':False, 'duplicate':False,
+            'checkpoint_id':arguments['checkpoint'].get('checkpoint_id'),
+            'stage_revision_before':None, 'stage_revision_after':None}
     record = {"call_id": call_id, "tool_id": tid, "source": source,
               "rpc_request_id": rpc_id, "started_at": stamp(), "ended_at": None,
               "owner_pid": os.getpid(), "worker_pid": None,
@@ -518,6 +570,9 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         root = Path(p["path"])
         if source == "cli" and command != "start":
             arguments = cli_arguments(manager, command, arguments)
+        if source == 'cli':
+            from .submission import defaults
+            arguments = defaults(command, arguments)
         if command in COMMANDS:
             validate(command, arguments, root)
         mark=time.perf_counter()
@@ -532,10 +587,24 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
             arguments = {k: v for k, v in arguments.items() if k not in {'result_file', 'result_sha256'}}
             arguments['result'] = payload
             validate(command, arguments, root)
+        before = snapshot(project)
         checkpoint_payload = arguments.pop('checkpoint', None)
         if checkpoint_payload is not None:
             from .project_hub import checkpoint
-            checkpoint(manager, {**checkpoint_payload, 'project':str(project)})
+            checkpoint_receipt = {'state':'failed', 'recorded':False, 'duplicate':False,
+                'checkpoint_id':checkpoint_payload.get('checkpoint_id'),
+                'stage_revision_before':None, 'stage_revision_after':None}
+            try:
+                from scripts import project_journal
+                stage_before = project_journal.load(project)['phase_revision']
+                checkpoint_receipt.update(stage_revision_before=stage_before, stage_revision_after=stage_before)
+                checkpoint_receipt = checkpoint(manager, {**checkpoint_payload, 'project':str(project)})
+            except Exception as checkpoint_error:
+                if not isinstance(checkpoint_error, (ValueError, PolicyDenied)):
+                    checkpoint_receipt.update(state='unknown', recorded=None, stage_revision_after=None)
+                checkpoint_receipt['error'] = {'code':'checkpoint_failed', 'message':str(checkpoint_error)[:1200]}
+                raise
+            record['checkpoint_receipt'] = checkpoint_receipt
         if command in {'submit','validate_response'} and arguments.get('result',{}).get('action') in {'request_asset','request_assets'}:
             from .material_policy import effective
             if not effective(manager,project)['values']['host_generation_allowed']:
@@ -598,7 +667,16 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                               "returncode": 3, "reason": "Worker timeout; inspect status before retry", "worker_pid": child.pid}
                     manager.store.event("tool.timeout", "Worker remains owned; no automatic retry or process kill",
                                         source=source, status="waiting", details={**record, **result})
-                    from .recovery import describe_result
+                    if checkpoint_receipt is not None:
+                        result['checkpoint_receipt'] = checkpoint_receipt
+                    from .recovery import describe_result, independent_outcomes
+                    independent_outcomes(result, command=command, arguments=arguments, dispatched=True,
+                        before=before, after=snapshot(project), checkpoint=checkpoint_receipt)
+                    describe_result(result, dispatched=True)
+                    record.update(command_status='outcome_unknown', revision_after=snapshot(project).get('revision'),
+                        submission=result.get('submission'), checkpoint_receipt=result['checkpoint_receipt'],
+                        recovery=result['recovery'])
+                    (output_dir/'call.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
                     return describe_result({**result, "call_id": call_id, "tool_id": tid,
                         "output_directory": str(output_dir)}, dispatched=True)
             timings['worker_seconds']=time.perf_counter()-mark
@@ -619,10 +697,7 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
                 result["command_status"] = "outcome_unknown"
             if result.get("command_status") == "completed":
                 try:
-                    if arguments.get('response_detail')=='compact':
-                        result = enrich_task(manager, result, project, 'compact')
-                    else:
-                        result = enrich_task(manager, result, project)
+                    result = enrich_task(manager, result, project)
                 except Exception as exc:
                     result["task_display_warning"] = str(exc)[:1200]
                     result["next_error"] = {"code":"task_display_failed",
@@ -649,8 +724,14 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         if production.get('pending') and applied.get('revision') == production['revision'] and applied.get('effective_sha256') == production.get('effective_sha256'):
             production = mark_applied(manager,project,production['revision'])
         result['production_settings'] = production
-        from .recovery import describe_result
+        from .recovery import describe_result, independent_outcomes
+        independent_outcomes(result, command=command, arguments=arguments,
+            dispatched=record['worker_pid'] is not None, before=before, after=after, checkpoint=checkpoint_receipt)
+        record.update(submission=result.get('submission'), checkpoint_receipt=result['checkpoint_receipt'])
+        if checkpoint_receipt is not None:
+            result['checkpoint_receipt'] = checkpoint_receipt
         describe_result(result, dispatched=record["worker_pid"] is not None)
+        record.update({k: result.get(k) for k in ('acceptance_state','failed_stage','failure_reason','retry_scope','blocking_call_id')})
         from .project_status import safe_message
         record.update(revision_after=after["revision"], workflow_status=result.get("workflow_status"),
                       project_id=after["project_id"], task_id=record["task_id"] or after["task_id"],
@@ -703,9 +784,17 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         describe_result(result, dispatched=record["worker_pid"] is not None)
         from .learning import record_attempt_safely
         record_attempt_safely(manager, command, arguments, result)
+        if command=='finish':
+            from .project_context import delivery_details
+            delivery_details(result,project)
         if arguments.get('response_detail') == 'compact':
-            from .context_delivery import measure_delivery
-            measure_delivery(result)
+            from .context_delivery import compact_response
+            try:result=compact_response(manager,result,project,command,output_dir,record)
+            except (OSError,ValueError) as projection_exc:
+                from .context_delivery import measure_delivery
+                result['response_detail']='full'
+                result['compact_warning']=str(projection_exc)[:300]
+                measure_delivery(result)
             record['ended_at']=stamp()
             finish_metrics(record,result,began)
             try:
@@ -738,16 +827,24 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
         if hasattr(exc, 'diagnostics'):
             result['error']['diagnostics'] = exc.diagnostics
             result['error']['not_checked'] = getattr(exc,'not_checked',[])
-        if previous_result.get("accepted_task"):
-            result.update(accepted_task=previous_result["accepted_task"],
+        if previous_result.get("accepted_task") or (previous_result.get('submission') or {}).get('state') == 'accepted':
+            result.update(accepted_task=previous_result.get("accepted_task"),
                           submission=previous_result.get("submission"),
                           next_error={"code":"post_accept_failure","message":str(exc)[:1200]})
         elif previous_result.get("command_status") == "completed":
             result.update(previous_result, reporting_warning=str(exc)[:1200])
+        elif previous_result.get('command_status') == 'outcome_unknown':
+            result['command_status'] = 'outcome_unknown'
         elif record["worker_pid"] is not None and not previous_result:
             result["command_status"] = "outcome_unknown"
-        from .recovery import describe_result
+        from .recovery import describe_result, independent_outcomes
+        independent_outcomes(result, command=command, arguments=arguments,
+            dispatched=record['worker_pid'] is not None, before=before, after=after, checkpoint=checkpoint_receipt)
+        record.update(submission=result.get('submission'), checkpoint_receipt=result['checkpoint_receipt'])
+        if checkpoint_receipt is not None:
+            result['checkpoint_receipt'] = checkpoint_receipt
         describe_result(result, dispatched=record["worker_pid"] is not None)
+        record.update({k: result.get(k) for k in ('acceptance_state','failed_stage','failure_reason','retry_scope','blocking_call_id')})
         record.update(command_status=result["command_status"], ended_at=stamp(),
                       revision_after=after.get("revision"), workflow_status=after.get("workflow_status"),
                       error_type=type(exc).__name__, recovery=result["recovery"])
@@ -768,4 +865,12 @@ def execute(manager, command, arguments, source="cli", rpc_id=None, timeout=None
             result.update(authorization_request=request, next_action=next_action(request), reason=str(exc))
         from .learning import record_attempt_safely
         record_attempt_safely(manager, command, arguments, result)
+        if isinstance(arguments,dict) and arguments.get('response_detail')=='compact' and record.get('output_directory'):
+            from .context_delivery import compact_response
+            result.update(call_id=call_id,tool_id=tid)
+            try:
+                result=compact_response(manager,result,project,command,Path(record['output_directory']),record)
+                (Path(record['output_directory'])/'call.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
+            except (OSError,ValueError) as projection_exc:
+                result['compact_warning']=str(projection_exc)[:300]
         return result

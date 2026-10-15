@@ -36,6 +36,14 @@ def inspect(path, project_root=None):
 def require(path, project_root=None):
     report = inspect(path, project_root)
     if report['errors']:
-        raise ValueError('Scene import errors: '+'; '.join(report['errors'][:20])+
+        exc = ValueError('Scene import errors: '+'; '.join(report['errors'][:20])+
                          ' | base='+report['base']+' | '+report['guidance'])
+        exc.diagnostics = [{'path':r['field'],'code':'scene_reference_invalid',
+            'message':r['error'],'base':r['base'],'resolved':r.get('resolved'),
+            'value':r['value'],'exists':r.get('exists',False),
+            'next_action':report['guidance']} for r in report['references'] if 'error' in r]
+        if not exc.diagnostics:
+            exc.diagnostics = [{'path':'/scene','code':'scene_contract_invalid','message':message,
+                                'next_action':report['guidance']} for message in report['errors']]
+        raise exc
     return report

@@ -72,6 +72,8 @@ def start(project:Path, references=None, scene_path=None, candidate=None, ratio=
             title='Reference rebuild';pages=[]
             for i,(p,size) in enumerate(zip(references,sizes),1):
                 rel=f'input/slide-{i:03}{p.suffix.lower()}';shutil.copyfile(p,stage/rel)
+                from artifact_registry import record_transform
+                record_transform(stage, p, stage/rel, {'operation': 'reference_import'})
                 pages.append({'id':f'slide-{i:03}','index':i,'reference':rel,'size':size,'sha256':sha256(stage/rel),
                               'mapping':input_mapping(canvas,size,mapping),'plan':None,'fragments':{},
                               'imported_slide':None,'source_review':None})
@@ -86,7 +88,7 @@ def start(project:Path, references=None, scene_path=None, candidate=None, ratio=
                'builder':'external' if candidate else builder,'office_requested':office,'active_task':None,
                'task_seq':0,'run_seq':0,'run':None,'accepted':[],'asset_jobs':[], 'failure':None,'operation':None,
                'tracked_inputs':{},'history':[],
-               'production_policy':'layered-material/2','review_policy':'layered-review/2'}
+               'production_policy':'layered-material/2','review_policy':'layered-review/3'}
         if production_settings is not None:
             from production_settings import snapshot, validate_values
             state['production_settings'] = snapshot(validate_values(production_settings['values']), revision=production_settings.get('revision',0), source=production_settings.get('source','project'))
@@ -100,7 +102,9 @@ def start(project:Path, references=None, scene_path=None, candidate=None, ratio=
             for path in (stage/folder).rglob('*'):
                 if path.is_file():state['tracked_inputs'][path.relative_to(stage).as_posix()]=sha256(path)
         write_json(stage/'workflow/preflight.json',probe())
+        from project_layout import CONTRACT
         write_json(stage/'workflow/project-context.json',{'format':'ppt-project-context/1','project_id':state['project_id'],
+                   'directory_contract':CONTRACT,
                    'path_base':'project_root','input':'input','assets':'assets','versions':'runs',
                    'scene_path_contract':{'1.0':'scene_directory','1.1':'project_root',
                        'new_scene_fields':{'version':'1.1','path_base':'project_root'},'frozen_snapshots':'1.0 self-contained scene directory'},
@@ -135,7 +139,8 @@ def add_asset(project:Path,source:Path,provenance:str):
         s=load(project)
         # Assets can be imported while a regional task is active; this is an explicit task amendment.
         rel=import_file(source,project);s['tracked_inputs'][rel]=sha256(project/rel)
-        s.setdefault('asset_catalog',[]).append({'asset':rel,'provenance':text(provenance,'provenance'),'sha256':sha256(project/rel)})
+        s.setdefault('asset_catalog',[]).append({'asset':rel,'provenance':text(provenance,'provenance'),'sha256':sha256(project/rel),
+            'source_origin': {'path': str(source.resolve()), 'sha256': sha256(source)}})
         _cancel(s,'asset_imported')
         save(project,s,'asset_imported',{'asset':rel})
         return {**brief(s),'asset':rel,'note':'Current task was refreshed to include the new asset; call next and use its new token.'}
@@ -214,6 +219,8 @@ def _progress(project,s,max_steps=6,office=None):
                 kind='compare';_begin(project,s,kind);run['attempt']+=1;out=base/f'comparisons-{run["attempt"]:03}'
                 compare_deck(base/'scene.json',under(project,run['render']['file']),out,base/'regions.json',pptx_path=under(project,run['candidate']['file']))
                 run['comparison']=file_record(project,out/'deck-comparison.json')
+                from layered_review import prepare_checks
+                prepare_checks(s,run,read_json(base/'scene.json'),comparison_views(project,run))
                 from review_reuse import restore
                 restore(project,s)
                 s['status']='awaiting_visual_review';_end(project,s,kind);return
@@ -365,6 +372,8 @@ def _template(kind,context):
                 for row in result['material_reviews']: row.pop('output_sha256')
         return result
     if kind=='source_review':
+        assertion['text_checks'] = [{'object_id':o['id'],'source_text':''}
+                                    for o in context.get('text_and_tables',[]) if o['kind']=='text']
         from workflow_production import review_required, review_template as production_template
         if review_required(context.get('production_settings')):
             assertion['production_review'] = production_template(context['production_settings'])
@@ -387,7 +396,7 @@ def _template(kind,context):
     if kind=='candidate':return {'file':''}
     if kind=='office_render':return {'receipt':''}
     if kind in {'review_full','preview_full'}:
-        result = {'reviewer':'','viewed_files':[], 'checks':{k:{'status':'blocked','note':''} for k in ['visual_full','raster_scope','text_geometry']},'findings':[]}
+        result = {'reviewer':'','viewed_files':[], 'checks':{k:{'status':'blocked','note':''} for k in ['visual_full','raster_scope','text_geometry']},'findings':[],'refinement_issues':[]}
         from workflow_production import review_required, review_template as production_template
         if review_required(context.get('production_settings')):
             result['production_review'] = production_template(context['production_settings'])
@@ -395,10 +404,10 @@ def _template(kind,context):
             from material_quality import review_template
             result['material_reviews'] = review_template(context['material_quality'])
         return result
-    if kind in {'review_local','preview_local'}:return {**assertion,'relationships':[{'object_id':x,'note':''} for x in context['relationships']],'findings':[],
+    if kind in {'review_local','preview_local'}:return {**assertion,'relationships':[{'object_id':x,'note':''} for x in context['relationships']],'findings':[],'refinement_issues':[],
         **({'object_checks':[{'object_id':oid,'status':'blocked','note':''} for oid in context['object_check_ids']]}
            if context.get('object_check_ids') else {})}
-    return {**assertion,'files':[],'actions':[],**({'edit_tests':[]} if kind=='editable_behavior' else {})}
+    return {**assertion,'files':[],'actions':[],**({'edit_tests':[],'evidence_index':None} if kind=='editable_behavior' else {})}
 
 TASK_HELP={
  'page_plan':('先看整页背景、层级和标题区、文字区、插图区，再在同一份 element_scope 中记录各组件的类型、文字归属、编辑需求和制作方法。先读取 production_settings。简单线性与规则组合图标归为 simple_icon 并原生绘制。插画按图片生成优先或可编辑绘制优先处理，照片按具体保真要求选择保留或生成。字体和段落组织按对应设置执行。仅在选择原生曲线路线后读取 graphics_illustration_guide。重点区设 local_review；regions 按背景到前景排列，bbox 为原图像素 xyxy。',['references/component-material-workflow.md','references/analysis-and-planning.md','references/asset-policy.md'],[]),
@@ -410,7 +419,7 @@ TASK_HELP={
  'preview_full':('这是 LibreOffice 预审。按当前任务清单查看带渲染器标签的全页左右对比与叠加图。左右对比核对内容和风格，叠加图核对位置、比例和遮挡，再看文字和素材边缘；本轮预审结论与 Office 验收分别记录。',['references/preview-and-handoffs.md'],[]),
  'preview_local':('这是 LibreOffice 局部预审。按当前任务清单查看同裁切框的左右对比与叠加图，核对轮廓、数量、箭头和透明边缘。装饰标题逐字核对，素材自带文字随素材检查。发现差异时只返修受影响组件；合图仅补做未采用项，已采用项保留。本轮结论与 Office 验收分别记录。',['references/preview-and-handoffs.md','references/asset-policy.md'],[]),
  'review_full':('查看任务要求的全页左右对比与叠加图，核对大构图、层级、位置、遮挡和文字。再查看局部清单中的每个重点组件，分别记录观察；未查看项保持待检查。分辨率、路径数量等诊断不能代替看图。',['references/rendering-and-review.md'],[]),
- 'review_local':('查看同裁切框的局部左右对比和叠加图，检查每个组件的轮廓、数量、端点与边缘，再核对文字完整、换行和对齐。装饰标题按保存原文逐字核对，照片和插画内部文字不拆成原生字。涉及关系时逐条填观察，不用整页平均分代替。旧任务按其 required_view_files 执行。',['references/rendering-and-review.md','references/troubleshooting.md'],[]),
+ 'review_local':('查看同裁切框的局部左右对比，叠加图按本次任务清单执行，检查每个组件的轮廓、数量、端点与边缘，再核对文字完整、换行和对齐。装饰标题按保存原文逐字核对，照片和插画内部文字不拆成原生字。涉及关系时逐条填观察，不用整页平均分代替。旧任务按其 required_view_files 执行。',['references/rendering-and-review.md','references/troubleshooting.md'],[]),
  'editable_behavior':('在副本上按任务要求实际修改文字、形状、表格或图表；素材检查整体移动、缩放和替换，照片与插画内部文字无需逐字编辑。保存重开并检查，提交修改副本和实际动作记录。',['references/rendering-and-review.md'],['office.native','pptx.inspect']),
  'reproducibility':('在新目录按持久化输入和已采用脚本重建，核对文字、对象结构及可用渲染。不要求PPTX字节相同；提交重建文件/日志。未执行则blocked。',['references/deck-and-revisions.md'],['pptx.build','pptx.inspect']),
 }
@@ -546,14 +555,22 @@ def _issue(project,s,kind,target):
                 context['renderer']='LibreOffice'
                 context['review_scope']='preview_only'
                 context['office_validation']='not_run'
-            from layered_review import required_views, local_required_views, review_policy
+            from layered_review import required_views, local_required_views, review_policy, overlay_check
             view_policy=review_policy(run)
             context['review_policy']=view_policy
+            check=overlay_check(s,page,run,target.get('region_id') if kind.endswith('local') else None,is_preview,
+                                comp['local_paths'][(target['index'],target['region_id'])]['object_ids'] if kind.endswith('local') else ())
+            context['overlay_check']=check
+            context['review_settings']=page.get('review_settings',page.get('production_settings',s.get('production_settings')))
+            context['refinement_history']=copy.deepcopy(s.get('refinement_issues',{}).get(page['id'],{}))
+            context['refinement_rule']='For needs_changes identify concrete objects and defects in refinement_issues. Keep the same issue_id across revisions. Two rounds without improvement require change_method, accept_difference or unresolved; unresolved defects cannot pass. No new defect means stop adding checks.'
             if kind in {'review_full','preview_full'}:
-                for view in required_views(comp,target['index'],policy=view_policy):include(view,True)
+                for view in required_views(comp,target['index'],policy=view_policy,overlay_required=check['required']):include(view,True)
+                context['optional_view_files']=[] if check['required'] or view_policy=='legacy-side/1' else [include(comp['full_view_paths'][target['index']]['overlay'])]
             else:
                 row=comp['local_paths'][(target['index'],target['region_id'])]
-                for view in local_required_views(row,view_policy):include(view,True)
+                for view in local_required_views(row,view_policy,check['required']):include(view,True)
+                context['optional_view_files']=[] if check['required'] or view_policy=='legacy-side/1' else [include(row['views']['overlay'])]
                 must=required_review(read_json(project/run['dir']/'scene.json')['slides'][target['index']-1])['relationship_objects']
                 context['relationships']=sorted(set(row['object_ids'])&set(must))
                 context['object_ids']=row['object_ids']
@@ -608,8 +625,11 @@ def _issue(project,s,kind,target):
                     key = f'local:{index}:{rid}'
                     if index != target['index'] or key in run['reviews'] or key==target.get('key'):
                         continue
+                    local_check=overlay_check(s,page,run,rid,object_ids=row['object_ids'])
                     bundle.append({'region_id': rid, 'key': key, 'file': include(row['file']),
-                                   'required_view_files':[include(v) for v in local_required_views(row,view_policy)],
+                                   'required_view_files':[include(v) for v in local_required_views(row,view_policy,local_check['required'])],
+                                   'optional_view_files':[] if local_check['required'] or view_policy=='legacy-side/1' else [include(row['views']['overlay'])],
+                                   'overlay_check':local_check,'review_policy':view_policy,
                                    'object_ids': row['object_ids'],
                                    **component_context(slide,row['object_ids']),
                                    'relationships': sorted(set(row['object_ids']) & must)})
@@ -618,6 +638,7 @@ def _issue(project,s,kind,target):
                 context['review_bundle'] = bundle
                 context['review_bundle_rule'] = ('After viewing each local file, submit additional_reviews with one independent review_local result per region_id. '
                     'Only these regions on this page are allowed. Omitted regions remain pending. No default pass or copied observations.')
+            context['review_object_ids']=[o['id'] for o in walk_objects(read_json(project/run['dir']/'scene.json')['slides'][target['index']-1]['objects'])] if kind.endswith('full') else context['object_ids']
         if kind in {'editable_behavior','reproducibility'}:
             scene=read_json(project/run['dir']/'scene.json');kinds={o['kind'] for slide in scene['slides'] for o in walk_objects(slide['objects'])}
             if kind == 'editable_behavior':
@@ -647,9 +668,15 @@ def _issue(project,s,kind,target):
     docs=list(docs);tools=list(tools)
     if kind in {'page_plan','region_objects','source_review','review_full','editable_behavior'}:
         docs.append('references/material-quality.md')
-    if kind=='region_objects':
+    if kind in {'page_plan','region_objects'}:
         docs.append('references/stage3-calibration-impact.md')
         tools.extend(['ops.text-fit-plan','ops.text-fit-evaluate'])
+        context['typography_calibration'] = {
+            'timing': '确认代表文字及其样式后，整页制作前运行 Office 小样；已有相同文字和环境的有效测量可复用。',
+            'representatives': ['title','body','numbers','long_text','mixed_language'],
+            'plan_tool': 'ops.text-fit-plan', 'plan_mode': 'calibration',
+            'measurement_tool': 'office.render', 'measurement_flag': '-TextCalibration',
+            'evaluation_tool': 'ops.text-fit-evaluate', 'automatic_pass': False}
     from rebuild_assistance import task_advice, production_guidance
     guidance=production_guidance(kind)
     if guidance:context['production_guidance']=guidance
@@ -674,15 +701,28 @@ def _issue(project,s,kind,target):
             context['learned_skills_status']='unavailable; use ordinary reconstruction'
     if kind=='editable_behavior':
         from office_edit import CONTRACTS
+        from edit_preparation import build as prepare_edits
+        preparation = prepare_edits(under(project, context['scene']), under(project, context['candidate']),
+                                    context['required_edit_actions'], project_id=s['project_id'], run_id=run['id'])
+        for batch in preparation['operation_batches']:
+            operations_file = folder/(batch['id']+'.operations.json')
+            write_json(operations_file, batch['operations'])
+            batch['operations_file'] = include(operations_file)
+            batch['plan_arguments'] = ['plan','--pptx',context['candidate'],'--operations',batch['operations_file'],
+                                       '--outdir',str(folder.relative_to(project)/(batch['id']+'-edit-plan'))]
+        context['edit_preparation'] = preparation
+        readback_targets = [{'slide':t['slide'],'name':t['name'],'kind':t['kind']}
+                            for t in preparation['targets'] if t['kind'] in {'text','shape','table','picture','image'}]
         context['edit_readback']={
             'tool':'office.edit-readback','contracts':CONTRACTS,'index_base':1,
-            'targets':[{'slide':idx,'name':o['id'],'kind':o['kind']}
-                       for idx,slide in enumerate(scene['slides'],1) for o in walk_objects(slide['objects'])
-                       if o['kind'] in {'text','shape','table'}][:30],
-            'note':'先 describe 查看字段，使用真实对象名称和不同的新值。run 在新目录修改副本并保存重开读回；查看导出图后提交原有 actions/files。图表与长文本排版仍需另测。',
+            'targets':readback_targets[:30], 'target_count':len(readback_targets),
+            'targets_truncated':len(readback_targets)>30, 'complete_targets_field':'context.edit_preparation.targets',
+            'runner_plan_batches': [batch['plan_arguments'] for batch in preparation['operation_batches']],
+            'note':'按 edit_preparation 查看完整要求。准备好的批次只包含部分操作，替换图、背景和其他待处理项仍需补齐。run 在新目录修改副本并保存重开读回，实际看图后填写观察。',
         }
         context['edit_test_summary']='在 edit_tests 中逐项记录对象、实际测试值、范围、结果与证据。失败项写明所需调整。必需操作失败时提交 needs_changes；额外压力测试不能覆盖必需操作的失败，也不能据此推算通用字符上限。'
         tools.append('office.edit-readback')
+        docs.append('references/edit-runner.md')
     token=uuid.uuid4().hex
     packet={'format':'ppt-task/1.2','task_id':tid,'token':token,'kind':kind,'target':target,
             'project_id':s['project_id'],'base_revision':s['revision']+1,'instructions':instruction,
@@ -715,6 +755,8 @@ def _public_task(project,s):
             'packet':str((project/task['packet']).resolve()),'instructions':p['instructions'],
             'response_template':str((folder/'response.template.json').resolve()),
             'must_view_files':[str((project/f).resolve()) for f in p['required_view_files']],
+            'optional_view_files':[str((project/f).resolve()) for f in p['context'].get('optional_view_files',[])],
+            'overlay_check':p['context'].get('overlay_check'),
             'read_only_when_needed':[str((ROOT/f).resolve()) for f in p['references']],
             'suggested_tools':p['suggested_tools'], 'submission_constraints':p['context'].get('submission_constraints',{}), 'examples_file':str(folder/'response.examples.json') if (folder/'response.examples.json').exists() else None, 'context_chars':len(json.dumps(p['context'],ensure_ascii=False))})
     if task:
@@ -889,7 +931,7 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
             from asset_batch import validate_batch_result, ingest_batch_result
             active_job={**job,'request':packet['context']['request']}
             validate_batch_result(project,active_job,result)
-            if validate_only:return attachments
+            if validate_only:return [{'file':str(src),'sha256':sha256(src)}]
             dest=project/'assets/batches'/t['id']
             manifest=ingest_batch_result(project,active_job,result,dest)
             requests={i['id']:i for i in active_job['request']['items']}
@@ -918,7 +960,7 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
             if im.format!='PNG':raise ValueError('Host raster substitution currently requires actual PNG content; SVG is a separate native/vector route')
             if job['request']['transparent']:
                 if 'A' not in im.getbands() or im.getchannel('A').getextrema()[0]>=255 or im.getchannel('A').getextrema()[1]==0:raise ValueError('Requested transparency needs nonempty visible content AND genuinely transparent pixels')
-        if validate_only:return attachments
+        if validate_only:return [{'file':str(src),'sha256':sha256(src)}]
         rel=import_file(src,project);s['tracked_inputs'][rel]=sha256(project/rel)
         info={'asset':rel,'provenance':result['provenance'],'tool_used':result['tool_used'],'model_reported':result.get('model_reported'), 'source_kind':'generated','job_id':job['id']}
         for field in ('generation_decision','multi_icon_sheet'):
@@ -977,7 +1019,9 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
     elif kind in {'review_full','preview_full'}:
         from validation_checks import Checks
         checks=Checks()
-        keys(result,['reviewer','viewed_files','checks'],['findings','material_reviews','production_review','additional_reviews'] if kind == 'review_full' else ['findings','material_reviews','production_review'])
+        keys(result,['reviewer','viewed_files','checks'],['findings','material_reviews','production_review','refinement_issues','additional_reviews'] if kind == 'review_full' else ['findings','material_reviews','production_review','refinement_issues'])
+        from layered_review import validate_refinement
+        checks.run(lambda:validate_refinement(s,t,result,packet['context']),'/refinement_issues','refinement')
         checks.run(lambda:text(result['reviewer'],'reviewer'),'/reviewer','reviewer')
         checks.run(lambda:_seen(project,packet,result),'/viewed_files','required_views')
         keys(result['checks'],['visual_full','raster_scope','text_geometry'])
@@ -1018,7 +1062,9 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
     elif kind in {'review_local','preview_local'}:
         from validation_checks import Checks
         checks=Checks()
-        checks.run(lambda:_assertion(result,['relationships','findings','object_checks']+(['additional_reviews'] if kind=='review_local' else [])),'','review_fields')
+        checks.run(lambda:_assertion(result,['relationships','findings','object_checks','refinement_issues']+(['additional_reviews'] if kind=='review_local' else [])),'','review_fields')
+        from layered_review import validate_refinement
+        checks.run(lambda:validate_refinement(s,t,result,packet['context']),'/refinement_issues','refinement')
         checks.run(lambda:_seen(project,packet,result),'/viewed_files','required_views')
         rows=result.get('relationships',[])
         if not isinstance(rows,list):raise ValueError('relationships must be a list')
@@ -1046,7 +1092,7 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
     elif kind in {'editable_behavior','reproducibility'}:
         from validation_checks import Checks
         checks=Checks()
-        checks.run(lambda:_assertion(result,['files','actions']+(['edit_tests'] if kind=='editable_behavior' else [])),'','review_fields')
+        checks.run(lambda:_assertion(result,['files','actions']+(['edit_tests','evidence_index'] if kind=='editable_behavior' else [])),'','review_fields')
         checks.run(lambda:_seen(project,packet,result),'/viewed_files','required_views')
         if kind=='editable_behavior':
             from edit_summary import validate_tests
@@ -1070,6 +1116,11 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
             if any(p==current for p in paths):raise ValueError('Do not use or modify the current candidate as the edit/rebuild test')
             if kind=='editable_behavior' and not any(sha256(p)!=sha256(current) for p in pptxs):raise ValueError('Edited test PPTX must differ from the candidate')
             if kind=='editable_behavior':
+                if result.get('evidence_index'):
+                    from edit_evidence import resolve
+                    resolution=resolve(project,s,result['evidence_index'],paths)
+                    paths=list(dict.fromkeys(paths+[Path(f) for f in resolution['files']]))
+                    pptxs=[p for p in paths if p.suffix.lower()=='.pptx']
                 if any(k.startswith('image_') for k in needed):
                     from material_edit_review import validate_image_edits
                     picture_report = validate_image_edits(current,pptxs)
@@ -1080,17 +1131,23 @@ def _accept_result(project,s,t,packet,result,*,validate_only=False):
                         try:edit_receipt=read_json(p)
                         except (ValueError,UnicodeError):continue
                         if (isinstance(edit_receipt,dict) and edit_receipt.get('format')=='ppt-edit-readback/1'
-                                and edit_receipt.get('longer_text_layout')=='overflow_detected'):
+                                and edit_receipt.get('longer_text_layout')=='overflow_detected'
+                                and not result.get('evidence_index')):
                             raise ValueError('Longer text overflow is unresolved; submit needs_changes rather than passed')
             for p in pptxs:
                 require_capabilities('pptx.inspect')
-                report=inspect(p)
+                import zipfile
+                try:report=inspect(p)
+                except (zipfile.BadZipFile,OSError) as exc:
+                    raise ValueError('Attached PPTX is not a readable audited package') from exc
                 if report['checks']['package']['status']!='passed':raise ValueError('Attached PPTX is not a readable audited package')
             if validate_only:
-                for p in paths:sha256(p)
-                return attachments
+                return [{'file':str(p),'sha256':sha256(p)} for p in paths]
             for p in paths:
-                rel=import_file(p,project,s['run']['dir']+'/agent-evidence');attachments.append(file_record(project,project/rel))
+                if kind=='editable_behavior' and result.get('evidence_index') and p.is_relative_to(project.resolve()):
+                    attachments.append(file_record(project,p))
+                else:
+                    rel=import_file(p,project,s['run']['dir']+'/agent-evidence');attachments.append(file_record(project,project/rel))
     else:raise ValueError('Unknown task kind')
     return attachments
 
@@ -1109,11 +1166,12 @@ def validate_response(project:Path,response:dict,expected_revision=None):
         raise WorkflowError('stale_task','Task identity changed; read the current task')
     from toolbox_manager.validation_errors import diagnostics
     errors=diagnostics(result_errors(t['kind'],response['result'],ROOT), '/result', limit=None)
+    validated_files = []
     not_checked=['semantic_checks'] if errors else []
     if not errors:
         result=copy.deepcopy(response['result'])
         if _managed_policy is not None:result=_managed_policy.result_paths(result,t['kind'])
-        try:_accept_result(project,copy.deepcopy(s),t,read_json(under(project,t['packet'])),result,validate_only=True)
+        try:validated_files = _accept_result(project,copy.deepcopy(s),t,read_json(under(project,t['packet'])),result,validate_only=True)
         except (ValueError,KeyError,TypeError,FileNotFoundError) as exc:
             if getattr(exc,'code',None)=='permission_denied':raise
             from validation_checks import prefixed
@@ -1128,6 +1186,7 @@ def validate_response(project:Path,response:dict,expected_revision=None):
                 'packet_sha256':t['packet_sha256'],'state_sha256':before,
                 'result_sha256':hashlib.sha256(json.dumps(response['result'],sort_keys=True,ensure_ascii=False,
                     separators=(',',':')).encode('utf-8')).hexdigest(),
+                'referenced_files': [{'file':item['file'],'sha256':item['sha256']} for item in t.get('inputs',[])] + (validated_files or []),
                 'reuse':'not_cached; submit validates current state and dependencies'},
             'scope':'Contract and referenced files only; does not attest that images were viewed'}
 
@@ -1227,8 +1286,19 @@ def submit(project:Path,response_path:Path|dict,expected_revision=None,*,lock_he
             extra_ref = file_record(project, extra_path)
             s['accepted'].append(extra_ref)
             s['run']['reviews'][key] = extra_ref
+            from layered_review import record_refinement
+            record_refinement(s,{**t,'target':extra['target']},extra['result'])
+            from layered_review import accept_observation
+            local_context=next(row for row in packet['context']['review_bundle'] if row['region_id']==extra['target']['region_id'])
+            accept_observation(project,s,_page(s,extra['target']['slide_id']),
+                               {**t,'kind':'review_local','target':extra['target']},local_context,extra['result'],extra_ref)
         for attachment in attachments:s['tracked_inputs'][attachment['file']]=attachment['sha256']
         kind=t['kind'];r=response['result']
+        if kind in {'review_full','review_local'}:
+            from layered_review import record_refinement, accept_observation
+            record_refinement(s,t,r)
+            reviewed_page=_page(s,t['target']['slide_id'])
+            accept_observation(project,s,reviewed_page,t,packet['context'],r,rec)
         if kind=='source_review':
             reviewed_page=_page(s,t['target']['slide_id'])
             reviewed_page['source_review']={**rec,'status':r['status']}
@@ -1284,10 +1354,13 @@ def retry(project:Path,reason:str):
         save(project,s,'explicit_retry',{'reason':reason});return brief(s)
 
 
-def revise(project:Path,slide_id:str,region_id:str|None,reason:str):
+def revise(project:Path,slide_id:str,region_id:str|None,reason:str,overlay_review=False):
     require_capabilities('workflow.revise')
     with locked(project):
         s=load(project);p=_page(s,slide_id);text(reason,'revision reason')
+        if type(overlay_review) is not bool:raise ValueError('overlay_review must be boolean')
+        if overlay_review or region_id is None:
+            p.setdefault('overlay_requests',{})[region_id or 'full']=reason if overlay_review else 'full_layout_revision'
         if p.get('imported_slide') is not None:
             if region_id:
                 from workflow_recovery import context
@@ -1374,8 +1447,19 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
         from workflow_scene import temporary_import_project
         with temporary_import_project(project) as temp:
             canvas,title,pages=import_scene(scene_path,temp,source_project=project)
+            # Use the same declared dependency set as trials and freeze. In particular,
+            # normalized requirement sources must survive removal of the import temp.
+            from scene_paths import dependency_records, copy_dependencies
+            imported={'version':'1.0','canvas':canvas,'slides':[p['imported_slide'] for p in pages]}
+            _,dependency_base,dependencies=dependency_records(imported,temp)
+            for relative in copy_dependencies(dependencies,dependency_base,project):
+                s['tracked_inputs'][relative]=sha256(project/relative)
+            if (temp/'evidence/provenance').is_dir():
+                shutil.copytree(temp/'evidence/provenance',project/'evidence/provenance',dirs_exist_ok=True)
             for old,new in zip(s['pages'],pages):
                 new['native_first']=old.get('native_first',False)
+                for field in ('overlay_baseline','overlay_requests','review_settings'):
+                    if field in old:new[field]=copy.deepcopy(old[field])
                 new['reference']=old['reference'];new['imported_slide']['reference']=old['reference']
                 from workflow_recovery import context, review_context
                 try:
@@ -1386,18 +1470,6 @@ def replace_scene(project:Path,scene_path:Path,reason:str):
                     if exc.code!='replanning_required':raise
                     new['planning_state']='invalid'
                     new['planning_reason']=str(exc)
-                for o in walk_objects(new['imported_slide']['objects']):
-                    if o['kind']=='image':
-                        rel=import_file(temp/o['asset'],project);o['asset']=rel;s['tracked_inputs'][rel]=sha256(project/rel)
-                    for field in ('reference','drawing'):
-                        decision=o.get('generation_decision',{})
-                        if field in decision:
-                            rel=import_file(temp/decision[field],project);decision[field]=rel
-                            s['tracked_inputs'][rel]=sha256(project/rel)
-                for unit in new['imported_slide'].get('element_scope',{}).get('units',[]):
-                    if 'source' in unit:
-                        rel=import_file(temp/unit['source']['asset'],project)
-                        unit['source']['asset']=rel;s['tracked_inputs'][rel]=sha256(project/rel)
                 from source_review_reuse import retain
                 retain(project,s,old,new,canvas)
             _invalidate_run(s,reason);s.update(canvas=canvas,title=title,pages=pages)
@@ -1429,6 +1501,10 @@ def complete(project:Path):
             return result
         require_capabilities('delivery.verify')
         run=s['run'];base=under(project,run['dir']+'/scene.json').parent
+        from artifact_registry import preflight
+        delivery_preflight = preflight(project, s)
+        if delivery_preflight['status'] != 'ready_for_existing_gate':
+            return {**brief(s), 'delivery_created': False, 'delivery_preflight': delivery_preflight}
         # Re-evaluate the entire evidence chain at the final boundary, not only stored status.
         from verify_delivery import verify
         result=verify(under(project,run['candidate']['file']),under(project,run['audit']['file']),under(project,run['render']['file']),
@@ -1449,18 +1525,25 @@ def complete(project:Path):
             write_json(stage/'delivery.json',{'status':'passed','pptx_sha256':sha256(stage/'editable.pptx'),'run_id':run['id'],'gate':result,
                                             'edit_summary':{'file':'edit-summary.json','sha256':sha256(stage/'edit-summary.json')}})
         s['status']='delivered';s['delivery']=dest.relative_to(project).as_posix();save(project,s,'delivery_created',{'dir':s['delivery']})
-        return {**brief(s),'delivery_created':True,'delivery':str(dest),'edit_summary':edit_summary}
+        return {**brief(s),'delivery_created':True,'delivery':str(dest),'edit_summary':edit_summary,
+                'delivery_preflight': delivery_preflight}
 
 
-def review_again(project:Path,task_id:str,reason:str):
+def review_again(project:Path,task_id:str,reason:str,overlay_review=False):
     """Reopen an assertion, not rebuild a successful file; old statements remain archived."""
     with locked(project):
         s=load(project);text(reason,'reason');record=None
+        if s.get('operation'):
+            raise WorkflowError('operation_pending','Resolve the current operation before reopening review')
         for ref in s['accepted']:
             data=read_json(under(project,ref['file']))
             if data['task_id']==task_id:record=data;break
         if not record:raise WorkflowError('unknown_review','No accepted task with this ID')
         kind=record['kind'];target=record['target']
+        if type(overlay_review) is not bool:raise ValueError('overlay_review must be boolean')
+        if overlay_review:
+            if kind not in {'review_full','review_local','preview_full','preview_local'}:raise ValueError('Overlay requests require a visual review task')
+            _page(s,target['slide_id']).setdefault('overlay_requests',{})[target.get('region_id','full')]=reason
         if kind=='source_review':_page(s,target['slide_id'])['source_review']=None
         elif kind in {'review_full','review_local','editable_behavior','reproducibility'}:
             if not s.get('run') or target['key'] not in s['run']['reviews']:
@@ -1478,7 +1561,12 @@ def review_again(project:Path,task_id:str,reason:str):
         if s.get('run'):
             s['run'].pop('gate',None);s['run'].pop('review',None)
         _cancel(s,reason);s['status']='ready_to_continue'
-        save(project,s,'review_reopened',{'task_id':task_id,'reason':reason});return brief(s)
+        detail={'task_id':task_id,'reason':reason}
+        if (s.get('failure') or {}).get('stage')=='gate':
+            # The old gate is invalidated, not declared successful. Preserve its
+            # failure in history while the reopened review and new gate remain due.
+            detail['superseded_gate_failure']=s['failure'];s['failure']=None
+        save(project,s,'review_reopened',detail);return brief(s)
 
 
 def apply_production_settings(project, settings, scope='unfinished', selected_objects=None):

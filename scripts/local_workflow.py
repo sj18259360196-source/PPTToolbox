@@ -29,17 +29,17 @@ def fingerprint(value):
 
 
 def bundle(scene, source, destination):
-    from scene_paths import prepare as prepare_paths
-    scene,source,paths=prepare_paths(scene,source)
-    if any('error' in row for row in paths):raise ValueError('Cannot freeze unresolved scene paths')
+    from scene_paths import dependency_records, require_dependencies, copy_dependencies, dependency_manifest
+    scene,source,paths=dependency_records(scene,source)
+    require_dependencies(paths)
     scene['version']='1.0';scene.pop('path_base',None)
     destination.mkdir(parents=True, exist_ok=True)
-    deps = {row['normalized'] for row in paths}
-    for relative in deps:
-        path = resolve_asset(source, relative)
-        dest = destination/relative
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, dest)
+    copy_dependencies(paths, source, destination)
+    from validate_scene import validate
+    errors = validate(scene, destination)
+    if errors:
+        raise ValueError('Bundled scene errors: ' + '; '.join(errors[:16]))
+    write_json(destination/"dependency-manifest.json", dependency_manifest(paths))
     write_json(destination/"scene.json", scene)
     return destination/"scene.json"
 

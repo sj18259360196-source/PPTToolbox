@@ -11,7 +11,7 @@ from test_installed_upgrade import installed
 
 
 def test_release_omits_development_evidence_but_keeps_runtime(tmp_path):
-    names = ["README.md", "AGENTS.md", "scripts/workflow.py", "assets/icon-packs/LICENSE.txt",
+    names = ["README.md", "AGENTS.md", "plan.md", "scripts/workflow.py", "assets/icon-packs/LICENSE.txt",
              "tests/test_fixture.py", "validation/user-project.json", "docs/upgrade/private.json",
              "benchmarks/observations.json", "manager_docs/USER_GUIDE.md"]
     for name in names:

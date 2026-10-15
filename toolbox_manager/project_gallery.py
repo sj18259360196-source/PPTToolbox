@@ -2,16 +2,22 @@
 import io, os, re, time, stat, json, hashlib
 from pathlib import Path
 from .workbench import Workbench
+from scripts.project_layout import references
 
 
 def gallery(manager, key):
     wb = Workbench(manager); root, _, state = wb.entry(key)
     cache = getattr(manager, '_gallery_cache', {})
     cached = cache.get(key)
-    identity = (str(root), state.get('revision'))
+    def stamp(relative):
+        try:
+            info = wb.path(root, relative).stat()
+            return (info.st_mtime_ns, info.st_size)
+        except (OSError, ValueError): return None
+    identity = (str(root), state.get('revision'), stamp('input/references.json'), stamp('workflow/state.json'))
     if cached and cached[0] == identity and time.monotonic() - cached[1] < 15: return cached[2]
     groups = {}; names = []; count = 0; limited = False
-    for top in ('delivery', 'runs', 'input'):
+    for top in ('delivery', 'runs'):
         base = wb.path(root, top)
         if not base.is_dir(): continue
         for directory, dirs, files in os.walk(base, followlinks=False):
@@ -53,7 +59,11 @@ def gallery(manager, key):
             except (OSError,ValueError): pass
         result.append(row)
     result.sort(key=lambda r:({'成品':0,'候选':1,'参考图':2}[r['kind']], -max(p['modified_ns'] for p in r['pages'])))
-    value = {'versions':result, 'search_text':' '.join(names), 'limited':limited}
+    ref = references(root, state)
+    if ref['pages']:
+        result.append({'version':'参考图','kind':'参考图','pages':ref['pages'],'pptx':None})
+    value = {'versions':result, 'search_text':' '.join(names), 'limited':limited,
+             'reference_issues':ref['issues'], 'reference_source':ref['source']}
     cache[key] = (identity, time.monotonic(), value); manager._gallery_cache = cache
     return value
 

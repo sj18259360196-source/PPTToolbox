@@ -46,7 +46,10 @@ def initialize_directory(project, in_place=False):
         with staged_directory(project) as stage:yield stage
         return
     if not in_place:
-        raise WorkflowError('project_exists','Use a new project directory or explicit in-place initialization for an unused workspace; resume initialized projects.')
+        preflight = inspect_directory(project)
+        exc = WorkflowError('project_exists','Use a new project directory or explicit in-place initialization for an unused workspace; resume initialized projects.', preflight['next_action'])
+        exc.diagnostics = preflight
+        raise exc
     if not project.is_dir():raise WorkflowError('project_exists','Project path is not a directory')
     preflight=inspect_directory(project)
     if preflight['status']=='initializing':

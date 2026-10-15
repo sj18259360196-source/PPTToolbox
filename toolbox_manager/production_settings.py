@@ -22,7 +22,7 @@ def _key(root):
 
 def _global(manager):
     row = manager.store.get(GLOBAL_KEY, {})
-    return snapshot(row.get('values', defaults()), row.get('revision', 0), 'global_default')
+    return snapshot({**defaults(), **row.get('values', {})}, row.get('revision', 0), 'global_default')
 
 
 def _applied(root):

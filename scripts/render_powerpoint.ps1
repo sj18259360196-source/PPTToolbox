@@ -13,12 +13,43 @@ $ErrorActionPreference='Stop'
 $out=[System.IO.Path]::GetFullPath($OutputDir)
 if(Test-Path -LiteralPath $out){if(@(Get-ChildItem -LiteralPath $out -Force).Count -gt 0){throw 'OutputDir must be new or empty; never reuse old previews'}}
 [System.IO.Directory]::CreateDirectory($out)|Out-Null
-$report=[ordered]@{status='not_run';renderer='Microsoft PowerPoint';pptx_sha256=$null;slides=@();text_bounds=@();scope='Read-only PowerPoint open/export; visual and editing review not performed';probe_only=[bool]$ProbeOnly}
+$report=[ordered]@{status='not_run';renderer='Microsoft PowerPoint';pptx_sha256=$null;slides=@();text_bounds=@();scope='Read-only PowerPoint open/export; visual and editing review not performed';probe_only=[bool]$ProbeOnly;office_started=$false;validation_stage='pre_com'}
 $app=$null;$deck=$null;$owned=$false;$code=0
 if($TextCalibration){. (Join-Path $PSScriptRoot 'text_calibration_measure.ps1')}
 try{
+    $sizes=@{}
+    if(!$ProbeOnly -and $SizesJson){
+        $sizeField='$';$sizeItem=$null
+        try{
+            $raw=Get-Content -LiteralPath $SizesJson -Raw -Encoding UTF8
+            if(!$raw.TrimStart().StartsWith('[')){throw 'SizesJson must be an array'}
+            $entries=@($raw|ConvertFrom-Json)
+            for($n=0;$n -lt $entries.Count;$n++){
+                $entry=$entries[$n];$sizeItem=$n
+                foreach($field in @('index','width','height')){
+                    $sizeField=$field
+                    if($null -eq $entry -or $null -eq $entry.PSObject.Properties[$field]){throw "Missing $field"}
+                    $value=$entry.$field
+                    if($value -is [bool] -or $value -is [string] -or $null -eq $value -or
+                       !($value -is [ValueType]) -or $value -is [char]){throw "$field must be numeric"}
+                    $number=[double]$value
+                    $maximum=if($field -eq 'index'){[int]::MaxValue}else{16000}
+                    if([double]::IsNaN($number) -or [double]::IsInfinity($number) -or $number -lt 1 -or $number -gt $maximum){throw "Invalid $field range"}
+                    if($field -eq 'index' -and $number -ne [Math]::Truncate($number)){throw 'index must be an integer'}
+                }
+                $sizeField='index';$index=[int]$entry.index
+                if($sizes.ContainsKey($index)){throw 'Duplicate slide index'}
+                $sizes[$index]=@([int]$entry.width,[int]$entry.height)
+            }
+        }catch{
+            $report['error_code']='invalid_render_sizes';$report['error_field']=$sizeField;$report['error_item']=$sizeItem
+            throw
+        }
+    }
     if($env:OS -ne 'Windows_NT'){$report.status='blocked';throw 'Windows PowerPoint COM is required'}
+    $report.office_started=$null;$report.validation_stage='creating_com'
     $app=New-Object -ComObject PowerPoint.Application
+    $report.office_started=$true;$report.validation_stage='after_com'
     $report['office_version']=[string]$app.Version
     if($ProbeOnly){$report.status='passed';$report.scope='COM availability only; no slide was rendered'}
     else{
@@ -32,18 +63,17 @@ try{
         $report.pptx_sha256=(Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash.ToLowerInvariant()
         # ReadOnly true; Untitled false; WithWindow false. Never save source.
         $deck=$app.Presentations.Open($inputPath,-1,0,0);$owned=$true
+        $report.validation_stage='after_open'
+        foreach($index in $sizes.Keys){
+            if($index -gt $deck.Slides.Count){
+                $report['error_code']='invalid_render_sizes';$report['error_field']='index';$report['error_index']=$index
+                throw 'Per-slide index exceeds presentation slide count'
+            }
+        }
         $wpt=[double]$deck.PageSetup.SlideWidth;$hpt=[double]$deck.PageSetup.SlideHeight
         if($Height -eq 0){$Height=[int][Math]::Round($Width*$hpt/$wpt)}
         if($Height -le 0){throw 'Invalid output height'}
         $report['canvas_pt']=@($wpt,$hpt)
-        $sizes=@{}
-        if($SizesJson){
-            $entries=Get-Content -LiteralPath $SizesJson -Raw -Encoding UTF8|ConvertFrom-Json
-            foreach($entry in $entries){
-                if($entry.width -lt 1 -or $entry.width -gt 16000 -or $entry.height -lt 1 -or $entry.height -gt 16000){throw 'Invalid per-slide image size'}
-                $sizes[[int]$entry.index]=@([int]$entry.width,[int]$entry.height)
-            }
-        }
         for($i=1;$i -le $deck.Slides.Count;$i++){
             $slide=$deck.Slides.Item($i);$file=Join-Path $out ('slide-{0:d3}.png' -f $i)
             $ew=$Width;$eh=$Height;if($sizes.ContainsKey($i)){$ew=$sizes[$i][0];$eh=$sizes[$i][1]}

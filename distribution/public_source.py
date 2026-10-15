@@ -43,6 +43,7 @@ PUBLIC_TESTS.update({'test_shape_tools.py','test_shape_parameters.py','test_nati
     'test_project_thumbnails.py','test_setup_wizard.py','test_update_process_detection.py'})
 PUBLIC_TESTS.update({'test_gradient_capabilities.py','test_default_capabilities.py','test_agent_cooperation.py','test_assistant_recording.py','test_flow_semantics.py'})
 PUBLIC_TESTS.update({'test_prompt_editor.py','test_context_delivery.py','test_production_settings.py'})
+PUBLIC_TESTS.add('test_work_blocker_repair.py')
 PUBLIC_TESTS.update({'test_asset_batch.py','test_component_material_policy.py','test_layered_material_workflow.py',
     'test_layered_review_diagnostics.py','test_material_text_review.py','test_material_edit_review.py',
     'test_managed_asset_handoff.py','test_material_guidance.py','test_material_experience_guidance.py'})
@@ -67,7 +68,7 @@ def public_text(text):
     text=re.sub(r'A:[/\\]+Project',r'C:/Work',text,flags=re.I)
     text=re.sub(r'A:[/\\]+\.codex',r'C:/Users/Example/.codex',text,flags=re.I)
     text=re.sub(r'D:[/\\]+[0-9]+',r'C:/Users/Example',text,flags=re.I)
-    text=re.sub(r'历史记录保存在本机个人经验库。]+。','历史记录保存在本机个人经验库。',text)
+    text=re.sub(r'保留原有记录，补入[^。]+。','历史记录保存在本机个人经验库。',text)
     text=re.sub(r'来自\[[^\]]+\]\(\.\./validation/[^)]+\)[^。]*。','',text)
     text=re.sub(r'\[([^\]]+)\]\(<?(?:\.\./)+(?:checks|validation|docs/upgrade)/[^)]+\)',r'\1（本地验收记录未随包提供）',text)
     return text

@@ -196,5 +196,5 @@ def project(nodes, life=None):
     parents={v for n in nodes for v in n.get('after',[])}
     for n in nodes:
         if n['id'] not in parents and not n.get('exit_reason'):
-            n['exit_reason']=({'running':'running','failed':'failed','outcome_unknown':'unknown','skipped':'skipped','replaced':'replaced'}.get(n.get('status')) or 'relation_pending')
+            n['exit_reason']=({'running':'running','failed':'failed','recovered':'recovered','outcome_unknown':'unknown','skipped':'skipped','replaced':'replaced'}.get(n.get('status')) or 'relation_pending')
     return nodes

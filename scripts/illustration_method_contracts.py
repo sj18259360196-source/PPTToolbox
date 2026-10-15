@@ -1,5 +1,5 @@
 """Project-file contracts for repeatable selection and evaluation experiments."""
-from graphics_recipe import obj,array
+from graphics_contracts import obj,array
 S={'type':'string','minLength':1,'maxLength':2000}
 SHA={'type':'string','pattern':'^[a-f0-9]{64}$'}
 BASE={'project':S}
