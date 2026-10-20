@@ -6,7 +6,7 @@
 
 [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.28.0-20261020/PPTToolbox-1.28.0-arm64-trial.dmg) · [下载校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.28.0-20261020/SHA256SUMS.txt) · [发行页面](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.28.0-20261020)
 
-本包采用临时签名，未经过 Apple 公证。PowerPoint 编辑接口尚未实现，外置 Agent 监督进程仍要求正式 Developer ID，当前试用包不支持该正式接入流程。稳定版自动更新关闭。
+本包采用临时签名，未经过 Apple 公证。本次更新已包含八类 PowerPoint 编辑接口，真实 Office 编辑与视觉效果待实测，外置 Agent 监督进程仍要求正式 Developer ID，当前试用包不支持该正式接入流程。稳定版自动更新关闭。
 
 ## 安装
 
@@ -28,12 +28,20 @@ shasum -a 256 PPTToolbox-1.28.0-arm64-trial.dmg
 当前 DMG 的 SHA-256 如下。
 
 ```text
-eb20282d0d3a12c138ae51068b7f6cde78744dbd4f2def3bd516f3c8f2ba7ed0
+fb6593fca0b09cd8143a929873620bf387d2dea8b7cc807f88a9c40841a093a7
 ```
 
 ## 本轮试用
 
-先用测试项目检查启动、设置、三种主题、项目列表和文件定位。退出后重新启动，核对设置与测试项目是否保留。PowerPoint 编辑、Office 渲染与编辑验收尚未开放。
+先用测试项目检查启动、设置、三种主题、项目列表和文件定位。退出后重新启动，核对设置与测试项目是否保留。可以使用以下命令进行独立样例编辑试验；真实 Office 结果仍待验收。
+
+```bash
+"/Applications/PPT Toolbox.app/Contents/Resources/runtime/bin/python3" -E -s -B \
+"/Applications/PPT Toolbox.app/Contents/Resources/app/distribution/macos/office_smoke.py" \
+--run-office --output "$HOME/Desktop/PPTToolbox-Office-$(date +%Y%m%d-%H%M%S)"
+```
+
+命令会启动 PowerPoint，在桌面新建测试文件夹，编辑自动生成的样例副本。自动化权限询问时允许终端控制 PowerPoint。完成后反馈 smoke-result.json、编辑回执与 PNG；失败时保留终端输出。超时后先检查 PowerPoint，不要立即重试。
 
 安装包已在 macOS 14.8.9 arm64 完成构建、临时签名、签名前后运行时检查和 DMG 校验。实际用户安装、桌面交互和重启后的数据连续性仍待实机反馈。
 
