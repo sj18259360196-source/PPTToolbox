@@ -28,7 +28,7 @@ shasum -a 256 PPTToolbox-1.28.0-arm64-trial.dmg
 当前 DMG 的 SHA-256 如下。
 
 ```text
-0b76ca3950279c8e7c4270af1cc7a1b68ea81fa737f7f18815e4951725978a3c
+23bdc6fe23701bb9200560267238e819df070cb43199c6fc7c238ac823a5c37f
 ```
 
 ## 本轮试用
@@ -48,4 +48,6 @@ shasum -a 256 PPTToolbox-1.28.0-arm64-trial.dmg
 反馈时提供芯片型号、macOS 版本、应用版本、具体步骤及错误原文。涉及 Office 时补充 PowerPoint 版本。不要在公开附件中提交 API 密钥、管理数据库或私人项目。
 
 [平台功能对照](PLATFORM_SUPPORT.md) · [版本与更新](VERSIONS.md) · [返回首页](../README.md)
-2026-10-20 根据实机反馈更新同名试用附件，修复发行身份、试用解释器库校验、SDEF 字典与错误报告。最终 DMG 的独立副本已通过云端 Mac 原生依赖功能及无诊断变量桌面自检，用户安装和真实 PowerPoint 编辑仍需重新测试。当前 SHA-256 为 `0b76ca3950279c8e7c4270af1cc7a1b68ea81fa737f7f18815e4951725978a3c`。
+2026-10-20 根据实机反馈更新同名试用附件，修复发行身份、试用解释器库校验、SDEF 字典与错误报告。最终 DMG 的独立副本已通过云端 Mac 原生依赖功能及无诊断变量桌面自检，用户安装和真实 PowerPoint 编辑仍需重新测试。当前 SHA-256 为 `23bdc6fe23701bb9200560267238e819df070cb43199c6fc7c238ac823a5c37f`。
+
+2026-10-20 已更新同一试用安装包，修复 PowerPoint SDEF 跨作用域同名声明的预检误判，并保留第一次失败及每项编辑诊断。Mac 云端最终 DMG 检查通过，实际 PowerPoint 编辑、回读和视觉效果仍待用户复测。
