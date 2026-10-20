@@ -2,6 +2,8 @@
 
 本地 PPT 项目工具箱，为制作 Agent 提供受管工具，集中管理项目、素材、制作进度和交付文件。Windows 1.28.0 已发布，Mac 提供 Apple Silicon 安装试用版。
 
+本仓库以后用于发布软件安装包、发行说明、校验文件和自动更新材料。完整开发源码在私有仓库维护。
+
 ## 下载
 
 | 平台 | 当前版本 | 安装包 | 使用范围 |
@@ -40,19 +42,11 @@ Windows 正式版与 Mac 试用版分开发行。Mac 试用版不会替换 Windo
 
 每个发行页面提供 `SHA256SUMS.txt`。Windows 可使用 `Get-FileHash`，Mac 可使用 `shasum -a 256` 核对下载文件。校验步骤见 [版本与更新](manager_docs/VERSIONS.md)。
 
-## 公开源码与安装包
+## 历史公开源码
 
-当前公开源码快照为 **1.27.15**，最新 Windows 安装包和 Mac 试用包为 **1.28.0**。1.28.0 应用源码暂未公开，GitHub 自动生成的 Source code 归档对应标签所指向的旧公开源码，不能用于构建 1.28.0 或 Mac 试用包。
+仓库保留已有的 **1.27.15** 公开源码快照及其历史，后续应用源码不再同步到这里。Windows 安装包和 Mac 试用包已使用 **1.28.0**。GitHub 自动生成的 Source code 归档对应标签指向的旧公开源码，不能用于构建 1.28.0 或 Mac 试用包。
 
-公开源码支持 Python 3.11 及以上，运行环境与依赖锁在 `distribution` 中。开发数据应放在源码之外。
-
-```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements-dev.txt
-.venv\Scripts\python -B manager.py --data-dir ..\PPTToolbox-development-data serve
-```
-
-源码贡献与构建见 [贡献说明](CONTRIBUTING.md) 和 [发布维护](distribution/PUBLIC_RELEASE.md)。个人项目、数据库、API 配置、签名私钥和原始反馈不随公开仓库分发。
+第三方依赖所需的许可证和源码材料继续按许可要求提供。个人项目、数据库、API 配置、签名私钥和原始反馈不随公开仓库分发。
 
 [使用说明](manager_docs/USER_GUIDE.md) · [Agent 接入](manager_docs/PPTAGENT.md) · [项目管理](manager_docs/PROJECT_MANAGEMENT.md) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/sj18259360196-source/PPTToolbox/issues)
 
