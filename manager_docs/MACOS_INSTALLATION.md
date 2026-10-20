@@ -28,7 +28,7 @@ shasum -a 256 PPTToolbox-1.28.0-arm64-trial.dmg
 当前 DMG 的 SHA-256 如下。
 
 ```text
-fb6593fca0b09cd8143a929873620bf387d2dea8b7cc807f88a9c40841a093a7
+0b76ca3950279c8e7c4270af1cc7a1b68ea81fa737f7f18815e4951725978a3c
 ```
 
 ## 本轮试用
@@ -48,3 +48,4 @@ fb6593fca0b09cd8143a929873620bf387d2dea8b7cc807f88a9c40841a093a7
 反馈时提供芯片型号、macOS 版本、应用版本、具体步骤及错误原文。涉及 Office 时补充 PowerPoint 版本。不要在公开附件中提交 API 密钥、管理数据库或私人项目。
 
 [平台功能对照](PLATFORM_SUPPORT.md) · [版本与更新](VERSIONS.md) · [返回首页](../README.md)
+2026-10-20 根据实机反馈更新同名试用附件，修复发行身份、试用解释器库校验、SDEF 字典与错误报告。最终 DMG 的独立副本已通过云端 Mac 原生依赖功能及无诊断变量桌面自检，用户安装和真实 PowerPoint 编辑仍需重新测试。当前 SHA-256 为 `0b76ca3950279c8e7c4270af1cc7a1b68ea81fa737f7f18815e4951725978a3c`。
