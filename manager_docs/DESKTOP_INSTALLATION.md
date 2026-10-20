@@ -1,10 +1,12 @@
 # 桌面安装与 Agent 接入
 
+Windows x64 当前正式版为 1.28.0。Mac 用户请阅读 [Mac 试用版安装](MACOS_INSTALLATION.md)。下文程序路径、安装器与 Agent 接入步骤适用于 Windows。当前公开源码为 1.27.15，源码预览仍使用旧桌面实现。
+
 ## 安装
 
-从本项目 Releases 下载并运行 `PPTToolbox-1.21.0-Setup.exe`。默认只为当前 Windows 用户安装，不需要管理员权限。安装程序提供程序目录、管理数据目录和默认 PPT 项目目录选择，并创建开始菜单入口。桌面快捷方式可选。
+从本项目 Releases 下载并运行 [PPTToolbox-1.28.0-Setup.exe](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.28.0/PPTToolbox-1.28.0-Setup.exe)。默认只为当前 Windows 用户安装，不需要管理员权限。安装程序提供程序目录、管理数据目录和默认 PPT 项目目录选择，并创建开始菜单入口。桌面快捷方式可选。
 
-程序依赖 Microsoft Edge WebView2 Runtime 和 .NET Framework 4.6.2 或更高版本。安装程序会检查这两项，缺少时给出安装提示。制作和验收 PowerPoint 文件仍需本机安装 PowerPoint。安装包内含 Python 运行环境，无需用户另装 Python。
+1.28.0 内置 Electron 与 Python，Windows 启动入口需要 .NET Framework 4.6.2 或更新版本。制作和验收 PowerPoint 文件仍需本机安装 Microsoft PowerPoint。
 
 已有安装继续使用原程序位置和管理数据。升级不按旧版 location.json 的项目根目录覆盖当前设置。需要搬动目录时，从设置页进入安装与迁移。
 

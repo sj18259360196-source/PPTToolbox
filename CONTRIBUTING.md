@@ -1,5 +1,16 @@
 # Development and releases
 
+The current public source snapshot is 1.27.15. Windows 1.28.0 and the macOS
+Apple Silicon 1.28.0 trial are distributed as release binaries; their application
+source is not currently public. Automatic GitHub source archives contain the
+older public snapshot. See [platform support](manager_docs/PLATFORM_SUPPORT.md)
+and [release history](CHANGELOG.md) before choosing a build target.
+
+Changes to this public snapshot must keep its source version accurate. Do not
+bump release.json to match a binary whose application source is absent. A version
+tag builds only when it matches release.json; other binary release tags skip the
+source build and preserve existing release assets.
+
 Use a project-local Python environment. Install `requirements-dev.txt` for the
 core tests, and the optional graphics dependencies for graphics tests. Windows
 desktop and Office behavior require separate Windows acceptance checks.

@@ -1,5 +1,31 @@
 # 版本与更新
 
+## 当前下载版本
+
+| 内容 | 版本 | 获取方式 |
+| --- | --- | --- |
+| Windows x64 正式版 | 1.28.0 | [Setup 与发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.28.0) |
+| macOS Apple Silicon 试用版 | 1.28.0 | [DMG 与发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.28.0-20261020) |
+| 公开源码快照 | 1.27.15 | 当前仓库，release.json 记录该源码版本 |
+
+1.28.0 应用源码暂未公开，GitHub 自动生成的 Source code 归档对应旧公开源码。第三方源码附件用于随包开源组件许可，不包含完整的 1.28.0 应用源码。
+
+Windows 正式更新渠道继续指向 v1.28.0。Mac 版为预发行试用包，稳定版自动更新关闭，后续试用版从 Releases 手动下载。Intel 安装包暂未发布。详细差异见 [平台功能对照](PLATFORM_SUPPORT.md)。
+
+## 校验下载文件
+
+从对应发行页面下载 SHA256SUMS.txt，将实际文件摘要与其中的同名记录比较。
+
+```powershell
+Get-FileHash .\PPTToolbox-1.28.0-Setup.exe -Algorithm SHA256
+```
+
+```bash
+shasum -a 256 PPTToolbox-1.28.0-arm64-trial.dmg
+```
+
+Mac 的签名与安装要求见 [Mac 安装指南](MACOS_INSTALLATION.md)。以下自动更新和安装行为适用于 Windows。
+
 软件界面只显示 PPT Toolbox 的发行版本。管理器、内置 PPT 制作工具、Skill 和随附说明由同一个安装包更新，采用同一发行号。
 
 1.27.1 统一 1.27.0 分层组件流程的提示与说明。当前制作路径以 references/component-material-workflow.md 和当前任务契约为准，历史版本记录及原生案例仅在对应条件下使用。升级保留旧项目已接受计划；改变已有项目路线需要明确修订，不能补写旧检查。用户保存的指令覆盖继续保留，可在指令维护中与新版比较。

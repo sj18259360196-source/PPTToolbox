@@ -1,38 +1,50 @@
 # PPT Toolbox
 
-面向 Windows 的本地 PPT 项目工具箱，为制作 Agent 提供受管工具，集中显示项目、文件、工作路径、交付结果和需要处理的异常。
+本地 PPT 项目工具箱，为制作 Agent 提供受管工具，集中管理项目、素材、制作进度和交付文件。Windows 1.28.0 已发布，Mac 提供 Apple Silicon 安装试用版。
 
-制作时按[看图与修订流程](references/multipage-efficiency.md)选择整页和局部，查看全页及关键局部的左右对比和叠加图，保留未变范围的有效审查。原生对象与图片的选择遵循[素材规则](references/asset-policy.md)。
+## 下载
 
-项目随包提供经验、指令模板和 MCP 工具。实际可用条目及数量以当前 toolbox_context、工具枚举与经验查询返回结果为准。新安装无需导入开发机历史即可使用这些方法；已有用户覆盖和停用设置仍优先。经验用于指导操作，当前项目仍需独立验证。
+| 平台 | 当前版本 | 安装包 | 使用范围 |
+| --- | --- | --- | --- |
+| Windows x64 | 1.28.0 正式版 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.28.0/PPTToolbox-1.28.0-Setup.exe) | Electron 桌面、项目管理、制作 Agent 接入和 Windows PowerPoint 工具 |
+| macOS Apple Silicon | 1.28.0 试用版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.28.0-20261020/PPTToolbox-1.28.0-arm64-trial.dmg) | macOS 14 及以上，先测试安装、启动、设置、主题和项目界面 |
+| macOS Intel | 暂无安装包 | 暂未发布 | 等待后续构建与验证 |
 
-## 下载与安装
+Mac 试用包采用临时签名，尚未经过 Apple 公证，PowerPoint 编辑接口尚未实现，稳定版自动更新关闭。安装步骤和限制见 [Mac 安装指南](manager_docs/MACOS_INSTALLATION.md)。
 
-在本仓库 Releases 页面选择已发布版本的安装包，源码版本可能先于安装包。安装包自带 Python；桌面界面需要 Microsoft Edge WebView2 Runtime 和 .NET Framework，Office 制作与验收功能需要 Microsoft PowerPoint。
+[Windows 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.28.0) · [Mac 试用版发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.28.0-20261020) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases) · [平台功能对照](manager_docs/PLATFORM_SUPPORT.md)
 
-程序默认安装在 `%LOCALAPPDATA%\Programs\PPTToolbox`，管理数据保存在 `%LOCALAPPDATA%\PPTToolbox`，新项目默认放在用户文档目录的 `PPTToolbox\Projects`。安装时可更改位置，升级沿用已保存的位置。
+## Windows 安装与升级
 
-安装后，在设置页接入制作 Agent 的 MCP。也可复制接入提示词，让能操作本机的 Agent 配置并验证连接。随后从概况页复制启动指令，与参考图和需求一起发给 Agent。
+运行 Setup，按提示选择程序、管理数据与项目位置。1.28.0 内置 Electron 和 Python，桌面已迁移到 Electron；Windows 启动入口需要 .NET Framework 4.6.2 或更新版本。PPT 制作、Office 渲染和编辑验收需要本机 Microsoft PowerPoint。
+
+默认程序目录为 `%LOCALAPPDATA%\Programs\PPTToolbox`，管理数据保存在 `%LOCALAPPDATA%\PPTToolbox`，新项目默认位于文档目录的 `PPTToolbox\Projects`。升级沿用已保存的位置、项目、设置和授权，并保留恢复备份。
+
+安装后，在设置页接入制作 Agent 的 MCP，刷新客户端并验证连接。随后从概况页复制启动指令，与参考图和需求一起发给 Agent。详细步骤见 [桌面安装与接入](manager_docs/DESKTOP_INSTALLATION.md)。
 
 ## 日常功能
 
-- 项目以文字索引显示，支持排序、文件夹、子项目、批量交付和归档。打开项目后再读取工作详情与当前预览。
-- 工作路径显示大阶段、分支、实际调用和文件变化，单独显示较大的错误及结果待确认。
-- 制作 Agent 在大阶段切换时打卡，软件负责整理界面内的进度。
-- 驻留 PPTAgent 为可选功能，通过 Responses API 整理记录、更新展示工作图，并按保存的规则处理管理事项。它不负责软件更新，不获得任意命令执行权限。
-- 素材与经验保留来源。个人 API 配置、项目和经验存放在本地；公开版不附带作者的历史项目复盘原文。
+- 管理项目、文件夹与子项目，调整顺序，批量交付、归档和恢复。
+- 查看工作阶段、分支、实际调用和文件变化，追踪异常与结果待确认事项。
+- 按制作设置选择原生对象、现有素材或参考生成，查看全页与关键局部，完成编辑和保存重开验证。
+- 查询随包经验、指令模板和 MCP 工具。已有用户覆盖与停用设置优先，项目按当前要求独立验收。
+- 可选驻留 PPTAgent 通过 Responses API 整理记录与展示工作图，按已有规则处理管理事项。
 
-制作 Agent 先分析整页背景、分区、层次与文字归属，再逐组件选路。复杂插画与装饰标题在整体编辑满足需求时默认参考局部生成，无需原生试稿或相似度分数。简单插画与规则几何使用原生对象；照片、准确标识和已有清晰素材保留源像素及内部原有文字。页面独立文字保持原生，内部编辑由明确要求触发。
+上述制作流程以 Windows 版为准。Mac 试用范围见 [平台功能对照](manager_docs/PLATFORM_SUPPORT.md)。制作方法见 [看图与修订](references/multipage-efficiency.md)、[素材规则](references/asset-policy.md) 和 [插画调用指南](references/illustration-agent-guide.md)。
 
-## 软件更新
+## 软件更新与校验
 
-从 1.21.1 开始，在版本与更新页检查、下载和安装。默认每天自动检查一次，可关闭。下载和安装由用户发起，签名与 SHA-256 校验通过后才能执行。有活动任务时等待，保留原项目、设置和权限。
+Windows 1.21.1 及之后的版本可在版本与更新页检查、下载和安装，也可直接运行最新完整 Setup。安装前核对更新清单签名及 SHA-256；有活动任务时等待，保留项目、设置和权限。更早版本可手动安装当前正式版。
 
-早期版本（包括 1.21.0）需要先手动安装一次 1.21.1。无法联网时仍可使用当前软件，也可手动下载完整安装包。首个公开安装包尚未使用 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
+Windows 正式版与 Mac 试用版分开发行。Mac 试用版不会替换 Windows 稳定更新入口，后续试用包请从 Releases 手动下载。
 
-## 开发
+每个发行页面提供 `SHA256SUMS.txt`。Windows 可使用 `Get-FileHash`，Mac 可使用 `shasum -a 256` 核对下载文件。校验步骤见 [版本与更新](manager_docs/VERSIONS.md)。
 
-源码支持 Python 3.11 及以上。公开 Windows 运行环境与依赖固定在 `distribution/runtime-lock.json` 和 `distribution/requirements-release.lock` 中。
+## 公开源码与安装包
+
+当前公开源码快照为 **1.27.15**，最新 Windows 安装包和 Mac 试用包为 **1.28.0**。1.28.0 应用源码暂未公开，GitHub 自动生成的 Source code 归档对应标签所指向的旧公开源码，不能用于构建 1.28.0 或 Mac 试用包。
+
+公开源码支持 Python 3.11 及以上，运行环境与依赖锁在 `distribution` 中。开发数据应放在源码之外。
 
 ```powershell
 python -m venv .venv
@@ -40,13 +52,8 @@ python -m venv .venv
 .venv\Scripts\python -B manager.py --data-dir ..\PPTToolbox-development-data serve
 ```
 
-开发数据必须位于源码之外。构建和签名见 [发布维护](distribution/PUBLIC_RELEASE.md)。测试、桌面启动、Office 渲染和外部 Agent 连接分别验证。
+源码贡献与构建见 [贡献说明](CONTRIBUTING.md) 和 [发布维护](distribution/PUBLIC_RELEASE.md)。个人项目、数据库、API 配置、签名私钥和原始反馈不随公开仓库分发。
 
-[使用说明](manager_docs/USER_GUIDE.md) · [Agent 接入](manager_docs/PPTAGENT.md) · [项目管理](manager_docs/PROJECT_MANAGEMENT.md) · [版本与更新](manager_docs/VERSIONS.md) · [更新记录](manager_docs/CHANGELOG.md)
+[使用说明](manager_docs/USER_GUIDE.md) · [Agent 接入](manager_docs/PPTAGENT.md) · [项目管理](manager_docs/PROJECT_MANAGEMENT.md) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/sj18259360196-source/PPTToolbox/issues)
 
-原创程序代码采用 MIT 许可证。第三方依赖、图标和医学素材保留各自许可与署名要求，见 [第三方声明](THIRD_PARTY_NOTICES.md)。
-
-
-## 1.26.7 插画方法直接入口
-
-简单分层插画或明确要求内部编辑时，按需调用 graphics_illustration_guide，按实际观察选择钢笔节点或选区转路径，再调用 graphics_route_illustration。指南直接返回当前参数、受管调用入口、步骤和复查条件，不依赖经验检索。保留孔洞与共享边，分别验证轮廓、颜色和编辑行为。详见 [Agent 调用指南](references/illustration-agent-guide.md)。软件图形构造页可读取并复制整套调用步骤；升级后重连 MCP。
+本仓库已公开的原创程序代码采用 MIT 许可证。第三方依赖与素材保留各自许可和署名要求，见 [第三方声明](THIRD_PARTY_NOTICES.md)。
