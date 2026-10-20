@@ -19,3 +19,4 @@ Mac 试用包已完成原生构建、签名前后运行时检查和 DMG 校验�
 当前公开源码为 1.27.15。1.28.0 桌面和 Mac 实现暂未公开，公开源码的测试结果对应这一旧快照。
 
 [Windows 安装](DESKTOP_INSTALLATION.md) · [Mac 安装](MACOS_INSTALLATION.md) · [版本与更新](VERSIONS.md)
+2026-10-20 根据实机反馈更新同名试用附件，修复发行身份、试用解释器库校验、SDEF 字典与错误报告。最终 DMG 的独立副本已通过云端 Mac 原生依赖功能及无诊断变量桌面自检，用户安装和真实 PowerPoint 编辑仍需重新测试。当前 SHA-256 为 `0b76ca3950279c8e7c4270af1cc7a1b68ea81fa737f7f18815e4951725978a3c`。
