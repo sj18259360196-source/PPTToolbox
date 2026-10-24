@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 当前公开稳定版为 1.29.1，Mac Apple Silicon 独立试用版保持 1.28.1。1.30.2 的说明已同步，安装包将在验证完成后公开。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.2，Mac Apple Silicon 独立试用版保持 1.28.1。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -8,15 +8,13 @@
 
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
-| Windows x64 | 1.29.1 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.29.1/PPTToolbox-1.29.1-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
+| Windows x64 | 1.30.2 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/PPTToolbox-1.30.2-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
 | macOS Apple Silicon | 1.28.1 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.28.1/PPTToolbox-1.28.1-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[1.30.2 更新说明](distribution/RELEASE_NOTES.md) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.29.1/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.30.2 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.30.2) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
-## Windows 1.30.2 待发布
-
-以下功能对应待发布的 Windows 1.30.2，当前下载仍为 1.29.1。
+## Windows 1.30.2
 
 矢量空间提供独立的实验性制作入口。开启后复制完整提示词并签发 VEC 编号，由已接入的制作 Agent 读取冻结设置、提交几何文档、导出文件，再登记检查和交付。项目授权与受管执行设置继续生效。
 
