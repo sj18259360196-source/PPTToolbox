@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.2，Mac Apple Silicon 独立测试版为 1.30.2。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.2，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -9,12 +9,12 @@
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
 | Windows x64 | 1.30.2 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/PPTToolbox-1.30.2-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
-| macOS Apple Silicon | 1.30.2 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.2-20261024/PPTToolbox-1.30.2-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
+| macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
 [Windows 1.30.2 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.30.2) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
-[Mac 1.30.2 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.2-20261024) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.2-20261024/MACOS_TESTING.md)
+[Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
 ## Windows 1.30.2
 
@@ -28,7 +28,7 @@
 
 ## 输出和验收范围
 
-SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用于查看预览。Illustrator 兼容选项输出 SVG，原生 AI 与 CDR 导出尚未实现。EPS 仅支持不透明纯色路径，PSD 使用像素图层。矢量 PDF 取决于运行时依赖，标准公开运行时不内置其转换依赖。
+SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用于查看预览。Illustrator 兼容选项输出 SVG，原生 AI 与 CDR 导出尚未实现。EPS 仅支持不透明纯色路径，PSD 使用像素图层。Windows 1.30.2 的矢量 PDF 取决于可选运行时依赖；Mac 1.30.3 内置 PDF 1.4 实色路径导出，明确拒绝文字、渐变和不支持的组合透明度。
 
 导出、结构检查、Agent 看图声明与目标编辑器的打开编辑分别记录。文件生成成功不能证明 Adobe、CorelDRAW 或其他编辑器已经验收。矢量入口关闭后，已有项目仍可查看、整理和管理文件；重新制作须开启入口并满足权限条件。
 
@@ -36,7 +36,7 @@ SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用
 
 Windows 运行 Setup，可选择安装位置。升级沿用已有管理数据、项目位置、设置和授权。程序内置 Electron 与 Python，启动入口需要 .NET Framework 4.6.2 或更新版本，PPT 制作和 Office 验收需要本机 Microsoft PowerPoint。程序打开时检查更新，确认后下载、校验和安装，有活动任务时等待。更新清单使用签名与 SHA-256 校验；安装器未提供 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
 
-Mac 1.30.2 测试版带入当前共享界面、PPT 与矢量项目工作台和制作说明。将 DMG 中的应用拖入 Applications 后启动。测试包使用临时签名，尚未 Apple 公证，采用手动安装更新。正式外置 Agent 监督流程仍要求 Developer ID。安装、完整界面流程、Agent 连接和 PowerPoint 实际操作需要在目标 Mac 上测试，反馈步骤见 [Mac 测试说明](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.2-20261024/MACOS_TESTING.md)。
+Mac 1.30.3 测试版带入当前共享界面、PPT 与矢量项目工作台和制作说明。将 DMG 中的应用拖入 Applications 后启动。测试包使用临时签名，尚未 Apple 公证，采用手动安装更新。正式外置 Agent 监督流程仍要求 Developer ID。本轮已在 Apple M4、macOS 15.7.3、PowerPoint 16.102.2 上验证常规副本编辑、裁切、保存重开、主工作流、快速制作和注册渲染。Mac 预览采用 PowerPoint 原生 PDF 经 PDFium 生成 PNG，直接原生 PNG 与文本边界测量仍不支持；Intel、跨版本和部分 Windows 专用位图描摹引擎仍待适配。测试版 Agent 使用包内 Python 直连，升级后刷新连接。反馈步骤见 [Mac 测试说明](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)。
 
 发行页提供 `SHA256SUMS.txt`。Windows 可用 `Get-FileHash` 核对下载文件，Mac 可用 `shasum -a 256`。
 
