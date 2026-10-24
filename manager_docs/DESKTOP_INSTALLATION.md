@@ -1,18 +1,18 @@
 # 桌面安装与 Agent 接入
 
-Windows x64 当前正式版为 1.28.0。Mac 用户请阅读 [Mac 试用版安装](MACOS_INSTALLATION.md)。下文程序路径、安装器与 Agent 接入步骤适用于 Windows。当前公开源码为 1.27.15，源码预览仍使用旧桌面实现。
-
 ## 安装
 
-从本项目 Releases 下载并运行 [PPTToolbox-1.28.0-Setup.exe](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.28.0/PPTToolbox-1.28.0-Setup.exe)。默认只为当前 Windows 用户安装，不需要管理员权限。安装程序提供程序目录、管理数据目录和默认 PPT 项目目录选择，并创建开始菜单入口。桌面快捷方式可选。
+从本项目 Releases 选择实际已发布的 Setup 安装包，并按对应发行说明安装。本文对应 1.30.2，公开下载版本以实际发行条目为准。应用源码由私有仓库维护。默认只为当前 Windows 用户安装，不需要管理员权限，安装时可选择程序、管理数据与默认项目目录，并创建开始菜单入口。桌面快捷方式可选。
 
-1.28.0 内置 Electron 与 Python，Windows 启动入口需要 .NET Framework 4.6.2 或更新版本。制作和验收 PowerPoint 文件仍需本机安装 Microsoft PowerPoint。
+当前 Windows 迁移版本已内置 Electron 与 Python 运行环境，无需用户另装 Python。启动入口需要 .NET Framework 4.6.2 或更高版本，安装程序会检查并提示缺失。制作和验收 PowerPoint 文件仍需本机安装 PowerPoint。
 
-已有安装继续使用原程序位置和管理数据。升级不按旧版 location.json 的项目根目录覆盖当前设置。需要搬动目录时，从设置页进入安装与迁移。
+独立矢量项目使用随包引擎，无需启动 PowerPoint。具体格式由当前运行时能力决定，不应为解锁格式自行向程序目录复制依赖。创建入口与逐版管理见[矢量项目使用说明](VECTOR_SPACE.md)。
+
+首次安装默认使用 `%LOCALAPPDATA%\Programs\PPTToolbox` 程序目录、`%LOCALAPPDATA%\PPTToolbox` 管理数据目录和用户文档目录下的 `PPTToolbox\Projects` 项目目录，可在安装时选择其他位置。已有安装继续使用原程序位置和管理数据，也保留当前项目目录设置。升级不按旧版 location.json 的项目根目录覆盖当前设置。需要搬动目录时，从设置页进入安装与迁移。
 
 ## 在设置页接入 Agent
 
-首次打开桌面窗口会进入设置页。选择 Codex 或 Cursor，核对客户端配置文件路径，再点击预览配置。确认写入只修改 `ppt_toolbox_manager` 条目，并在旁边备份原文件。其他服务和设置会保留。遇到同名但来源不明的条目时停止写入，由用户核对。
+首次打开桌面窗口进入制作准备页。需要接入制作 Agent 时，打开设置页的制作 Agent 接入，选择 Codex 或 Cursor，核对客户端配置文件路径，再点击预览配置。确认写入只修改 `ppt_toolbox_manager` 条目，并在旁边备份原文件。其他服务和设置会保留。遇到同名但来源不明的条目时停止写入，由用户核对。
 
 其他 MCP 客户端可以复制通用配置，在其 MCP 设置中添加。不同电脑必须生成各自的绝对路径配置，不能照搬开发机的路径。
 
@@ -34,7 +34,7 @@ Agent 的正式入口固定为安装根目录下的 `agent_bridge.py`。在同�
 
 更新前在管理数据的 `application-updates` 中保存数据库、位置配置和被替换文件。替换失败或新运行环境导入检查失败时，回滚本次程序文件修改。断电留下 UPDATE_PENDING.json 时停止启动，保留现场供恢复处理，不静默重试。数据库备份含维护锁记录，手动恢复必须核对并释放对应维护锁，不能直接覆盖正在使用的数据库。
 
-从 1.21.0 开始，版本与更新页可检查 GitHub Releases 并下载完整安装包，签名与文件摘要验证通过后再运行。没有网络时仍可使用已安装版本，也可以手动下载安装包。Microsoft Authenticode 证书和全量离线 WebView2 安装包尚未提供。
+从 1.21.1 开始，版本与更新页可检查 GitHub Releases 并下载完整安装包，签名与文件摘要验证通过后再运行。早期版本如无法使用更新入口，需手动运行 Releases 页面实际已发布的完整 Setup。没有网络时仍可使用已安装版本。首次公开安装包尚未使用 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
 
 ## 卸载
 
@@ -44,4 +44,4 @@ Windows 的已安装应用列表提供卸载入口。卸载前检查运行进程
 
 ## 验证记录
 
-本次验证记录保存在 `checks/desktop-installer-20260928`。自动化客户端验证、真实浏览器检查、真实桌面启动与用户自己的 Codex/Cursor 连接分别记录。自动化测试通过不能代替用户客户端完成连接验证。
+早期安装器验证记录保存在 `checks/desktop-installer-20260928`。历史 1.28.0 安装与发布记录见 `checks/release-visual-20261020/RELEASE_REPORT.md`。1.30.2 矢量流程和逐版状态的正式安装只读记录见 `checks/vector-run-path-20261024/main/installed-ui-r05`，该轮没有新增 Office 或 Adobe 编辑验收。自动化客户端验证、真实浏览器检查、真实桌面启动与用户自己的 Codex/Cursor 连接分别记录。自动化测试通过不能代替用户客户端完成连接验证。
