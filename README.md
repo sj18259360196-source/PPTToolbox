@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.2，Mac Apple Silicon 独立测试版为 1.30.3。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.3，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -8,15 +8,24 @@
 
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
-| Windows x64 | 1.30.2 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/PPTToolbox-1.30.2-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
+| Windows x64 | 1.30.3 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.3/PPTToolbox-1.30.3-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
 | macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[Windows 1.30.2 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.30.2) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.2/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.30.3 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.30.3) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.3/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
 [Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
-## Windows 1.30.2
+## Windows 1.30.3
+
+新增软件内新手教程，引导第一次制作并保留学习进度。切换步骤时自动打开对应页面，等待控件加载后滚动到高亮位置，后台刷新不会反复拉回页面。
+
+学习高级操作提供本次设置与全局默认、同一项目继续制作与返修、批量管理与归档恢复、可选的小模型整理助手和制作 Agent 的 MCP 接入五个主题，支持保存阅读标记。
+
+Agent 接入页另有独立教程。驻留助手用于工具箱内的记录整理、摘要与日常辅助，可按需接入价格较低的小模型，属于可选功能。PPT 制作仍交给外部制作 Agent。
+
+### 既有矢量与项目管理
+
 
 矢量空间提供独立的实验性制作入口。开启后复制完整提示词并签发 VEC 编号，由已接入的制作 Agent 读取冻结设置、提交几何文档、导出文件，再登记检查和交付。项目授权与受管执行设置继续生效。
 
