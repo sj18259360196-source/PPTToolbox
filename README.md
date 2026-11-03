@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.30.3，Mac Apple Silicon 独立测试版为 1.30.3。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.31.8，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -8,21 +8,32 @@
 
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
-| Windows x64 | 1.30.3 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.3/PPTToolbox-1.30.3-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
+| Windows x64 | 1.31.8 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.8/PPTToolbox-1.31.8-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
 | macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[Windows 1.30.3 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.30.3) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.30.3/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.31.8 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.8) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.8/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
 [Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
-## Windows 1.30.3
+## Windows 1.31.8
 
-新增软件内新手教程，引导第一次制作并保留学习进度。切换步骤时自动打开对应页面，等待控件加载后滚动到高亮位置，后台刷新不会反复拉回页面。
+极速版先集中查看一次正式成片的整页左右图和叠图，一次列齐明显问题并合并修复。后续针对问题核对必要局部，再快速确认整页没有新增溢出、遮挡或布局错误。普通小改默认不再反复叠图；大幅布局变化、用户精确要求和频繁叠图设置仍按任务执行。
 
-学习高级操作提供本次设置与全局默认、同一项目继续制作与返修、批量管理与归档恢复、可选的小模型整理助手和制作 Agent 的 MCP 接入五个主题，支持保存阅读标记。
+极速、标准和精修的新合同统一提供完整UTF-8 JSON标注说明，另附Markdown文档，并保留一张位置概览图。Agent直接读取文字，文字清单不再转成多张PNG或图片PDF。对象、路线、编辑能力、外观和风险要求继续完整保留，标准与精修的检查深度保持。
 
-Agent 接入页另有独立教程。驻留助手用于工具箱内的记录整理、摘要与日常辅助，可按需接入价格较低的小模型，属于可选功能。PPT 制作仍交给外部制作 Agent。
+从1.30.3升级，还会得到这些改进。
+
+- 文本框默认按框宽换行，图片默认不锁宽高比。原生表格和图表可以放进组合及多层组合，保留单元格与嵌入数据。
+- 按当前合同保存待核对素材草稿，继续预览和原图核对。草稿接收与质量通过分别记录，最终交付仍须完成规定检查。批量区域问题及可独立判断的提交错误集中返回。
+- 制作、项目运行路径和辅助Agent读取同一份冻结工作流上下文，分别显示标注生成、阅读、审核和当前任务。改进提交回执、故障关联与恢复说明，保留未知结果，不自动重放Office写入。
+- 项目列表与详情统一制作档位及配色，整理状态和操作区域，运行路径默认展开历史轮次。
+
+升级保留已有项目、设置、授权、编号和历史证据。旧项目继续使用各自冻结合同，新标注与极速规则用于相应新合同。极速在整体清楚、内容及布局准确且无专项要求时，可记录轻微装饰差异并收尾；错漏、错误关系、明显偏位、溢出遮挡及编辑结构错误仍须解决，不按轮数自动通过。
+
+1.31.8已完成源码回归、Windows安装包构建和本机正式安装核验。本轮没有新增真实PPT成片、Office编辑效果或实际制作耗时验收，暂不提供提速比例。Mac继续使用现有1.30.3测试版，本次不替换其附件。
+
+已有的软件内教程继续提供新手制作、项目返修、批量管理和Agent接入指引，可退出后接续。可选整理助手负责记录与摘要，PPT制作仍由外部制作Agent执行。
 
 ### 既有矢量与项目管理
 
@@ -37,7 +48,7 @@ Agent 接入页另有独立教程。驻留助手用于工具箱内的记录整�
 
 ## 输出和验收范围
 
-SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用于查看预览。Illustrator 兼容选项输出 SVG，原生 AI 与 CDR 导出尚未实现。EPS 仅支持不透明纯色路径，PSD 使用像素图层。Windows 1.30.2 的矢量 PDF 取决于可选运行时依赖；Mac 1.30.3 内置 PDF 1.4 实色路径导出，明确拒绝文字、渐变和不支持的组合透明度。
+SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用于查看预览。Illustrator 兼容选项输出 SVG，原生 AI 与 CDR 导出尚未实现。EPS 仅支持不透明纯色路径，PSD 使用像素图层。Windows 矢量 PDF 的适用范围以随包工具与当前任务返回的能力为准；Mac 1.30.3 内置 PDF 1.4 实色路径导出，明确拒绝文字、渐变和不支持的组合透明度。
 
 导出、结构检查、Agent 看图声明与目标编辑器的打开编辑分别记录。文件生成成功不能证明 Adobe、CorelDRAW 或其他编辑器已经验收。矢量入口关闭后，已有项目仍可查看、整理和管理文件；重新制作须开启入口并满足权限条件。
 
