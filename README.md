@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 稳定版为 1.31.8，Mac Apple Silicon 独立测试版为 1.30.3。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows稳定版为1.31.20，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -8,32 +8,23 @@
 
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
-| Windows x64 | 1.31.8 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.8/PPTToolbox-1.31.8-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
+| Windows x64 | 1.31.20 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.20/PPTToolbox-1.31.20-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
 | macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[Windows 1.31.8 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.8) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.8/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.31.20发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.20) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.20/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
 [Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
-## Windows 1.31.8
+## Windows 1.31.20
 
-极速版先集中查看一次正式成片的整页左右图和叠图，一次列齐明显问题并合并修复。后续针对问题核对必要局部，再快速确认整页没有新增溢出、遮挡或布局错误。普通小改默认不再反复叠图；大幅布局变化、用户精确要求和频繁叠图设置仍按任务执行。
+标准与精修新项目采用逐元素标注，按原生结构、图片素材、图标图形、基础样式和风险分类。位置图沿用极速版的编号及框选样式，JSON与Markdown逐项给出制作路线、编辑能力和备注。制作Agent按参考图、实际PPT与Office图判断修正，验收继续沿用各档流程。
 
-极速、标准和精修的新合同统一提供完整UTF-8 JSON标注说明，另附Markdown文档，并保留一张位置概览图。Agent直接读取文字，文字清单不再转成多张PNG或图片PDF。对象、路线、编辑能力、外观和风险要求继续完整保留，标准与精修的检查深度保持。
+本版修复完整制作设置在早期小样和整页冻结时被自身场景校验拒绝的问题，也包含自公开1.31.8以来的原生图形文字检查、对齐与表格工具、逐步新手教程和切档草稿修复。极速首版优先默认开启，已记住关闭的选择继续生效。
 
-从1.30.3升级，还会得到这些改进。
+新手教程按Agent接入、项目目录、制作准备、参考案例和辅助入口逐步聚焦，关键操作可单独跳过，结束页保留待处理项并支持重试。随包版本页、安装与更新说明同步到本次发行。
 
-- 文本框默认按框宽换行，图片默认不锁宽高比。原生表格和图表可以放进组合及多层组合，保留单元格与嵌入数据。
-- 按当前合同保存待核对素材草稿，继续预览和原图核对。草稿接收与质量通过分别记录，最终交付仍须完成规定检查。批量区域问题及可独立判断的提交错误集中返回。
-- 制作、项目运行路径和辅助Agent读取同一份冻结工作流上下文，分别显示标注生成、阅读、审核和当前任务。改进提交回执、故障关联与恢复说明，保留未知结果，不自动重放Office写入。
-- 项目列表与详情统一制作档位及配色，整理状态和操作区域，运行路径默认展开历史轮次。
-
-升级保留已有项目、设置、授权、编号和历史证据。旧项目继续使用各自冻结合同，新标注与极速规则用于相应新合同。极速在整体清楚、内容及布局准确且无专项要求时，可记录轻微装饰差异并收尾；错漏、错误关系、明显偏位、溢出遮挡及编辑结构错误仍须解决，不按轮数自动通过。
-
-1.31.8已完成源码回归、Windows安装包构建和本机正式安装核验。本轮没有新增真实PPT成片、Office编辑效果或实际制作耗时验收，暂不提供提速比例。Mac继续使用现有1.30.3测试版，本次不替换其附件。
-
-已有的软件内教程继续提供新手制作、项目返修、批量管理和Agent接入指引，可退出后接续。可选整理助手负责记录与摘要，PPT制作仍由外部制作Agent执行。
+升级保留原安装位置、管理数据、项目目录和授权，已有项目继续使用冻结合同。完整内容见[本版发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.20)。本次只发布Windows安装包，Mac继续使用独立1.30.3测试版，已有附件保持。
 
 ### 既有矢量与项目管理
 
