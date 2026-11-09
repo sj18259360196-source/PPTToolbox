@@ -1,6 +1,6 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows稳定版为1.31.20，Mac Apple Silicon 独立测试版为 1.30.3。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows稳定版为1.31.26，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
 
@@ -8,11 +8,11 @@
 
 | 平台 | 版本 | 安装包 | 使用范围 |
 | --- | --- | --- | --- |
-| Windows x64 | 1.31.20 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.20/PPTToolbox-1.31.20-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
+| Windows x64 | 1.31.26 | [下载 Setup](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.26/PPTToolbox-1.31.26-Setup.exe) | Windows 稳定渠道，桌面管理、制作 Agent 接入与 Windows PowerPoint 工具 |
 | macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[Windows 1.31.20发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.20) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.20/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.31.26发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.26/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
 [Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
@@ -20,7 +20,7 @@
 
 ### Windows
 
-1. 从上表下载 `PPTToolbox-1.31.20-Setup.exe`。
+1. 从上表下载 `PPTToolbox-1.31.26-Setup.exe`。
 2. 双击运行，选择安装位置并完成安装。升级时可直接安装新版，软件会沿用已保存的数据、项目位置、设置和授权。
 3. 启动 PPT Toolbox，从顶部的**新手教程**开始操作。
 
@@ -42,7 +42,7 @@ npm 是 Node.js 的包管理工具。本项目中的 npm 用于桌面端的开�
 
 ## 第一次制作 PPT
 
-以下按 Windows 1.31.20 的界面说明。先准备参考图片和一个能访问本机 MCP 或运行本机命令的 Agent，例如 Codex、Claude Code、CodeBuddy 或 Qoder。
+以下按 Windows 1.31.26 的界面说明。先准备参考图片和一个能访问本机 MCP 或运行本机命令的 Agent，例如 Codex、Claude Code、CodeBuddy 或 Qoder。
 
 1. **接入 Agent**。点击左侧 **Agent 接入**，在上方点击 **复制通用接入提示词**，粘贴到 Agent 对话并发送。等 Agent 返回连接结果后，可在工具箱中点击 **检查接入结果**。下方的整理助手为可选功能，第一次制作无需配置助手 API。
 2. **保存项目目录**。进入 **制作准备 → 修改目录设置**，点击项目目录旁的 **浏览**，选择用于长期存放 PPT 项目的文件夹，再点击 **保存设置**。参考图、制作版本、预览和交付文件会归入各自的项目文件夹。
@@ -60,26 +60,18 @@ npm 是 Node.js 的包管理工具。本项目中的 npm 用于桌面端的开�
 
 **卡在某一步时**，新手教程中的关键操作可以单独跳过，结束页会保留待处理项，之后可重试或交给 Agent 排查。底部可跳过整个教程，并选择下次不再提示；需要重看时点击顶部 **新手教程**。素材库和经验库可在后续制作中逐步熟悉，完整操作见 [使用说明](manager_docs/USER_GUIDE.md)。
 
-## Windows 1.31.20
+## Windows 1.31.26
 
-标准与精修新项目采用逐元素标注，按原生结构、图片素材、图标图形、基础样式和风险分类。位置图沿用极速版的编号及框选样式，JSON与Markdown逐项给出制作路线、编辑能力和备注。制作Agent按参考图、实际PPT与Office图判断修正，验收继续沿用各档流程。
+参考图标注与制作选路新增组件功能、后期修改和替换需求的判断，再按极速版、标准版和精修版选择实现方式。
 
-本版修复完整制作设置在早期小样和整页冻结时被自身场景校验拒绝的问题，也包含自公开1.31.8以来的原生图形文字检查、对齐与表格工具、逐步新手教程和切档草稿修复。极速首版优先默认开启，已记住关闭的选择继续生效。
+- 普通文字优先保持可编辑。精修版进一步拆分可近似的装饰标题、图标底座和矢量图形；特殊书法与场景中的文字按组件用途保留图片。
+- 精修版优先把需要替换的照片独立出来，遮罩、渐变和装饰按能力分别处理。复杂曲面玻璃、插画和透明效果采用独立图片或透明 PNG。
+- 表格与数据图表继续沿用现行原生制作规则。新规则随新签发的任务指令生效，历史项目保留原冻结要求。
+- 保留近期 Windows 更新中的项目交付、空间清理进度和恢复优化。安装检查能够识别已退出的本机管理进程留下的标记。
 
-新手教程按Agent接入、项目目录、制作准备、参考案例和辅助入口逐步聚焦，关键操作可单独跳过，结束页保留待处理项并支持重试。随包版本页、安装与更新说明同步到本次发行。
+安装包已在本机完成正式升级和文件校验，原有项目、设置、授权及数据位置保留。实际生图和 PowerPoint 视觉效果仍按具体项目验收。
 
-升级保留原安装位置、管理数据、项目目录和授权，已有项目继续使用冻结合同。完整内容见[本版发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.20)。本次只发布Windows安装包，Mac继续使用独立1.30.3测试版，已有附件保持。
-
-### 既有矢量与项目管理
-
-
-矢量空间提供独立的实验性制作入口。开启后复制完整提示词并签发 VEC 编号，由已接入的制作 Agent 读取冻结设置、提交几何文档、导出文件，再登记检查和交付。项目授权与受管执行设置继续生效。
-
-已有矢量项目与 PPT 共用项目页，可搜索、分类、排序、整理、归档和恢复。矢量工作台提供运行路径、项目文件、制作记录和助手摘要四个页签；不同版本分别保留失败、检查与交付记录。默认打开最近一次交付对应的版本，有更新版本时单独提示。
-
-运行路径显示冻结设置、所选版本和全项目当前服务三组记录。结构检查、逐格式导出、返修、部分交付、结果恢复及文件异常都有对应状态。管理助手的排队、处理、过期和失败按实际记录显示；助手只处理管理摘要与备注，不代替制作或交付检查。
-
-桌面运行时更新至 Electron 44.9.3，包含受影响中间证书的撤销修复及同主线安全回补。修正发行包的图标缓存匹配，首次进入素材库可直接加载随包缓存。
+本次仅更新 Windows x64 稳定版，Mac Apple Silicon 1.30.3 测试版保持不变。公开资产包含安装包、签名更新清单、校验文件及第三方许可材料，应用源码在私库维护。
 
 ## 输出和验收范围
 
@@ -94,7 +86,7 @@ Windows 可在 **版本与更新** 页检查、下载并安装新版。下载后
 发行页提供 `SHA256SUMS.txt`。下载后，可在 PowerShell 中核对 Windows 安装包的摘要。
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath "$HOME\Downloads\PPTToolbox-1.31.20-Setup.exe"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$HOME\Downloads\PPTToolbox-1.31.26-Setup.exe"
 ```
 
 Mac 可在终端中核对 DMG 的摘要。

@@ -2,7 +2,7 @@
 
 ## 安装
 
-Windows当前发行是[1.31.20](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.20)。下载完整Setup，先按同页SHA256SUMS.txt核对，再运行安装。升级后在界面版本、CLI或MCP中核对实际程序与数据位置；当前源码版本不能代替已安装版本。
+Windows当前发行是[1.31.26](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26)。下载完整Setup，先按同页SHA256SUMS.txt核对，再运行安装。升级后在界面版本、CLI或MCP中核对实际程序与数据位置；当前源码版本不能代替已安装版本。
 
 从本项目 Releases 选择实际已发布的 Setup 安装包，并按对应发行说明安装。公开下载版本以实际发行条目为准。应用源码由私有仓库维护。默认只为当前 Windows 用户安装，不需要管理员权限，安装时可选择程序、管理数据与默认项目目录，并创建开始菜单入口。桌面快捷方式可选。
 
