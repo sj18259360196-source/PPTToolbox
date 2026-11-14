@@ -1,8 +1,10 @@
 # PPT Toolbox
 
-本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows稳定版为1.31.26，Mac Apple Silicon 独立测试版为 1.30.3。
+本地 PPT 与矢量项目工具箱，为制作 Agent 提供受管工具，集中管理项目、参考文件、制作过程和交付文件。Windows 公开稳定版为 1.31.26，Mac Apple Silicon 独立测试版为 1.30.3。
 
 本仓库提供安装包、发行说明、更新清单、校验文件和必要的第三方许可材料。新版应用源码在私有仓库维护。
+
+Windows 1.31.30 已完成本机安装检查，正在准备公开发行。该版本暂未提供公开安装包，软件内自动更新仍使用下表中的稳定版。
 
 ## 下载
 
@@ -12,7 +14,7 @@
 | macOS Apple Silicon | 1.30.3 测试版 | [下载 DMG](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/PPTToolbox-1.30.3-arm64-trial.dmg) | macOS 14 及以上，临时签名、未公证，手动安装更新 |
 | macOS Intel | 暂无安装包 | 暂未发布 | 等待构建与验证 |
 
-[Windows 1.31.26发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.26/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
+[Windows 1.31.26 发行说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26) · [SHA-256 校验文件](https://github.com/sj18259360196-source/PPTToolbox/releases/download/v1.31.26/SHA256SUMS.txt) · [所有版本](https://github.com/sj18259360196-source/PPTToolbox/releases)
 
 [Mac 1.30.3 测试版说明](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/macos-trial-v1.30.3-20261025) · [Mac 测试与反馈](https://github.com/sj18259360196-source/PPTToolbox/releases/download/macos-trial-v1.30.3-20261025/MACOS_TESTING.md)
 
@@ -73,6 +75,16 @@ npm 是 Node.js 的包管理工具。本项目中的 npm 用于桌面端的开�
 
 本次仅更新 Windows x64 稳定版，Mac Apple Silicon 1.30.3 测试版保持不变。公开资产包含安装包、签名更新清单、校验文件及第三方许可材料，应用源码在私库维护。
 
+## Windows 1.31.30 准备进展
+
+本轮改进集中在制作后的返修、版本选择与安装恢复。
+
+- 返修继续使用同一项目，区分已保存草稿、当前制作候选和历史交付，按所选文件打开 PPT。
+- 新版本尚未生成预览时，保留它的入口并显示预览状态，避免旧交付图代替当前版本。
+- 完整 Setup 加入首次安装续装与升级中断恢复；恢复时核对文件和备份，遇到冲突保留现场。
+
+该版本已在维护者电脑完成完整 Setup 升级、文件校验和隔离项目的 Office 预览检查。多版本查询速度和升级后的 Agent 重连体验仍待改进。正式公开包与下载地址将在发行核验完成后更新，详情见[版本与更新](manager_docs/VERSIONS.md)。
+
 ## 输出和验收范围
 
 SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用于查看预览。Illustrator 兼容选项输出 SVG，原生 AI 与 CDR 导出尚未实现。EPS 仅支持不透明纯色路径，PSD 使用像素图层。Windows 矢量 PDF 的适用范围以随包工具与当前任务返回的能力为准；Mac 1.30.3 内置 PDF 1.4 实色路径导出，明确拒绝文字、渐变和不支持的组合透明度。
@@ -82,6 +94,8 @@ SVG 保留矢量对象和文字，文字依赖接收电脑上的字体。PNG 用
 ## 更新与校验
 
 Windows 可在 **版本与更新** 页检查、下载并安装新版。下载后会核对签名与 SHA-256，有活动任务时等待。安装器未提供 Microsoft Authenticode 证书，Windows 可能显示未知发布者提示。
+
+升级后若 Agent 提示 `Transport closed` 或仍显示旧工具，重新连接客户端中的 PPT Toolbox MCP 服务，再检查接入结果。客户端没有重连入口时，重启客户端后再连接。
 
 发行页提供 `SHA256SUMS.txt`。下载后，可在 PowerShell 中核对 Windows 安装包的摘要。
 

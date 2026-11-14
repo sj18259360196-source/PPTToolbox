@@ -2,7 +2,7 @@
 
 ## 安装
 
-Windows当前发行是[1.31.26](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26)。下载完整Setup，先按同页SHA256SUMS.txt核对，再运行安装。升级后在界面版本、CLI或MCP中核对实际程序与数据位置；当前源码版本不能代替已安装版本。
+Windows 当前公开稳定版是 [1.31.26](https://github.com/sj18259360196-source/PPTToolbox/releases/tag/v1.31.26)。下载完整 Setup，先按同页 `SHA256SUMS.txt` 核对，再运行安装。Windows 1.31.30 正在准备公开发行，暂未提供公开安装包。升级后在界面版本、CLI 或 MCP 中核对实际程序与数据位置。
 
 从本项目 Releases 选择实际已发布的 Setup 安装包，并按对应发行说明安装。公开下载版本以实际发行条目为准。应用源码由私有仓库维护。默认只为当前 Windows 用户安装，不需要管理员权限，安装时可选择程序、管理数据与默认项目目录，并创建开始菜单入口。桌面快捷方式可选。
 
@@ -30,6 +30,8 @@ CLI 先按 manifest 的 `cli.prompt_project` 完整命令，用 `prompt-project 
 ## 更新与恢复
 
 Agent 的正式入口固定为安装根目录下的 `agent_bridge.py`。在同一位置升级后，配置无需更改版本号或构建目录。旧的 portable.py MCP 入口继续可用。
+
+升级退出旧后台后，已经打开的 Agent 对话可能提示 `Transport closed`。先在客户端重新连接 PPT Toolbox MCP 服务；客户端没有重连入口时，重启客户端后检查接入结果。恢复连接后查询原任务状态，再决定下一步。
 
 安装更新前检查未决调用和项目写入锁。有未决工作时暂停更新，不强制终止。新版空闲桌面与 MCP 进程支持退出请求；旧版后台不支持时，需用户从托盘退出窗口并停止对应 MCP 服务后重试。
 
